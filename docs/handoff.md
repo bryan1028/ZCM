@@ -47,3 +47,13 @@ via the API to publish). `NODE_USE_ENV_PROXY=1 NODE_EXTRA_CA_CERTS=/root/.ccr/ca
 The Netlify token may be named `Netlify_AUTH_TOKEN` (mixed case); map it to `NETLIFY_AUTH_TOKEN`.
 Netlify env vars to add: `DATABASE_URL`. Keep `FIREBASE_SERVICE_ACCOUNT` (Firebase Auth), `ADMIN_PASSWORD`, `NEXT_PUBLIC_SITE_URL`.
 Do not upgrade firebase-admin past 13.x on Netlify (ESM-only jose breaks functions).
+
+
+## Update: Supabase migration DONE (2026-10-01)
+- Supabase project `zist` (ref `xwtfdjkpwzgybangudyc`, eu-central-1) has the schema and the data: 12,812 restaurants (43 cities, 37 countries) and 15,481 prices.
+- `DATABASE_URL` (pooled, port 6543) is set on the Netlify site. The site runs on Supabase; Firestore is no longer used for data (Firebase Auth still is).
+- The sandbox cannot open raw Postgres TCP. Data was loaded by generating `insert ... jsonb_to_recordset($zj$...$zj$)` SQL files from the same store code and POSTing them to
+  `https://api.supabase.com/v1/projects/{ref}/database/query` with `SUPABASE_ACCESS_TOKEN`. Inserts are idempotent (`on conflict do nothing`).
+- Legacy Firestore data (one profile) was not migrated; there are no real users.
+- One test lead (Chuka Ramen Bar, WhatsApp) from verification is in the `leads` table; delete it before reading lead stats.
+- Live deploy includes the WhatsApp "order request" change and the new UI.
