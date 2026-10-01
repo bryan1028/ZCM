@@ -1,0 +1,8 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "22"
+  # Netlify scans build output for strings that look like secrets; our public Firebase web key is not one.
+  SECRETS_SCAN_ENABLED = "false"

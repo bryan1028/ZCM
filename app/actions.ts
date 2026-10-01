@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getStore } from "@/lib/store";
+import { requireAdmin } from "@/lib/auth";
 import { normalizeWhatsapp, slugify } from "@/lib/util";
 import type { Diet } from "@/lib/types";
 import { DIETS } from "@/lib/types";
@@ -95,6 +96,7 @@ export async function reportPrice(formData: FormData) {
 
 /** Admin actions. These are only reachable via /admin, which proxy.ts protects with basic auth. */
 export async function setPriceStatus(formData: FormData) {
+  await requireAdmin();
   const status = clean(formData.get("status"), 10);
   if (!["ok", "flagged", "hidden"].includes(status)) return;
   await getStore().setPriceStatus(clean(formData.get("id"), 120), status as "ok" | "flagged" | "hidden");
@@ -102,6 +104,7 @@ export async function setPriceStatus(formData: FormData) {
 }
 
 export async function addDeal(formData: FormData) {
+  await requireAdmin();
   const title = clean(formData.get("title"), 140), storeName = clean(formData.get("store"), 80), city = clean(formData.get("city"), 80);
   const country = clean(formData.get("country"), 2).toUpperCase(), validUntil = clean(formData.get("validUntil"), 10);
   if (!title || !storeName || !city || !/^[A-Z]{2}$/.test(country) || !/^\d{4}-\d{2}-\d{2}$/.test(validUntil)) return;

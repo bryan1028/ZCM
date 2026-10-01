@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getStore } from "@/lib/store";
 import { regionName } from "@/lib/util";
 import { addDeal, setPriceStatus } from "../actions";
+import { requireAdmin } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Admin", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -13,6 +14,7 @@ const countBy = <T,>(xs: T[], key: (x: T) => string) => {
 };
 
 export default async function Admin() {
+  await requireAdmin();
   const store = getStore();
   const [leads, claims, prices, deals] = await Promise.all([store.listLeads(1000), store.listClaims(50), store.listPrices(60), store.listDeals({ includeAll: true, limit: 30 })]);
   const day = Date.now() - 864e5;
