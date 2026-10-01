@@ -6,7 +6,6 @@ import { formatPrice, regionName } from "@/lib/util";
 
 const dietLabel = (id: string) => DIETS.find((d) => d.id === id)?.label ?? id;
 const MSG = "Message to order";
-const WANT = "I want this";
 
 /** A single dish, front and centre: what it is, what it costs, what's in it, and one tap to ask for it on WhatsApp. */
 export function DishCard({ h }: { h: DishHit }) {
@@ -29,7 +28,7 @@ export function DishCard({ h }: { h: DishHit }) {
         {m.price != null && <span className="dish-price">{formatPrice(m.price, m.currency)}</span>}
         <div className="dish-actions">
           {h.canMessage
-            ? <a className="btn wa" href={`/go/${h.restaurantId}?item=${encodeURIComponent(m.id)}&src=web`} rel="nofollow">{h.unclaimed ? `🙋 ${WANT}` : `💬 ${MSG}`}</a>
+            ? <a className="btn wa" href={`/go/${h.restaurantId}?item=${encodeURIComponent(m.id)}&src=web`} rel="nofollow">💬 {MSG}</a>
             : <span className="meta">Not reachable yet</span>}
           <Link className="btn ghost sm" href={`/r/${h.restaurantId}`}>Pick more</Link>
         </div>
@@ -60,8 +59,8 @@ export function RestaurantCard({ r, source = "web" }: { r: Restaurant; source?: 
 /** Message (WhatsApp) when we have a WhatsApp number, otherwise Call; plus Website. All three are tracked links. */
 export function ContactButtons({ r, source = "web", compact = false }: { r: Pick<Restaurant, "id" | "whatsapp" | "phone" | "website" | "status">; source?: string; compact?: boolean }) {
   const cls = compact ? " sm" : "";
-  // Restaurants that haven't joined Zood yet get a single "I want to order here" signal, never their contact details.
-  if (r.status === "unclaimed") return <a className={`btn wa${cls}`} href={`/go/${r.id}?src=${source}`} rel="nofollow">🙋 I want to order here</a>;
+  // Restaurants that haven't joined Zood never get their contact details shown; they get the claim page.
+  if (r.status === "unclaimed") return <Link className={`btn ghost${cls}`} href={`/list?claim=${r.id}`}>Is this yours? Claim it</Link>;
   return (
     <>
       {r.whatsapp && <a className={`btn wa${cls}`} href={`/go/${r.id}?src=${source}`} rel="nofollow noopener" target="_blank">💬 Message</a>}

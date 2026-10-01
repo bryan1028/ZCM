@@ -62,6 +62,18 @@ Do not upgrade firebase-admin past 13.x on Netlify (ESM-only jose breaks functio
 - Every imported restaurant is `status=unclaimed`. For those, `/go/[id]` records the tap (same bot filter and 1h dedupe) and redirects to `/r/[id]/thanks`,
   which says plainly that the restaurant has NOT been messaged and tells the Zood story. No phone/WhatsApp/website is exposed, so no free leads and no "number isn't on WhatsApp" errors.
 - Buttons read "I want to order here" / "I want this". ChatGPT tool text tells the model the link does not contact the restaurant.
+- SUPERSEDED by the claim flow below: the "I want to order here" tap and /r/[id]/thanks were removed.
 - Restaurants that join (status `active`) keep the direct WhatsApp/call/website flow.
 - `/about` has the Zood and Zind vision; `VisionStory` (app/vision.tsx) is reused on the thanks page and /find.
 - Admin has a "Restaurants to pitch" table with real 30-day counts and a copy-ready pitch line. Numbers are deliberately real, not invented: restaurants can ask for proof.
+
+## Update: claims, owner editor, admin inbox (migration 0002 applied to the live project)
+- **Zood only lists active restaurants WITH a menu** (searchRestaurants, listCities). Unclaimed/menu-less pages still load (noindex) so a claim link works.
+  Consequence: Zood is empty until restaurants are approved and have menus (owners via /account/restaurant, or admin via /admin/restaurant/[id]).
+- Unclaimed page shows "Is this your restaurant? ... Claim your free trial" -> `/list?claim=<id>` (sign-in required) -> `submitClaim` (app/claim-actions.ts): name, role, WhatsApp, email, proof.
+  `/go/[id]` for an unclaimed restaurant redirects to the claim page; contact details are never exposed for them.
+- Admin `/admin#claims` ("Inbox: restaurants"): per claim shows claimant, listed phone/website, email-domain-vs-website match, proof, thread; actions: reply, mark verifying, approve (status active, plan trial, owner set, 90-day trial), reject.
+  `/admin#support` ("Inbox: support") is the existing support list. Replies to claimants are in-app (shown on /account/restaurant); there is no email sending yet.
+- Approved owners edit profile + menu at `/account/restaurant` (one dish per line: `Name | price | description | diets | allergens`). Admin can do the same at `/admin/restaurant/[id]`.
+- Deleting an account scrubs the person from their claims and releases restaurant ownership.
+- Store methods for claims/owners are Postgres-only (Firestore/demo throw).

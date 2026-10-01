@@ -14,8 +14,8 @@ export default function About() {
         sustainable and delivery-friendly, because their delivery people aren't just anonymous gig workers.
       </p>
       <p>
-        We're early. Most restaurants on Zood haven't joined yet, and we're upfront about that: when you tell us you want to order somewhere, we count it
-        and use it to invite them, we don't pretend they got your message. When they join they get a free trial to edit their profile and menu, and the demand you showed is the reason they come.
+        We're early, and we only list restaurants with a real menu. If you run a restaurant we've found, you can claim it: we verify you, then you get a free trial to edit your profile and menu and start taking orders directly.
+        Know a place that should be here? <Link href="/requests/new">Zummon it</Link>.
       </p>
       <h2>🦊 Zind: prices in the open</h2>
       <p>

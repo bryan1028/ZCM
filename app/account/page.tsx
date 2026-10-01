@@ -35,7 +35,7 @@ export default async function Account({ searchParams }: { searchParams: Promise<
         <label className="checkline"><input type="checkbox" name="optIn" defaultChecked={p.optIn} /><span>Email me when Zist launches in my city, and about restaurants I asked for.</span></label>
         <button type="submit">Save</button>
       </form>
-      <p className="meta" style={{ marginTop: 14 }}>{p.username && <><Link href={`/u/${p.username}`}>Your public profile</Link> · </>}<Link href="/feed">Your feed</Link></p>
+      <p className="meta" style={{ marginTop: 14 }}>{p.username && <><Link href={`/u/${p.username}`}>Your public profile</Link> · </>}<Link href="/feed">Your feed</Link> · <Link href="/account/restaurant">Your restaurant</Link></p>
       <h2 style={{ marginTop: 32 }}>Your requests</h2>
       {mine.length === 0 && <p className="meta">You haven't requested anything yet. <Link href="/requests/new">Request a place</Link>.</p>}
       {mine.map((r) => (

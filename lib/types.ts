@@ -60,6 +60,9 @@ export interface Restaurant {
   sourceId?: string;
   plan: "free" | "trial" | "paid";
   leadCount: number;
+  /** Set when an admin approves an ownership claim. */
+  ownerUid?: string;
+  trialEndsAt?: string;
   createdAt: string;
 }
 
@@ -96,6 +99,26 @@ export interface Claim {
   contactName: string;
   whatsapp: string;
   email?: string;
+  /** Verification state: new -> verifying (admin is checking) -> approved | rejected. */
+  status?: ClaimStatus;
+  userId?: string;
+  userHandle?: string;
+  /** Their relationship to the restaurant (owner, manager...). */
+  role?: string;
+  /** Link or note that shows they run the place (website, social page, Maps listing). */
+  proof?: string;
+  adminNote?: string;
+  createdAt: string;
+}
+
+export type ClaimStatus = "new" | "verifying" | "approved" | "rejected";
+
+/** One message in a claim's thread between the claimant and the Zist team. */
+export interface ClaimMessage {
+  id: string;
+  claimId: string;
+  fromAdmin: boolean;
+  body: string;
   createdAt: string;
 }
 

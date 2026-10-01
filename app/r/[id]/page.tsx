@@ -18,6 +18,8 @@ export async function generateMetadata({ params }: { params: P }): Promise<Metad
     title: `${r.name} — ${r.city}`,
     description: `${r.name} in ${r.city}: menu${r.diets.length ? `, ${r.diets.map(label).join(", ")} options` : ""}. Pick what you want and message them on WhatsApp.`,
     alternates: { canonical: `/r/${r.id}` },
+    // A listing without a menu isn't useful to diners; keep it out of search until the owner adds one.
+    ...(r.menu.length === 0 || r.status !== "active" ? { robots: { index: false, follow: true } } : {}),
   };
 }
 
@@ -32,7 +34,7 @@ export default async function RestaurantPage({ params }: { params: P }) {
     ...(r.lat != null && r.lng != null ? { geo: { "@type": "GeoCoordinates", latitude: r.lat, longitude: r.lng } } : {}),
   };
   const unclaimed = r.status === "unclaimed";
-  const canOrder = (unclaimed || Boolean(r.whatsapp)) && r.menu.length > 0;
+  const canOrder = !unclaimed && Boolean(r.whatsapp) && r.menu.length > 0;
 
   return (
     <article className="theme-zood" style={{ padding: "28px 0 56px" }}>
@@ -41,19 +43,21 @@ export default async function RestaurantPage({ params }: { params: P }) {
       <h1>{r.name}</h1>
       <div className="meta">{[r.address, `${r.city}, ${regionName(r.country)}`].filter(Boolean).join(" · ")}</div>
       <p>{r.diets.map((d) => <span key={d} className="tag">{label(d)}</span>)}{r.cuisines.map((c) => <span key={c} className="tag gray">{c}</span>)}</p>
-      {r.leadCount > 0 && <p className="meta">🔥 {r.leadCount} {r.leadCount === 1 ? "person wants" : "people want"} to order from {unclaimed ? "here" : "this restaurant"} through Zood</p>}
+      {!unclaimed && r.leadCount > 0 && <p className="meta">🔥 {r.leadCount} {r.leadCount === 1 ? "person has" : "people have"} reached out through Zood</p>}
 
-      {r.status === "unclaimed" && (
-        <div className="notice">Is this your restaurant? {r.leadCount > 0 ? <>{r.leadCount} {r.leadCount === 1 ? "person has" : "people have"} already asked to order from you on Zood. </> : null}<Link href={`/list?claim=${r.id}`}>Claim it</Link> for a free trial: edit your profile and menu, and start receiving customers directly, with no commission.</div>
+      {unclaimed && (
+        <div className="notice">
+          <b>Is this your restaurant?</b> Zood is the tool that brings it straight to people looking for it, with no commission.{" "}
+          <Link className="btn" href={`/list?claim=${r.id}`}>Claim your free trial</Link>
+          <span className="meta" style={{ display: "block", marginTop: 6 }}>Edit your profile and menu, and get customers messaging you directly. We verify every claim first.</span>
+        </div>
       )}
-      <p style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><ContactButtons r={r} /></p>
-      {unclaimed && <p className="meta">This restaurant hasn't joined Zood yet. Tapping the button tells us you want to order here; we use it to invite them.</p>}
+      {!unclaimed && <p style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><ContactButtons r={r} /></p>}
 
-      <h2>Pick your meal</h2>
-      {r.menu.length === 0 && <p className="meta">The menu hasn't landed yet. Tell us you want to order here and we'll ask them to put it up.</p>}
+      {r.menu.length === 0 ? <p className="meta">This restaurant hasn't put its menu on Zood yet.</p> : <h2>Pick your meal</h2>}
 
       {/* No JavaScript needed: tick dishes, press the button, and WhatsApp opens with everything you picked. */}
-      <form action={`/go/${r.id}`} method="get" target={unclaimed ? undefined : "_blank"}>
+      <form action={`/go/${r.id}`} method="get" target="_blank">
         <input type="hidden" name="src" value="web" />
         {r.menu.map((m) => (
           <label className="menu-item pick" key={m.id}>
@@ -73,7 +77,7 @@ export default async function RestaurantPage({ params }: { params: P }) {
         {canOrder && (
           <div className="tray">
             <span className="meta">Tick what you want, then</span>
-            <button type="submit" className="wa-btn">{unclaimed ? `🙋 I want these at ${r.name}` : `💬 Message ${r.name} with my picks`}</button>
+            <button type="submit" className="wa-btn">💬 Message {r.name} with my picks</button>
           </div>
         )}
       </form>

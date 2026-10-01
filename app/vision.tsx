@@ -6,7 +6,7 @@ export function VisionStory({ product }: { product: "zood" | "zind" }) {
     <div className="notice">
       <b>Why Zood exists.</b> Zood was started by a foodie who got tired of endless scrolling, and of delivery apps squeezing the profits out of the restaurants we love.
       We're building an open way to reach restaurants directly, with no hidden markups, so they can bring the food to you in a way that's sustainable and
-      delivery-friendly, because the people delivering are part of the restaurant, not anonymous gig workers. Every request like yours is a vote for that.{" "}
+      delivery-friendly, because the people delivering are part of the restaurant, not anonymous gig workers.{" "}
       <Link href="/about">Read more</Link>
     </div>
   ) : (

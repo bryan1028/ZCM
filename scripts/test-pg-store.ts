@@ -10,6 +10,7 @@ const ok = (m: string) => console.log("PASS", m);
 (async () => {
   const pg = new PGlite();
   await pg.exec(readFileSync("supabase/migrations/0001_init.sql", "utf8"));
+  await pg.exec(readFileSync("supabase/migrations/0002_claims.sql", "utf8"));
   const wrap = (c: { query: (t: string, p?: unknown[]) => Promise<any> }): Q => async (t, p) => { const r = await c.query(t, p as unknown[]); return { rows: r.rows, rowCount: Math.max(r.rows.length, r.affectedRows ?? 0) }; };
   const sql: Sql = { query: wrap(pg), transaction: (fn) => pg.transaction(async (tx) => fn(wrap(tx))) };
   const s = createPgStore(sql);
@@ -28,22 +29,36 @@ const ok = (m: string) => console.log("PASS", m);
     R({ name: "Sushi Zen", sourceId: "4", country: "JP", city: "Tokyo", citySlug: "tokyo", cuisines: ["japanese", "sushi"], rank: 0.7 }),
   ];
   assert.deepEqual(await s.upsertImported(batch), { created: 4, skipped: 0 }); assert.deepEqual(await s.upsertImported(batch), { created: 0, skipped: 4 }); ok("bulk import is idempotent (4 created, then 4 skipped)");
-  let r = await s.searchRestaurants({ citySlug: "nairobi" }); assert.deepEqual(r.map((x) => x.name), ["Haandi", "Taj Indian Kitchen"]); ok("city search: verified-with-menu first, then by rank");
-  assert.equal(r[0].menu.length, 2); assert.equal(r[1].website, "https://taj.example"); assert.equal(r[1].phone, "254700000002"); ok("menu jsonb + phone/website round-trip");
-  assert.deepEqual((await s.searchRestaurants({ q: "indian" })).map((x) => x.name).sort(), ["Haandi", "Taj Indian Kitchen"]); ok("text search by cuisine");
-  assert.deepEqual((await s.searchRestaurants({ q: "ind kit" })).map((x) => x.name), ["Taj Indian Kitchen"]); ok("multi-word prefix search ('ind kit')");
+  let r = await s.searchRestaurants({ citySlug: "nairobi" }); assert.deepEqual(r.map((x) => x.name), ["Haandi"]); ok("city search lists only active restaurants that have a menu");
+  assert.equal(r[0].menu.length, 2); const taj0 = (await s.getRestaurant("overture-2"))!; assert.equal(taj0.website, "https://taj.example"); assert.equal(taj0.phone, "254700000002"); ok("menu jsonb + phone/website round-trip");
+  assert.deepEqual((await s.searchRestaurants({ q: "indian" })).map((x) => x.name), ["Haandi"]); ok("text search by cuisine");
+  assert.deepEqual((await s.searchRestaurants({ q: "ind haa" })).map((x) => x.name), ["Haandi"]); ok("multi-word prefix search ('ind haa')");
   assert.deepEqual((await s.searchRestaurants({ q: "jeera" })).map((x) => x.name), ["Haandi"]); ok("search finds dish names");
-  assert.deepEqual((await s.searchRestaurants({ diet: ["vegan"] })).map((x) => x.name), ["Green Bowl"]); ok("diet filter");
-  assert.deepEqual((await s.searchRestaurants({ country: "JP" })).map((x) => x.name), ["Sushi Zen"]); ok("country filter");
-  assert.equal((await s.searchRestaurants({ q: "'; drop table restaurants; --" })).length, 0); assert.equal((await s.searchRestaurants({})).length, 4); ok("SQL-injection style input is harmless");
-  assert.equal((await s.searchRestaurants({ limit: 2 })).length, 2); ok("limit respected");
+  assert.deepEqual((await s.searchRestaurants({ diet: ["vegetarian"] })).map((x) => x.name), ["Haandi"]); assert.equal((await s.searchRestaurants({ diet: ["vegan"] })).length, 0); ok("diet filter (and menu-less Green Bowl stays hidden)");
+  assert.deepEqual((await s.searchRestaurants({ country: "KE" })).map((x) => x.name), ["Haandi"]); assert.equal((await s.searchRestaurants({ country: "JP" })).length, 0); ok("country filter");
+  assert.equal((await s.searchRestaurants({ q: "'; drop table restaurants; --" })).length, 0); assert.equal((await s.searchRestaurants({})).length, 1); ok("SQL-injection style input is harmless");
+  assert.equal((await s.searchRestaurants({ limit: 1 })).length, 1); ok("limit respected");
   const dishes = await s.searchDishes({ q: "chicken" }); assert.deepEqual(dishes.map((d) => d.item.name), ["Chicken Tikka"]); assert.equal((await s.searchDishes({ avoid: ["dairy"] })).length, 0); ok("dish search + allergen avoidance");
-  assert.deepEqual((await s.listCities()).map((c) => `${c.city}:${c.count}`), ["Nairobi:2", "Lagos:1", "Tokyo:1"]); ok("city list via indexed GROUP BY");
+  assert.deepEqual((await s.listCities()).map((c) => `${c.city}:${c.count}`), ["Nairobi:1"]); ok("city list counts only active restaurants with menus");
   const id = await s.createRestaurant(R({ name: "Mama Pizza", sourceId: "x", source: "owner", status: "pending", whatsapp: "254711111111" })); assert.ok(id.startsWith("own-"));
   assert.equal((await s.searchRestaurants({ q: "pizza" })).length, 0, "pending restaurants are not public"); ok("owner submissions stay hidden until approved");
   await s.setMenu("import-x".replace("import", "overture"), []); // no-op on missing id
   await s.setMenu("overture-2", [{ id: "a", name: "Butter Naan", diets: ["vegetarian"], allergens: ["gluten"] }]);
-  assert.deepEqual((await s.searchRestaurants({ q: "naan" })).map((x) => x.name), ["Taj Indian Kitchen"]); assert.ok((await s.getRestaurant("overture-2"))!.diets.includes("vegetarian")); ok("setMenu refreshes search text + diets");
+  assert.equal((await s.searchRestaurants({ q: "naan" })).length, 0, "unclaimed stays hidden even with a menu"); assert.ok((await s.getRestaurant("overture-2"))!.diets.includes("vegetarian")); ok("setMenu refreshes search text + diets");
+  // ── claims: verified owners
+  const cid = await s.addClaim({ restaurantId: "overture-2", restaurantName: "Taj Indian Kitchen", country: "KE", city: "Nairobi", contactName: "Tej", whatsapp: "254700000002", email: "tej@taj.example", status: "new", userId: "u9", userHandle: "tej", role: "owner", proof: "https://taj.example", createdAt: new Date().toISOString() });
+  assert.equal((await s.getClaim(cid))!.userHandle, "tej"); assert.equal((await s.listClaimsByUser("u9")).length, 1);
+  await s.addClaimMessage({ claimId: cid, fromAdmin: false, body: "hello" }); await s.addClaimMessage({ claimId: cid, fromAdmin: true, body: "calling you" });
+  assert.deepEqual((await s.listClaimMessages(cid)).map((m) => m.fromAdmin), [false, true]); assert.equal((await s.listAllClaimMessages(10)).length, 2); ok("claims + message thread");
+  await s.updateClaim(cid, { status: "verifying" }); assert.equal((await s.getClaim(cid))!.status, "verifying");
+  await s.approveClaim(cid, 90);
+  const taj = (await s.getRestaurant("overture-2"))!; assert.equal(taj.status, "active"); assert.equal(taj.ownerUid, "u9"); assert.equal(taj.plan, "trial"); assert.ok(taj.trialEndsAt && Date.parse(taj.trialEndsAt) > Date.now() + 80 * 864e5);
+  assert.equal((await s.getClaim(cid))!.status, "approved"); assert.deepEqual((await s.listMyRestaurants("u9")).map((x) => x.name), ["Taj Indian Kitchen"]);
+  assert.deepEqual((await s.searchRestaurants({ q: "naan" })).map((x) => x.name), ["Taj Indian Kitchen"]); ok("approval makes the claimant owner, starts the trial, and lists the restaurant");
+  await s.updateRestaurantProfile("overture-2", { name: "Taj Kitchen", whatsapp: "254700000009", phone: null, website: null, address: "Moi Ave", cuisines: ["indian"] });
+  const taj2 = (await s.getRestaurant("overture-2"))!; assert.equal(taj2.name, "Taj Kitchen"); assert.equal(taj2.whatsapp, "254700000009"); assert.deepEqual((await s.searchRestaurants({ q: "kitchen" })).map((x) => x.name), ["Taj Kitchen"]); ok("owner profile edit refreshes search");
+  await assert.rejects(s.approveClaim(await s.addClaim({ restaurantName: "x", country: "KE", city: "Nairobi", contactName: "a", whatsapp: "1", createdAt: new Date().toISOString() }), 90)); ok("a claim without a signed-in claimant can't be approved");
+
   assert.equal(await s.getRestaurant("nope"), null); ok("missing restaurant -> null");
 
   // ── leads
@@ -90,6 +105,7 @@ const ok = (m: string) => console.log("PASS", m);
   await s.follow({ uid: "u2", handle: "bob" }, { uid: "u1", handle: "alice" }); await s.follow({ uid: "u2", handle: "bob" }, { uid: "u1", handle: "alice" }); await s.follow({ uid: "u1", handle: "alice" }, { uid: "u1", handle: "alice" });
   assert.equal(await s.followerCount("u1"), 1); assert.equal(await s.isFollowing("u2", "u1"), true); assert.deepEqual(await s.following("u2"), [{ uid: "u1", handle: "alice" }]);
   const act = await s.activityBy(["u1"]); assert.equal(act.requests.length, 1); assert.equal(act.prices.length, 0); ok("follow/unfollow/feed (no self-follow, no duplicates)");
+  await s.deleteAccountData("u9", "tej"); assert.equal((await s.listMyRestaurants("u9")).length, 0); assert.equal((await s.getClaim(cid))!.email, undefined); assert.equal((await s.getClaim(cid))!.contactName, "former member");
   await s.deleteAccountData("u1", "alice");
   assert.equal(await s.getProfile("u1"), null); assert.equal(await s.findUidByUsername("alice"), null); assert.equal(await s.followerCount("u1"), 0);
   assert.equal((await s.listLeads(10)).some((l) => l.userHandle === "alice" || l.userId === "u1"), false); assert.equal((await s.listRequests({}))[0].createdBy.handle, "former-member");
@@ -98,6 +114,6 @@ const ok = (m: string) => console.log("PASS", m);
 
   // ── support + claims
   await s.addSupportMessage({ email: "a@b.co", message: "hello", createdAt: new Date().toISOString() }); assert.equal((await s.listSupportMessages(5))[0].message, "hello");
-  await s.addClaim({ restaurantName: "Haandi", country: "KE", city: "Nairobi", contactName: "Sam", whatsapp: "254700000009", createdAt: new Date().toISOString() }); assert.equal((await s.listClaims(5)).length, 1); ok("support messages + claims");
+  await s.addClaim({ restaurantName: "Haandi", country: "KE", city: "Nairobi", contactName: "Sam", whatsapp: "254700000009", createdAt: new Date().toISOString() }); assert.equal((await s.listClaims(10)).length, 3); ok("support messages + claims");
   console.log("\nPostgres store: all checks passed");
 })().catch((e) => { console.error("PG STORE TEST FAILED:", e.message ?? e); process.exit(1); });

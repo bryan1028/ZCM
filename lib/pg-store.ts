@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { flattenDishes, queryWords, restaurantTokens, type DishQuery } from "./dishes";
 import { tokenize } from "./prices";
 import type { CitySummary, PriceQuery, Store, SupportMessage } from "./store";
-import type { Claim, Deal, Lead, MenuItem, PlaceRequest, PricePoint, Profile, Restaurant } from "./types";
+import type { Claim, ClaimMessage, Deal, Lead, MenuItem, PlaceRequest, PricePoint, Profile, Restaurant } from "./types";
 
 export type Q = (text: string, params?: unknown[]) => Promise<{ rows: any[]; rowCount: number }>;
 export interface Sql { query: Q; transaction<T>(fn: (q: Q) => Promise<T>): Promise<T> }
@@ -19,7 +19,7 @@ const searchText = (words: string[]) => " " + words.join(" ") + " ";
 const toRestaurant = (r: any): Restaurant => ({
   id: r.id, name: r.name, country: r.country, city: r.city, citySlug: r.city_slug, address: nn(r.address), lat: nn(r.lat), lng: nn(r.lng),
   whatsapp: r.whatsapp ?? null, phone: r.phone ?? null, website: nn(r.website), cuisines: r.cuisines ?? [], diets: r.diets ?? [], menu: r.menu ?? [],
-  status: r.status, source: r.source, sourceId: nn(r.source_id), plan: r.plan, leadCount: Number(r.lead_count ?? 0), rank: num(r.rank), createdAt: iso(r.created_at),
+  status: r.status, source: r.source, sourceId: nn(r.source_id), plan: r.plan, leadCount: Number(r.lead_count ?? 0), rank: num(r.rank), ownerUid: nn(r.owner_uid), trialEndsAt: r.trial_ends_at ? iso(r.trial_ends_at) : undefined, createdAt: iso(r.created_at),
 });
 const toPrice = (r: any): PricePoint => ({
   id: r.id, productKey: r.product_key, productName: r.product_name, brand: nn(r.brand), barcode: nn(r.barcode), size: nn(r.size), storeName: r.store_name,
@@ -38,8 +38,10 @@ const toLead = (r: any): Lead => ({
 });
 const toClaim = (r: any): Claim => ({
   id: r.id, restaurantId: nn(r.restaurant_id), restaurantName: r.restaurant_name, country: r.country, city: r.city, contactName: r.contact_name,
-  whatsapp: r.whatsapp, email: nn(r.email), createdAt: iso(r.created_at),
+  whatsapp: r.whatsapp, email: nn(r.email), status: r.status ?? "new", userId: nn(r.user_id), userHandle: nn(r.user_handle), role: nn(r.role),
+  proof: nn(r.proof), adminNote: nn(r.admin_note), createdAt: iso(r.created_at),
 });
+const toClaimMessage = (r: any): ClaimMessage => ({ id: r.id, claimId: r.claim_id, fromAdmin: r.from_admin === true, body: r.body, createdAt: iso(r.created_at) });
 const toProfile = (r: any): Profile => ({
   uid: r.uid, username: (r.username ?? "").toLowerCase(), email: r.email ?? "", diets: r.diets ?? [], allergies: r.allergies ?? [],
   city: nn(r.city), country: nn(r.country)?.toUpperCase(), optIn: r.opt_in === true, createdAt: iso(r.created_at), updatedAt: iso(r.updated_at),
@@ -49,7 +51,7 @@ const toRequest = (r: any): PlaceRequest => ({
   createdBy: { uid: r.created_by_uid, handle: r.created_by_handle }, supportCount: Number(r.support_count), status: r.status, createdAt: iso(r.created_at),
 });
 
-const RESTAURANT_COLS = "id,name,country,city,city_slug,address,lat,lng,whatsapp,phone,website,cuisines,diets,menu,status,source,source_id,plan,lead_count,rank,created_at";
+const RESTAURANT_COLS = "id,name,country,city,city_slug,address,lat,lng,whatsapp,phone,website,cuisines,diets,menu,status,source,source_id,plan,lead_count,rank,owner_uid,trial_ends_at,created_at";
 const PRICE_COLS = "id,product_key,product_name,brand,barcode,size,store_name,country,city,city_slug,lat,lng,price,currency,search_text,source,status,observed_at,created_at,reporter,reporter_handle,source_id";
 
 /** Collects `WHERE` fragments with numbered parameters. */
@@ -70,7 +72,7 @@ export function createPgStore(db: Sql): Store {
   return {
     // ───────────── Zood ─────────────
     async searchRestaurants(o) {
-      const w = where(); w.add("status in ('active','unclaimed')");
+      const w = where(); w.add("status = 'active'"); w.add("jsonb_array_length(menu) > 0"); // no menu, no listing
       if (o.country) w.add("country = ?", o.country);
       if (o.citySlug) w.add("city_slug = ?", o.citySlug);
       if (o.diet?.length) w.add("diets @> ?::text[]", o.diet);
@@ -90,7 +92,7 @@ export function createPgStore(db: Sql): Store {
       return flattenDishes(r.rows.map(toRestaurant), o).slice(0, o.limit ?? 60);
     },
     async listCities() {
-      const r = await q(`select country, city, city_slug, count(*)::int as n from restaurants where status in ('active','unclaimed') group by country, city, city_slug order by n desc, city limit 300`);
+      const r = await q(`select country, city, city_slug, count(*)::int as n from restaurants where status = 'active' and jsonb_array_length(menu) > 0 group by country, city, city_slug order by n desc, city limit 300`);
       return r.rows.map((x: any): CitySummary => ({ country: x.country, city: x.city, citySlug: x.city_slug, count: x.n }));
     },
     async setCities() { /* computed live from an indexed GROUP BY */ },
@@ -138,11 +140,51 @@ export function createPgStore(db: Sql): Store {
       return (await q(`select * from leads order by created_at desc limit $1`, [limit])).rows.map(toLead);
     },
     async addClaim(c) {
-      await q(`insert into claims (id,restaurant_id,restaurant_name,country,city,contact_name,whatsapp,email,created_at) values ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-        [randomUUID(), c.restaurantId ?? null, c.restaurantName, c.country, c.city, c.contactName, c.whatsapp, c.email ?? null, c.createdAt]);
+      const id = randomUUID();
+      await q(`insert into claims (id,restaurant_id,restaurant_name,country,city,contact_name,whatsapp,email,status,user_id,user_handle,role,proof,created_at)
+               values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+        [id, c.restaurantId ?? null, c.restaurantName, c.country, c.city, c.contactName, c.whatsapp, c.email ?? null, c.status ?? "new", c.userId ?? null, c.userHandle ?? null, c.role ?? null, c.proof ?? null, c.createdAt]);
+      return id;
     },
     async listClaims(limit) {
       return (await q(`select * from claims order by created_at desc limit $1`, [limit])).rows.map(toClaim);
+    },
+    async getClaim(id) {
+      const r = await q(`select * from claims where id = $1`, [id]);
+      return r.rows[0] ? toClaim(r.rows[0]) : null;
+    },
+    async listClaimsByUser(uid) {
+      return (await q(`select * from claims where user_id = $1 order by created_at desc`, [uid])).rows.map(toClaim);
+    },
+    async updateClaim(id, patch) {
+      await q(`update claims set status = coalesce($2, status), admin_note = coalesce($3, admin_note) where id = $1`, [id, patch.status ?? null, patch.adminNote ?? null]);
+    },
+    async approveClaim(id, trialDays) {
+      await db.transaction(async (tx) => {
+        const c = (await tx(`select restaurant_id, user_id from claims where id = $1`, [id])).rows[0];
+        if (!c?.restaurant_id || !c.user_id) throw new Error("Claim has no restaurant or no signed-in claimant.");
+        await tx(`update claims set status = 'approved' where id = $1`, [id]);
+        await tx(`update restaurants set status = 'active', plan = 'trial', owner_uid = $2, trial_ends_at = now() + ($3 || ' days')::interval where id = $1`, [c.restaurant_id, c.user_id, String(trialDays)]);
+      });
+    },
+    async addClaimMessage(m) {
+      await q(`insert into claim_messages (id,claim_id,from_admin,body) values ($1,$2,$3,$4)`, [randomUUID(), m.claimId, m.fromAdmin, m.body.slice(0, 2000)]);
+    },
+    async listClaimMessages(claimId) {
+      return (await q(`select id,claim_id,from_admin,body,created_at from claim_messages where claim_id = $1 order by created_at`, [claimId])).rows.map(toClaimMessage);
+    },
+    async listAllClaimMessages(limit) {
+      return (await q(`select id,claim_id,from_admin,body,created_at from claim_messages order by created_at desc limit $1`, [limit])).rows.map(toClaimMessage);
+    },
+    async listMyRestaurants(uid) {
+      return (await q(`select ${RESTAURANT_COLS} from restaurants where owner_uid = $1 order by name`, [uid])).rows.map(toRestaurant);
+    },
+    async updateRestaurantProfile(id, p) {
+      const cur = (await q(`select name, cuisines, menu from restaurants where id = $1`, [id])).rows[0];
+      if (!cur) return;
+      const name = p.name ?? cur.name, cuisines = p.cuisines ?? cur.cuisines ?? [];
+      await q(`update restaurants set name = $2, whatsapp = $3, phone = $4, website = $5, address = $6, cuisines = $7, search_text = $8 where id = $1`,
+        [id, name, p.whatsapp ?? null, p.phone ?? null, p.website ?? null, p.address ?? null, cuisines, searchText(restaurantTokens({ name, cuisines, menu: cur.menu ?? [] }))]);
     },
 
     // ───────────── Zind ─────────────
@@ -300,6 +342,9 @@ export function createPgStore(db: Sql): Store {
         await tx(`update prices set reporter = null, reporter_handle = null where reporter = $1`, [uid]);
         await tx(`update requests set created_by_uid = 'deleted', created_by_handle = 'former-member' where created_by_uid = $1`, [uid]);
         await tx(`update supporters set handle = 'former-member' where uid = $1`, [uid]);
+        // Claimant details are personal data; the verification outcome stays but is no longer tied to the person.
+        await tx(`update claims set user_id = null, user_handle = null, contact_name = 'former member', email = null, whatsapp = '' where user_id = $1`, [uid]);
+        await tx(`update restaurants set owner_uid = null where owner_uid = $1`, [uid]);
       });
     },
     async addSupportMessage(m: SupportMessage) {

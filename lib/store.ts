@@ -7,7 +7,8 @@ import { tokenize } from "./prices";
 import { flattenDishes, queryWords, restaurantTokens, type DishHit, type DishQuery } from "./dishes";
 import { DIETS } from "./types";
 import { createLazyPoolSql, createPgStore } from "./pg-store";
-import type { Claim, Deal, Diet, Lead, MenuItem, PlaceRequest, PricePoint, Profile, Restaurant } from "./types";
+import { randomUUID } from "node:crypto";
+import type { Claim, ClaimMessage, Deal, Diet, Lead, MenuItem, PlaceRequest, PricePoint, Profile, Restaurant } from "./types";
 
 export interface SearchOptions {
   country?: string;
@@ -40,8 +41,19 @@ export interface Store {
   setMenu(id: string, menu: MenuItem[]): Promise<void>;
   recordLead(lead: Lead): Promise<void>;
   listLeads(limit: number): Promise<Lead[]>;
-  addClaim(claim: Claim): Promise<void>;
+  addClaim(claim: Claim): Promise<string>;
   listClaims(limit: number): Promise<Claim[]>;
+  getClaim(id: string): Promise<Claim | null>;
+  listClaimsByUser(uid: string): Promise<Claim[]>;
+  updateClaim(id: string, patch: { status?: Claim["status"]; adminNote?: string }): Promise<void>;
+  /** Approve: marks the claim approved and makes the claimant the owner, starting a free trial. */
+  approveClaim(id: string, trialDays: number): Promise<void>;
+  addClaimMessage(m: { claimId: string; fromAdmin: boolean; body: string }): Promise<void>;
+  listClaimMessages(claimId: string): Promise<ClaimMessage[]>;
+  listAllClaimMessages(limit: number): Promise<ClaimMessage[]>;
+  listMyRestaurants(uid: string): Promise<Restaurant[]>;
+  /** Owner-editable profile fields only. */
+  updateRestaurantProfile(id: string, patch: { name?: string; whatsapp?: string | null; phone?: string | null; website?: string | null; address?: string | null; cuisines?: string[] }): Promise<void>;
 
   // Zist Find
   searchPrices(o: PriceQuery): Promise<PricePoint[]>;
@@ -172,6 +184,8 @@ function createDemoStore(): Store {
 
   return {
     getProfile: needsDb, saveProfile: needsDb, claimUsername: needsDb, releaseUsername: needsDb, findEmailByUsername: needsDb,
+    getClaim: needsDb, listClaimsByUser: needsDb, updateClaim: needsDb, approveClaim: needsDb, addClaimMessage: needsDb, listClaimMessages: needsDb,
+    listAllClaimMessages: needsDb, listMyRestaurants: needsDb, updateRestaurantProfile: needsDb,
     upsertRequest: needsDb, supportRequest: needsDb, setRequestStatus: needsDb,
     findUidByUsername: needsDb, follow: needsDb, unfollow: needsDb, deleteAccountData: needsDb,
     async isFollowing() { return false; }, async following() { return []; }, async followerCount() { return 0; },
@@ -245,7 +259,9 @@ function createDemoStore(): Store {
       return readLines<Lead>(leadsFile).reverse().slice(0, limit);
     },
     async addClaim(c) {
-      appendFileSync(claimsFile, JSON.stringify(c) + "\n");
+      const id = randomUUID();
+      appendFileSync(claimsFile, JSON.stringify({ ...c, id }) + "\n");
+      return id;
     },
     async listClaims(limit) {
       return readLines<Claim>(claimsFile).reverse().slice(0, limit);
@@ -256,6 +272,7 @@ function createDemoStore(): Store {
 // ───────────────────────── Firestore ─────────────────────────
 
 function createFirestoreStore(): Store {
+  const retired = async (): Promise<never> => { throw new Error("Owner claims need Postgres. Set DATABASE_URL."); };
   const db = adminDb();
   const col = db.collection("restaurants");
   const toR = (d: DocumentSnapshot): Restaurant => ({ ...(d.data() as Omit<Restaurant, "id">), id: d.id });
@@ -284,6 +301,9 @@ function createFirestoreStore(): Store {
   const reqFrom = (d: DocumentSnapshot) => ({ ...(d.data() as object), id: d.id }) as PlaceRequest;
 
   return {
+    // Claims, owner accounts and the claim inbox live in Postgres only (Firestore is retired).
+    getClaim: retired, listClaimsByUser: retired, updateClaim: retired, approveClaim: retired, addClaimMessage: retired, listClaimMessages: retired,
+    listAllClaimMessages: retired, listMyRestaurants: retired, updateRestaurantProfile: retired,
     async getProfile(uid) {
       const d = await profiles.doc(uid).get();
       return d.exists ? toProfile(d) : null;
@@ -547,7 +567,7 @@ function createFirestoreStore(): Store {
       return snap.docs.map((d: DocumentSnapshot) => ({ ...(d.data() as Lead), id: d.id }));
     },
     async addClaim(c) {
-      await db.collection("claims").add(c);
+      return (await db.collection("claims").add(c)).id;
     },
     async listClaims(limit) {
       const snap = await db.collection("claims").orderBy("createdAt", "desc").limit(limit).get();

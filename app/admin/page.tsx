@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getStore } from "@/lib/store";
 import { regionName } from "@/lib/util";
+import { adminClaimAction } from "../claim-actions";
 import { addDeal, setPriceStatus, setRequestStatusAction } from "../actions";
 import { requireAdmin } from "@/lib/auth";
 
@@ -17,6 +18,10 @@ export default async function Admin() {
   await requireAdmin();
   const store = getStore();
   const [leads, claims, prices, deals, profiles, requests, support] = await Promise.all([store.listLeads(1000), store.listClaims(50), store.listPrices(60), store.listDeals({ includeAll: true, limit: 30 }), store.listProfiles(20000), store.listRequests({ includeAll: true, limit: 500 }), store.listSupportMessages(30)]);
+  const [claimRestaurants, claimThreads] = await Promise.all([
+    Promise.all(claims.map((c) => (c.restaurantId ? store.getRestaurant(c.restaurantId) : Promise.resolve(null)))),
+    Promise.all(claims.map((c) => (c.id ? store.listClaimMessages(c.id) : Promise.resolve([])))),
+  ]);
   const day = Date.now() - 864e5;
   const week = Date.now() - 7 * 864e5;
   const since = (t: number) => leads.filter((l) => Date.parse(l.createdAt) >= t).length;
@@ -82,7 +87,7 @@ export default async function Admin() {
         ))}</tbody>
       </table></div>
 
-      <h2 style={{ marginTop: 28 }}>Support messages ({support.length})</h2>
+      <h2 id="support" style={{ marginTop: 28 }}>Inbox: support ({support.length})</h2>
       <div className="table-scroll"><table>
         <thead><tr><th>When</th><th>From</th><th>Message</th></tr></thead>
         <tbody>{support.map((m, i) => <tr key={m.id ?? i}><td>{m.createdAt.slice(0, 10)}</td><td><a href={`mailto:${m.email}`}>{m.email}</a>{m.userHandle ? ` (@${m.userHandle})` : ""}</td><td style={{ whiteSpace: "pre-wrap" }}>{m.message}</td></tr>)}</tbody>
@@ -102,16 +107,40 @@ export default async function Admin() {
         ))}</tbody>
       </table></div>
 
-      <h2 style={{ marginTop: 28 }}>Claims &amp; new listings to verify</h2>
-      <div className="table-scroll"><table>
-        <thead><tr><th>When</th><th>Restaurant</th><th>Contact</th><th>WhatsApp</th></tr></thead>
-        <tbody>{claims.map((c, i) => (
-          <tr key={c.id ?? i}>
-            <td>{c.createdAt.slice(0, 10)}</td><td>{c.restaurantName} — {c.city}, {c.country}{c.restaurantId ? " (claim)" : " (new)"}</td><td>{c.contactName}</td>
-            <td><a href={`https://wa.me/${c.whatsapp}`} target="_blank" rel="noopener">+{c.whatsapp}</a></td>
-          </tr>
-        ))}</tbody>
-      </table></div>
+      <h2 id="claims" style={{ marginTop: 28 }}>Inbox: restaurants ({claims.filter((c) => c.status === "new" || c.status === "verifying" || !c.status).length} open)</h2>
+      <p className="meta">Verify before approving: call the restaurant on its <b>listed</b> number (not the claimant's), or check that the claimant's email domain matches the restaurant's website and the proof link shows them as owner. Approving starts a 90-day free trial and gives them the menu editor.</p>
+      {claims.map((c, i) => {
+        const r = claimRestaurants[i];
+        const domain = c.email?.split("@")[1]?.toLowerCase();
+        const siteHost = r?.website ? (() => { try { return new URL(r.website).hostname.replace(/^www\./, "").toLowerCase(); } catch { return ""; } })() : "";
+        const match = domain && siteHost && (siteHost === domain || siteHost.endsWith("." + domain) || domain.endsWith("." + siteHost));
+        return (
+          <div key={c.id ?? i} className="card" style={{ marginBottom: 12 }}>
+            <h3>{c.restaurantName} <span className="tag gray">{c.status ?? "new"}</span> {c.restaurantId && <a className="meta" href={`/admin/restaurant/${encodeURIComponent(c.restaurantId)}`}>edit menu</a>}</h3>
+            <div className="meta">{c.city}, {c.country} · {c.createdAt.slice(0, 10)}{c.restaurantId ? ` · listing: ${r?.status ?? "?"}` : " · no listing"}</div>
+            <div className="meta">
+              Claimant: <b>{c.contactName}</b> ({c.role ?? "?"}){c.userHandle ? ` @${c.userHandle}` : " (not signed in)"} ·{" "}
+              {c.email && <a href={`mailto:${c.email}`}>{c.email}</a>} · <a href={`https://wa.me/${c.whatsapp}`} target="_blank" rel="noopener">+{c.whatsapp}</a>
+            </div>
+            <div className="meta">Listed contact: {r?.phone ? `+${r.phone}` : "no phone"} · {r?.website ? <a href={r.website} target="_blank" rel="noopener">{r.website}</a> : "no website"} · email/website domain match: <b>{match ? "yes" : "no"}</b></div>
+            {c.proof && <div className="meta" style={{ whiteSpace: "pre-wrap" }}>Proof: {c.proof}</div>}
+            {claimThreads[i].map((m) => <p key={m.id} className="meta" style={{ whiteSpace: "pre-wrap", margin: "4px 0" }}><b>{m.fromAdmin ? "Us" : "Them"}</b> · {m.createdAt.slice(0, 16).replace("T", " ")}<br />{m.body}</p>)}
+            {c.id && c.status !== "approved" && (
+              <form className="stack" action={adminClaimAction}>
+                <input type="hidden" name="claimId" value={c.id} />
+                <label className="f">Reply (shown to them on their account page)<textarea name="body" rows={2} maxLength={2000} /></label>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <button type="submit" name="op" value="reply">Send reply</button>
+                  <button type="submit" name="op" value="verifying" className="ghost">Mark verifying</button>
+                  <button type="submit" name="op" value="approve">Approve + start trial</button>
+                  <button type="submit" name="op" value="reject" className="danger">Reject</button>
+                </div>
+              </form>
+            )}
+          </div>
+        );
+      })}
+      {claims.length === 0 && <p className="meta">No claims yet.</p>}
 
       <h2 style={{ marginTop: 28 }}>Zist Find: price reports</h2>
       <p className="meta">{prices.filter((p) => p.status === "flagged").length} flagged for review. Flagged and hidden prices are not shown to the public.</p>

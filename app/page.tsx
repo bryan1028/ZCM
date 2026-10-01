@@ -86,7 +86,7 @@ export default async function Zood({ searchParams }: { searchParams: SP }) {
       {!dishes.length && !restaurants.length && (
         <>
           <h2>Zood came back empty-handed 🥲</h2>
-          <p className="meta">Nobody's cooking that here yet{where ? ` in ${where}` : ""}. Try a broader craving, or <Link href="/requests/new">zummon the restaurant that should be</Link>.</p>
+          <p className="meta">Nobody's cooking that here yet{where ? ` in ${where}` : ""}. Try a broader craving, or <Link href="/requests/new">zummon the restaurant that should be</Link>. Run a restaurant? <Link href="/list">Put it on Zood</Link> with a free trial.</p>
         </>
       )}
       {!dishes.length && restaurants.length > 0 && searching && <p className="meta">No menu has that dish yet, but these places might.</p>}
