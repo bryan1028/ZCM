@@ -97,21 +97,3 @@ export async function sendVerificationEmail(uid: string): Promise<boolean> {
     return res.ok;
   } catch { return false; }
 }
-
-/**
- * reCAPTCHA v3 check (score-based, invisible). Active only when RECAPTCHA_SECRET is set, so the site keeps working without keys.
- * Passes when Google says success, the action matches and the score is at least 0.5. Returns true when not configured.
- */
-export async function captchaOk(formData: FormData, action = "signup"): Promise<boolean> {
-  const secret = process.env.RECAPTCHA_SECRET;
-  if (!secret) return true;
-  const token = String(formData.get("g-recaptcha-response") ?? "");
-  if (!token) return false;
-  try {
-    const res = await fetch("https://www.google.com/recaptcha/api/siteverify", {
-      method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ secret, response: token }),
-    });
-    const r = (await res.json()) as { success?: boolean; score?: number; action?: string };
-    return r.success === true && (r.score === undefined || r.score >= 0.5) && (r.action === undefined || r.action === action);
-  } catch { return false; }
-}

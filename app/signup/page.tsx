@@ -3,7 +3,6 @@ import Link from "next/link";
 import { DIETS } from "@/lib/types";
 import { safeNext } from "@/lib/session";
 import { signUp } from "../auth-actions";
-import { Captcha } from "../captcha";
 
 export const metadata: Metadata = { title: "Create your account" };
 export const dynamic = "force-dynamic";
@@ -12,7 +11,7 @@ const ERRORS: Record<string, string> = {
   username: "Usernames are 3-20 letters, numbers or underscores.", taken: "That username is taken. Try another.",
   email: "That email doesn't look right.", exists: "An account with that email already exists. Try signing in.",
   password: "Use a password of at least 8 characters.", failed: "Something went wrong. Please try again.",
-  unavailable: "Accounts aren't available on this server yet.", captcha: "We couldn't confirm you're human. Wait a second and try again.",
+  unavailable: "Accounts aren't available on this server yet.",
 };
 
 export default async function SignUp({ searchParams }: { searchParams: Promise<{ error?: string; next?: string }> }) {
@@ -38,7 +37,6 @@ export default async function SignUp({ searchParams }: { searchParams: Promise<{
         </div>
         <label className="f">Allergies (comma separated, optional)<input type="text" name="allergies" placeholder="peanuts, shellfish" /></label>
         <label className="checkline"><input type="checkbox" name="optIn" /><span>Email me when Zist launches in my city, and about restaurants I asked for. You can opt out any time.</span></label>
-        <Captcha />
         <button type="submit">Create account</button>
       </form>
       <p className="meta" style={{ marginTop: 14 }}>Already have an account? <Link href={`/login?next=${encodeURIComponent(next)}`}>Sign in</Link></p>

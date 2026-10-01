@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { adminAuth } from "@/lib/firebase-admin";
-import { captchaOk, endSession, isEmailVerified, passwordSignIn, sendVerificationEmail, requireUser, safeNext, sendPasswordReset, startSession } from "@/lib/session";
+import { endSession, isEmailVerified, passwordSignIn, sendVerificationEmail, requireUser, safeNext, sendPasswordReset, startSession } from "@/lib/session";
 import { getStore, isDemo } from "@/lib/store";
 import { DIETS, type Diet } from "@/lib/types";
 
@@ -25,7 +25,6 @@ export async function signUp(formData: FormData) {
   const back = (error: string) => redirect(`/signup?error=${error}&next=${encodeURIComponent(next)}`);
   if (clean(formData.get("website"))) redirect("/"); // honeypot
   if (isDemo()) back("unavailable");
-  if (!(await captchaOk(formData))) back("captcha");
 
   const username = clean(formData.get("username"), 30).toLowerCase();
   const email = clean(formData.get("email"), 120).toLowerCase();
