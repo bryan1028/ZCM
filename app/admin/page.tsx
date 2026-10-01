@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getStore } from "@/lib/store";
 import { regionName } from "@/lib/util";
+import { addDeal, setPriceStatus } from "../actions";
 
 export const metadata: Metadata = { title: "Admin", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -13,7 +14,7 @@ const countBy = <T,>(xs: T[], key: (x: T) => string) => {
 
 export default async function Admin() {
   const store = getStore();
-  const [leads, claims] = await Promise.all([store.listLeads(1000), store.listClaims(50)]);
+  const [leads, claims, prices, deals] = await Promise.all([store.listLeads(1000), store.listClaims(50), store.listPrices(60), store.listDeals({ includeAll: true, limit: 30 })]);
   const day = Date.now() - 864e5;
   const week = Date.now() - 7 * 864e5;
   const since = (t: number) => leads.filter((l) => Date.parse(l.createdAt) >= t).length;
@@ -55,6 +56,39 @@ export default async function Admin() {
           </tr>
         ))}</tbody>
       </table></div>
+
+      <h2 style={{ marginTop: 28 }}>Zist Find: price reports</h2>
+      <p className="meta">{prices.filter((p) => p.status === "flagged").length} flagged for review. Flagged and hidden prices are not shown to the public.</p>
+      <div className="table-scroll"><table>
+        <thead><tr><th>When</th><th>Product</th><th>Store</th><th>Price</th><th>Src</th><th>Status</th><th></th></tr></thead>
+        <tbody>{prices.map((p) => (
+          <tr key={p.id}>
+            <td>{p.createdAt.slice(0, 10)}</td><td>{[p.brand, p.productName, p.size].filter(Boolean).join(" ")}</td><td>{p.storeName}, {p.city}</td>
+            <td>{p.currency} {p.price}</td><td>{p.source}</td><td>{p.status}</td>
+            <td>
+              <form className="inline" action={setPriceStatus}><input type="hidden" name="id" value={p.id} /><input type="hidden" name="status" value={p.status === "ok" ? "hidden" : "ok"} /><button type="submit">{p.status === "ok" ? "Hide" : "Approve"}</button></form>
+            </td>
+          </tr>
+        ))}</tbody>
+      </table></div>
+
+      <h2 style={{ marginTop: 28 }}>Zist Find: deals ({deals.length})</h2>
+      <form className="stack" action={addDeal} style={{ marginBottom: 16 }}>
+        <label className="f">Title<input type="text" name="title" required /></label>
+        <label className="f">Store<input type="text" name="store" required /></label>
+        <div style={{ display: "flex", gap: 10 }}>
+          <label className="f" style={{ flex: 2 }}>City<input type="text" name="city" required /></label>
+          <label className="f" style={{ flex: 1 }}>Country (2)<input type="text" name="country" required maxLength={2} /></label>
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <label className="f" style={{ flex: 1 }}>Price<input type="text" name="price" inputMode="decimal" /></label>
+          <label className="f" style={{ flex: 1 }}>Currency<input type="text" name="currency" maxLength={3} /></label>
+          <label className="f" style={{ flex: 1 }}>% off<input type="text" name="discountPct" inputMode="numeric" /></label>
+        </div>
+        <label className="f">Valid until<input type="date" name="validUntil" required /></label>
+        <label className="f">Link (optional)<input type="text" name="url" /></label>
+        <button type="submit">Add deal</button>
+      </form>
     </section>
   );
 }

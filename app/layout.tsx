@@ -24,7 +24,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="wrap">
             <Link href="/" className="logo">Zist</Link>
             <nav>
-              <Link href="/">Find food</Link>
+              <Link href="/">Food</Link>
+              <Link href="/find">Prices</Link>
+              <Link href="/deals">Deals</Link>
               <Link href="/list">List your restaurant</Link>
             </nav>
           </div>
@@ -33,7 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <footer className="site">
           <div className="wrap">
             Menu and allergen details are provided by restaurants and may be out of date. If you have a severe allergy, always confirm with the restaurant before ordering.
-            <br />Some restaurant locations © OpenStreetMap contributors.
+            <br />Some restaurant locations © OpenStreetMap contributors. Some prices from Open Food Facts contributors (Open Prices).
           </div>
         </footer>
       </body>

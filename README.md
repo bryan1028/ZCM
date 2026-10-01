@@ -29,6 +29,27 @@ Set `FIREBASE_SERVICE_ACCOUNT` (see `.env.example`) to use the real database ins
 The `ref` code in each WhatsApp message lets a restaurant confirm a lead ("yes, ref K82E messaged us").
 Link taps count *intent to message*; WhatsApp doesn't tell us whether the message was actually sent.
 
+## Zist Find: prices & deals (worldwide)
+
+| Path | What |
+|---|---|
+| `/find?q=milk&city=nairobi` | Price per store for a product, cheapest highlighted, with how old each price is |
+| `/find/report` | Anyone can report a shelf price (no account) |
+| `/deals` | Active deals by city; added by admin in `/admin` |
+| `/api/prices?q=&city=&country=` | Public JSON comparison, for the ChatGPT app |
+
+Prices come from shoppers plus the open **Open Prices** dataset (Open Food Facts) — no scraping of retailer sites.
+Quality guards: only the latest price per store counts; prices older than 120 days are ignored; currencies are never mixed;
+a report far from the local median (3x) is held as `flagged` until an admin approves it in `/admin`; plus a honeypot and a
+20-reports/day cap per visitor cookie (a speed bump, not strong anti-abuse — add accounts or photo proof before scale).
+
+```bash
+npm test                              # price-logic unit tests
+npm run import:openprices -- KE 10    # seed Kenya from Open Prices (10 pages x 100)
+```
+
+Firestore collections added: `prices`, `deals_find` (the legacy Find app's `items`/`deals` are untouched).
+
 ## Adding restaurants worldwide
 
 ```bash

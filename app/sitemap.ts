@@ -8,6 +8,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const cities = await getStore().listCities();
   return [
     { url: site },
+    { url: `${site}/find` },
+    { url: `${site}/deals` },
     ...cities.map((c) => ({ url: `${site}/c/${c.country.toLowerCase()}/${c.citySlug}` })),
   ];
 }

@@ -1,0 +1,31 @@
+[
+ {
+  "id": "dd-1",
+  "title": "Brookside milk 500ml \u2014 3 for 150",
+  "storeName": "Quickmart",
+  "country": "KE",
+  "city": "Nairobi",
+  "citySlug": "nairobi",
+  "description": "In-store offer, while stocks last.",
+  "price": 50,
+  "currency": "KES",
+  "discountPct": 17,
+  "validUntil": "2026-10-31",
+  "status": "active",
+  "source": "admin",
+  "createdAt": "2026-09-30T12:00:00Z"
+ },
+ {
+  "id": "dd-2",
+  "title": "20% off all fresh vegetables (Saturdays)",
+  "storeName": "Carrefour",
+  "country": "KE",
+  "city": "Nairobi",
+  "citySlug": "nairobi",
+  "discountPct": 20,
+  "validUntil": "2026-12-31",
+  "status": "active",
+  "source": "admin",
+  "createdAt": "2026-09-28T12:00:00Z"
+ }
+]

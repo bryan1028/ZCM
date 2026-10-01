@@ -41,3 +41,25 @@ export function SearchForm({ defaults }: { defaults: { q?: string; city?: string
     </form>
   );
 }
+
+import type { PriceComparison } from "@/lib/types";
+import { agoLabel } from "@/lib/prices";
+import { formatPrice } from "@/lib/util";
+
+export function PriceCard({ c }: { c: PriceComparison }) {
+  return (
+    <article className="card">
+      <h3>{[c.brand, c.productName, c.size].filter(Boolean).join(" ")}</h3>
+      {c.stores.length > 1 && c.savingsPct > 0 && <div className="meta">Save up to <b>{c.savingsPct}%</b> at {c.stores[0].storeName}</div>}
+      <div style={{ display: "grid", gap: 6 }}>
+        {c.stores.map((s) => (
+          <div key={s.storeName} className="bar-row">
+            <div className="bar-label">{s.storeName}</div>
+            <div className="bar-track"><div className={s.isCheapest ? "bar cheapest" : "bar"} style={{ width: `${Math.max(18, (s.price / c.max) * 100)}%` }}>{formatPrice(s.price, c.currency)}</div></div>
+            <div className="meta bar-age">{agoLabel(s.observedAt)}{s.source === "openprices" ? " · Open Prices" : ""}</div>
+          </div>
+        ))}
+      </div>
+    </article>
+  );
+}

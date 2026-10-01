@@ -50,3 +50,11 @@ th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--bor
 footer.site { border-top: 1px solid var(--border); padding: 24px 0 48px; color: var(--ink-muted); font-size: 13px; }
 label.f { display: grid; gap: 4px; font-size: 14px; font-weight: 500; } form.stack { display: grid; gap: 14px; max-width: 520px; }
 @media (max-width: 520px) { nav a:nth-child(n+3) { display: none; } }
+.bar-row { display: grid; grid-template-columns: 96px 1fr 84px; gap: 8px; align-items: center; font-size: 14px; }
+.bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-track { background: #f1ebe0; border-radius: 8px; overflow: hidden; }
+.bar { background: #cdbfa8; color: var(--ink); padding: 4px 8px; font-weight: 600; font-size: 13px; white-space: nowrap; border-radius: 8px; }
+.bar.cheapest { background: var(--sage); color: #fff; }
+.bar-age { text-align: right; font-size: 12px; }
+@media (max-width: 420px) { .bar-row { grid-template-columns: 70px 1fr; } .bar-age { display: none; } }
+form.inline { display: inline; } form.inline button { padding: 4px 10px; font-size: 12px; }

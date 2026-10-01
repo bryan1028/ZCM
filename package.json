@@ -8,7 +8,9 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "import:csv": "tsx scripts/import-csv.ts",
-    "seed:osm": "tsx scripts/seed-osm.ts"
+    "seed:osm": "tsx scripts/seed-osm.ts",
+    "import:openprices": "tsx scripts/import-openprices.ts",
+    "test": "tsx scripts/test-prices.ts"
   },
   "dependencies": {
     "firebase-admin": "^14.5.0",

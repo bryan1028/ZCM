@@ -1,0 +1,200 @@
+[
+ {
+  "id": "dp-1",
+  "productKey": "brookside-fresh-milk-500ml",
+  "productName": "Fresh Milk",
+  "brand": "Brookside",
+  "size": "500ml",
+  "storeName": "Naivas",
+  "country": "KE",
+  "city": "Nairobi",
+  "citySlug": "nairobi",
+  "price": 60,
+  "currency": "KES",
+  "tokens": [
+   "brookside",
+   "fresh",
+   "milk"
+  ],
+  "source": "admin",
+  "status": "ok",
+  "observedAt": "2026-09-30T12:00:00Z",
+  "createdAt": "2026-09-30T12:00:00Z"
+ },
+ {
+  "id": "dp-2",
+  "productKey": "brookside-fresh-milk-500ml",
+  "productName": "Fresh Milk",
+  "brand": "Brookside",
+  "size": "500ml",
+  "storeName": "Carrefour",
+  "country": "KE",
+  "city": "Nairobi",
+  "citySlug": "nairobi",
+  "price": 64,
+  "currency": "KES",
+  "tokens": [
+   "brookside",
+   "fresh",
+   "milk"
+  ],
+  "source": "admin",
+  "status": "ok",
+  "observedAt": "2026-09-29T12:00:00Z",
+  "createdAt": "2026-09-29T12:00:00Z"
+ },
+ {
+  "id": "dp-3",
+  "productKey": "brookside-fresh-milk-500ml",
+  "productName": "Fresh Milk",
+  "brand": "Brookside",
+  "size": "500ml",
+  "storeName": "Quickmart",
+  "country": "KE",
+  "city": "Nairobi",
+  "citySlug": "nairobi",
+  "price": 58,
+  "currency": "KES",
+  "tokens": [
+   "brookside",
+   "fresh",
+   "milk"
+  ],
+  "source": "admin",
+  "status": "ok",
+  "observedAt": "2026-09-28T12:00:00Z",
+  "createdAt": "2026-09-28T12:00:00Z"
+ },
+ {
+  "id": "dp-4",
+  "productKey": "brookside-fresh-milk-500ml",
+  "productName": "Fresh Milk",
+  "brand": "Brookside",
+  "size": "500ml",
+  "storeName": "Tuskys",
+  "country": "KE",
+  "city": "Nairobi",
+  "citySlug": "nairobi",
+  "price": 62,
+  "currency": "KES",
+  "tokens": [
+   "brookside",
+   "fresh",
+   "milk"
+  ],
+  "source": "admin",
+  "status": "ok",
+  "observedAt": "2026-08-22T12:00:00Z",
+  "createdAt": "2026-08-22T12:00:00Z"
+ },
+ {
+  "id": "dp-5",
+  "productKey": "jogoo-maize-flour-2kg",
+  "productName": "Maize Flour",
+  "brand": "Jogoo",
+  "size": "2kg",
+  "storeName": "Naivas",
+  "country": "KE",
+  "city": "Nairobi",
+  "citySlug": "nairobi",
+  "price": 168,
+  "currency": "KES",
+  "tokens": [
+   "flour",
+   "jogoo",
+   "maize"
+  ],
+  "source": "admin",
+  "status": "ok",
+  "observedAt": "2026-09-29T12:00:00Z",
+  "createdAt": "2026-09-29T12:00:00Z"
+ },
+ {
+  "id": "dp-6",
+  "productKey": "jogoo-maize-flour-2kg",
+  "productName": "Maize Flour",
+  "brand": "Jogoo",
+  "size": "2kg",
+  "storeName": "Carrefour",
+  "country": "KE",
+  "city": "Nairobi",
+  "citySlug": "nairobi",
+  "price": 175,
+  "currency": "KES",
+  "tokens": [
+   "flour",
+   "jogoo",
+   "maize"
+  ],
+  "source": "admin",
+  "status": "ok",
+  "observedAt": "2026-09-26T12:00:00Z",
+  "createdAt": "2026-09-26T12:00:00Z"
+ },
+ {
+  "id": "dp-7",
+  "productKey": "jogoo-maize-flour-2kg",
+  "productName": "Maize Flour",
+  "brand": "Jogoo",
+  "size": "2kg",
+  "storeName": "Quickmart",
+  "country": "KE",
+  "city": "Nairobi",
+  "citySlug": "nairobi",
+  "price": 160,
+  "currency": "KES",
+  "tokens": [
+   "flour",
+   "jogoo",
+   "maize"
+  ],
+  "source": "admin",
+  "status": "ok",
+  "observedAt": "2026-09-30T12:00:00Z",
+  "createdAt": "2026-09-30T12:00:00Z"
+ },
+ {
+  "id": "dp-8",
+  "productKey": "pishori-basmati-rice-1kg",
+  "productName": "Basmati Rice",
+  "brand": "Pishori",
+  "size": "1kg",
+  "storeName": "Naivas",
+  "country": "KE",
+  "city": "Nairobi",
+  "citySlug": "nairobi",
+  "price": 290,
+  "currency": "KES",
+  "tokens": [
+   "basmati",
+   "pishori",
+   "rice"
+  ],
+  "source": "admin",
+  "status": "ok",
+  "observedAt": "2026-09-27T12:00:00Z",
+  "createdAt": "2026-09-27T12:00:00Z"
+ },
+ {
+  "id": "dp-9",
+  "productKey": "pishori-basmati-rice-1kg",
+  "productName": "Basmati Rice",
+  "brand": "Pishori",
+  "size": "1kg",
+  "storeName": "Quickmart",
+  "country": "KE",
+  "city": "Nairobi",
+  "citySlug": "nairobi",
+  "price": 275,
+  "currency": "KES",
+  "tokens": [
+   "basmati",
+   "pishori",
+   "rice"
+  ],
+  "source": "admin",
+  "status": "ok",
+  "observedAt": "2026-09-28T12:00:00Z",
+  "createdAt": "2026-09-28T12:00:00Z"
+ }
+]

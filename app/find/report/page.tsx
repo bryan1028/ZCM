@@ -1,0 +1,31 @@
+import type { Metadata } from "next";
+import { reportPrice } from "../../actions";
+
+export const metadata: Metadata = { title: "Report a price" };
+
+export default async function Report({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+  const { error } = await searchParams;
+  return (
+    <section className="hero">
+      <h1>Report a price</h1>
+      <p>Saw a price at a store? Add it so others can compare. Takes 20 seconds.</p>
+      {error === "limit" && <div className="notice">You've reached today's limit. Please come back tomorrow.</div>}
+      {error === "1" && <div className="notice">Please fill every required field with a valid price, 2-letter country code and 3-letter currency.</div>}
+      <form className="stack" action={reportPrice}>
+        <input type="text" name="website" tabIndex={-1} autoComplete="off" style={{ display: "none" }} aria-hidden />
+        <label className="f">Product<input type="text" name="product" required placeholder="Fresh Milk" /></label>
+        <label className="f">Brand (optional)<input type="text" name="brand" placeholder="Brookside" /></label>
+        <label className="f">Size (optional)<input type="text" name="size" placeholder="500ml" /></label>
+        <label className="f">Barcode (optional)<input type="text" name="barcode" inputMode="numeric" /></label>
+        <label className="f">Store<input type="text" name="store" required placeholder="Naivas Westgate" /></label>
+        <label className="f">City<input type="text" name="city" required placeholder="Nairobi" /></label>
+        <label className="f">Country code (2 letters)<input type="text" name="country" required maxLength={2} placeholder="KE" style={{ textTransform: "uppercase" }} /></label>
+        <div className="row" style={{ display: "flex", gap: 10 }}>
+          <label className="f" style={{ flex: 2 }}>Price<input type="text" name="price" inputMode="decimal" required placeholder="60" /></label>
+          <label className="f" style={{ flex: 1 }}>Currency<input type="text" name="currency" required maxLength={3} placeholder="KES" style={{ textTransform: "uppercase" }} /></label>
+        </div>
+        <button type="submit">Submit price</button>
+      </form>
+    </section>
+  );
+}

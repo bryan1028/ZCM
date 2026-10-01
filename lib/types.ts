@@ -85,3 +85,71 @@ export interface Claim {
   email?: string;
   createdAt: string;
 }
+
+// ───────────── Zist Find: prices & deals ─────────────
+
+export type PriceSource = "crowd" | "openprices" | "admin";
+
+/** One observed shelf price: "this product cost X at this store on this date". */
+export interface PricePoint {
+  id: string;
+  /** Barcode if known, else slug(name+brand). Groups the same product across stores. */
+  productKey: string;
+  productName: string;
+  brand?: string;
+  barcode?: string;
+  /** Pack size as written, e.g. "1L", "2kg". Prices are only compared within the same productKey. */
+  size?: string;
+  storeName: string;
+  country: string;
+  city: string;
+  citySlug: string;
+  lat?: number;
+  lng?: number;
+  price: number;
+  /** ISO 4217, e.g. KES */
+  currency: string;
+  /** Lowercase search tokens from name+brand, used for queries */
+  tokens: string[];
+  source: PriceSource;
+  /** ok: shown. flagged: looks like an outlier, hidden until reviewed. hidden: removed by admin. */
+  status: "ok" | "flagged" | "hidden";
+  /** When the price was seen (ISO). */
+  observedAt: string;
+  createdAt: string;
+  /** Anonymous reporter id, used for rate limiting and spotting abuse. */
+  reporter?: string;
+  sourceId?: string;
+}
+
+export interface Deal {
+  id: string;
+  title: string;
+  storeName: string;
+  country: string;
+  city: string;
+  citySlug: string;
+  description?: string;
+  price?: number;
+  currency?: string;
+  discountPct?: number;
+  url?: string;
+  /** ISO date; deals are hidden after this */
+  validUntil: string;
+  status: "active" | "hidden";
+  source: "admin" | "crowd";
+  createdAt: string;
+}
+
+export interface PriceComparison {
+  productKey: string;
+  productName: string;
+  brand?: string;
+  size?: string;
+  currency: string;
+  stores: { storeName: string; price: number; observedAt: string; source: PriceSource; isCheapest: boolean }[];
+  min: number;
+  max: number;
+  /** % saved by buying at the cheapest store vs the most expensive; 0 if only one store */
+  savingsPct: number;
+}
