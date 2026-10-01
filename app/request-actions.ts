@@ -5,6 +5,7 @@ import { requireUser, safeNext } from "@/lib/session";
 import { getStore } from "@/lib/store";
 import { normalizeWhatsapp, slugify } from "@/lib/util";
 import { wantedKey } from "@/lib/wanted";
+import { pledgeCountry } from "@/lib/geo";
 
 const clean = (v: FormDataEntryValue | null, max = 200) => String(v ?? "").trim().slice(0, max);
 const MAX_REQUESTS_PER_DAY = 10;
@@ -60,10 +61,13 @@ export async function wantRestaurantAction(formData: FormData) {
   const store = getStore();
   const r = await store.getRestaurant(clean(formData.get("id"), 160));
   if (!r || r.status !== "unclaimed") redirect(back);
+  const here = await pledgeCountry(user.profile.country);
+  const withFlag = (flag: string) => { const [path, hash] = back.split("#"); return `${path}${path.includes("?") ? "&" : "?"}${flag}${hash ? `#${hash}` : ""}`; };
+  if (here && here !== r.country) redirect(withFlag("pledge=away"));
   await store.upsertRequest(
     wantedKey(r),
     { kind: "restaurant", name: r.name, country: r.country, city: r.city, citySlug: r.citySlug, whatsapp: null, createdBy: { uid: user.uid, handle: user.handle } },
     { uid: user.uid, handle: user.handle },
   );
-  redirect(`${back}${back.includes("?") ? "&" : "?"}signed=1`);
+  redirect(withFlag("pledged=1"));
 }

@@ -13,12 +13,13 @@ import { wantedKey } from "@/lib/wanted";
 
 export const dynamic = "force-dynamic";
 
-type SP = Promise<{ q?: string; city?: string; diet?: string | string[]; avoid?: string | string[] }>;
+type SP = Promise<{ pledge?: string; pledged?: string; q?: string; city?: string; diet?: string | string[]; avoid?: string | string[] }>;
 const many = (v?: string | string[]) => ([] as string[]).concat(v ?? []);
 
 export default async function Zood({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
   const [user, place] = await Promise.all([currentUser(), detectPlace()]);
+  const home = place.country ?? user?.profile.country;
   const submitted = "q" in sp || "city" in sp || "diet" in sp || "avoid" in sp;
 
   // First visit: lean on the signed-in profile (and where you appear to be). After that, whatever the form says wins.
@@ -94,6 +95,8 @@ export default async function Zood({ searchParams }: { searchParams: SP }) {
       {usingProfile && <p className="meta">Using your saved diet and allergies. Change them anytime on <Link href="/account">your account</Link>.</p>}
       <p className="meta">Allergen tags are whatever the restaurant told us. <b>"No allergens listed" is not "allergen-free"</b>, so with a serious allergy, always ask the restaurant first.</p>
 
+      {sp.pledged && <div className="notice pledge">🤝 Pledged! Thank you. Pledge for more, and tell a friend nearby.</div>}
+      {sp.pledge === "away" && <div className="notice pledge">Pledges are for restaurants where you are. Search your own city to pledge for the ones you'd order from.</div>}
       {citySlug && !cityInfo && (
         <div className="notice pledge">
           <b>We don't have any restaurants in {city} yet.</b> Be the one who changes that: add a restaurant you love there and it gets a public pledge page.{" "}
@@ -102,8 +105,9 @@ export default async function Zood({ searchParams }: { searchParams: SP }) {
       )}
       {citySlug && cityInfo && (
         <div className="notice pledge">
-          <b>{cityInfo.count} restaurant{cityInfo.count === 1 ? "" : "s"} in {cityInfo.city} {cityInfo.count === 1 ? "isn't" : "aren't"} on Zood yet.</b> Pledge to order from the ones you want and we'll invite them to join.{" "}
-          <Link className="btn sm" href="#wanted">🤝 See them &amp; pledge</Link>
+          <b>{cityInfo.count} restaurant{cityInfo.count === 1 ? "" : "s"} in {cityInfo.city} {cityInfo.count === 1 ? "isn't" : "aren't"} on Zood yet.</b> {home && home !== cityInfo.country
+            ? <>Pledges come from people who live there, so if you know someone in {cityInfo.city}, send them this page. <Link className="btn sm" href="#wanted">See them</Link></>
+            : <>Pledge to order from the ones you want and we'll invite them to join. <Link className="btn sm" href="#wanted">🤝 See them &amp; pledge</Link></>}
         </div>
       )}
       {widened && <div className="notice">Zood hasn't landed in <b>{where}</b> yet 🛬 Here's what's cooking elsewhere. <Link href="/requests/new">Zummon a place in {where}</Link> and be the reason it does.</div>}
@@ -129,7 +133,7 @@ export default async function Zood({ searchParams }: { searchParams: SP }) {
         </>
       )}
 
-      <WantedBoard places={wanted} requests={wantReqs} mine={mine} returnTo={returnTo} where={where} />
+      <WantedBoard places={wanted} requests={wantReqs} mine={mine} returnTo={returnTo} where={where} home={home} />
 
       <section className="mission">
         <h2>We're building the Pinterest of restaurants. Help us.</h2>

@@ -22,3 +22,12 @@ export async function detectPlace(): Promise<Place> {
     return {};
   }
 }
+
+/**
+ * Country a person is in right now, for the "pledge" rule: you can only pledge for restaurants where you actually are
+ * (someone in Kenya can't order from Ghana). Uses the request's coarse IP location, falling back to the country on their
+ * profile. Never stored. Undefined when unknown, in which case we don't block.
+ */
+export async function pledgeCountry(profileCountry?: string): Promise<string | undefined> {
+  return (await detectPlace()).country ?? (profileCountry && /^[A-Z]{2}$/.test(profileCountry) ? profileCountry : undefined);
+}

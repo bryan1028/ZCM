@@ -99,3 +99,6 @@ Do not upgrade firebase-admin past 13.x on Netlify (ESM-only jose breaks functio
 ## Update: city dropdown and pledges
 - "Where?" is a native `<datalist>` (`app/cityinput.tsx`): Zood lists every city with restaurants (`listCities({ includeUnlisted: true })`, 43 cities), Zind lists cities with prices (`priceCities()`).
 - Typing a city with no restaurants shows "Add a restaurant in X" (links to `/requests/new?city=X`); a city with restaurants shows "N restaurants in X aren't on Zood yet, pledge" and the Wanted board. "Sign"/"signature" wording is now "pledge".
+
+## Update: pledges are local
+- You can only pledge for restaurants in the country you're in (`pledgeCountry` in lib/geo.ts: request IP country, falling back to profile country; never stored; unknown = allowed). Enforced in `wantRestaurantAction`, and the UI shows "Pledges come from people in X" for other countries. Country level, not city level, and a VPN can bypass it.

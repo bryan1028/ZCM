@@ -5,6 +5,7 @@ import { dishEmoji } from "@/lib/dishes";
 import { ContactButtons } from "../../components";
 import { currentUser } from "@/lib/session";
 import { wantedKey } from "@/lib/wanted";
+import { pledgeCountry } from "@/lib/geo";
 import { wantRestaurantAction } from "../../request-actions";
 import { getStore } from "@/lib/store";
 import { DIETS } from "@/lib/types";
@@ -38,6 +39,7 @@ export default async function RestaurantPage({ params }: { params: P }) {
   };
   const unclaimed = r.status === "unclaimed";
   const [user, reqs] = unclaimed ? await Promise.all([currentUser(), getStore().listRequests({ kind: "restaurant", citySlug: r.citySlug, limit: 300 })]) : [null, []];
+  const home = unclaimed ? await pledgeCountry(user?.profile.country) : undefined;
   const wkey = wantedKey(r);
   const signatures = reqs.find((x) => x.id === wkey)?.supportCount ?? 0;
   const signed = user ? (await getStore().supportedBy(user.uid, [wkey])).has(wkey) : false;
@@ -56,7 +58,7 @@ export default async function RestaurantPage({ params }: { params: P }) {
         <div className="wanted">
           <h2 style={{ fontSize: 22 }}>Want {r.name} on Zood?</h2>
           <p className="meta" style={{ marginTop: -4 }}>{signatures > 0 ? `${signatures} ${signatures === 1 ? "person has" : "people have"} pledged.` : "Be the first to pledge."} Pledge to order from them once they're here. Every pledge tells them people want to find them on Zood.</p>
-          {signed ? <span className="btn sign done">✓ You pledged</span> : (
+          {signed ? <span className="btn sign done">✓ You pledged</span> : home && home !== r.country ? <span className="meta">📍 Pledges come from people in {regionName(r.country)}.</span> : (
             <form action={wantRestaurantAction}>
               <input type="hidden" name="id" value={r.id} /><input type="hidden" name="returnTo" value={`/r/${r.id}`} />
               <button type="submit" className="sign">🤝 Pledge to order</button>

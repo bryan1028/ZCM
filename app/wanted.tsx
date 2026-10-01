@@ -5,7 +5,7 @@ import { wantedKey } from "@/lib/wanted";
 import { wantRestaurantAction } from "./request-actions";
 
 /** Restaurants we already know about that aren't on Zood yet. Signing one is a public vote that gets it invited. */
-export function WantedBoard({ places, requests, mine, returnTo, where }: { places: Restaurant[]; requests: PlaceRequest[]; mine: Set<string>; returnTo: string; where: string }) {
+export function WantedBoard({ places, requests, mine, returnTo, where, home }: { places: Restaurant[]; requests: PlaceRequest[]; mine: Set<string>; returnTo: string; where: string; home?: string }) {
   if (!places.length) return null;
   const byKey = new Map(requests.map((r) => [r.id, r]));
   return (
@@ -27,6 +27,8 @@ export function WantedBoard({ places, requests, mine, returnTo, where }: { place
                 <span className="signcount">{n > 0 ? `🤝 ${n} ${n === 1 ? "pledge" : "pledges"}` : "Be the first to pledge"}</span>
                 {signed ? (
                   <span className="btn sm sign done">✓ You pledged</span>
+                ) : home && home !== r.country ? (
+                  <span className="meta">📍 Pledges come from people in {regionName(r.country)}</span>
                 ) : (
                   <form action={wantRestaurantAction}>
                     <input type="hidden" name="id" value={r.id} />
