@@ -23,7 +23,7 @@ Set `FIREBASE_SERVICE_ACCOUNT` (see `.env.example`) to use the real database ins
 | `/r/{id}` | Restaurant page: menu, diets, allergens, Message button |
 | `/go/{id}?item=&src=` | **Lead tracker.** Logs the lead on the server, then redirects to `wa.me/<number>?text=…(ref ABCD)`. Skips bots and repeat taps (1h per visitor) |
 | `/list` | Owners claim a listing or add a new restaurant (lands in the admin queue as `pending`) |
-| `/admin` | Lead counts (24h / 7d / by restaurant / from ChatGPT) and claims to verify. Basic auth: user `admin`, password `ADMIN_PASSWORD` |
+| `/admin` | Lead counts (24h / 7d / by restaurant / from ChatGPT) and claims to verify. Sign in at `/admin/login` with `ADMIN_PASSWORD` |
 | `/api/restaurants` | Public JSON search, for the ChatGPT app to wrap |
 
 The `ref` code in each WhatsApp message lets a restaurant confirm a lead ("yes, ref K82E messaged us").
@@ -74,14 +74,11 @@ place data beyond the place ID, so Places is not used for seeding.
 1. Netlify → **Add new site → Import an existing project → GitHub** → pick `bryan1028/ZCM`, branch `claude/blissful-rubin-a7wvq3` (or merge to your main branch first). `netlify.toml` already sets the build.
 2. Site configuration → **Environment variables**:
    - `FIREBASE_SERVICE_ACCOUNT` — Firebase console → Project settings → Service accounts → Generate new private key; paste the whole JSON.
-   - `ADMIN_PASSWORD` — pick a long one; you log in at `/admin` as user `admin`.
+   - `ADMIN_PASSWORD` — pick a long one; you sign in at `/admin/login`.
    - `NEXT_PUBLIC_SITE_URL` = `https://zist.it.com`
 3. Domain management → **Add a domain** → `zist.it.com`, then set the DNS records Netlify shows.
 4. Once: `firebase deploy --only firestore:indexes` (needed for the filtered queries).
-5. Check after deploy: `/` loads, `/admin` asks for a password, tapping Message on a restaurant creates a row in `leads`.
-
-Next 16 `proxy.ts` (the admin login prompt) is the part most likely to differ between hosts. `/admin` also re-checks the password
-itself (`lib/auth.ts`), so it stays closed either way; if the login prompt doesn't appear, tell me and I'll switch to a login page.
+5. Check after deploy: `/` loads, `/admin` redirects to `/admin/login`, tapping Message on a restaurant creates a row in `leads`.
 
 `firestore.rules` is a snapshot of the current shared rules (this app uses the Admin SDK, which bypasses them).
 Don't deploy different rules until the legacy app and Zist Find are retired.

@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getStore } from "@/lib/store";
-import { requireAdmin } from "@/lib/auth";
+import { ADMIN_COOKIE, adminToken, passwordMatches, requireAdmin } from "@/lib/auth";
 import { normalizeWhatsapp, slugify } from "@/lib/util";
 import type { Diet } from "@/lib/types";
 import { DIETS } from "@/lib/types";
@@ -117,4 +117,16 @@ export async function addDeal(formData: FormData) {
     discountPct: pct > 0 && pct < 100 ? pct : undefined, url: /^https?:\/\//.test(url) ? url : undefined,
   });
   revalidatePath("/admin");
+}
+
+export async function adminLogin(formData: FormData) {
+  const password = process.env.ADMIN_PASSWORD;
+  if (!password || !passwordMatches(String(formData.get("password") ?? ""))) {
+    await new Promise((r) => setTimeout(r, 600)); // slow down guessing
+    redirect("/admin/login?error=1");
+  }
+  (await cookies()).set(ADMIN_COOKIE, adminToken(password!), {
+    httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: 60 * 60 * 24 * 7, path: "/",
+  });
+  redirect("/admin");
 }
