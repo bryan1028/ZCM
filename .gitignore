@@ -9,3 +9,5 @@ next-env.d.ts
 .scratch
 .netlify
 data/overture-places.jsonl
+data/prices.jsonl
+data/overture-places-v1.jsonl

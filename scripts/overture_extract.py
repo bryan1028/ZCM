@@ -48,6 +48,7 @@ def main():
     ap.add_argument("--cities", default=os.path.join(os.path.dirname(__file__), "cities.json"))
     ap.add_argument("--out", default="data/overture-places.jsonl")
     ap.add_argument("--per-city", type=int, default=150)
+    ap.add_argument("--per-chain", type=int, default=2, help="max branches of the same-named place per city, so chains do not crowd out independents")
     ap.add_argument("--only", default="")
     ap.add_argument("--release", default="2026-09-23.1")
     a = ap.parse_args()
@@ -108,7 +109,12 @@ def main():
                     "rank": round(row["confidence"] + (0.1 if sites else 0) + (0.05 if digits else 0), 3),
                 })
             picked.sort(key=lambda p: -p["rank"])
-            picked = picked[: a.per_city]
+            seen, balanced = {}, []
+            for p in picked:
+                k = re.sub(r"[^a-z0-9]", "", p["name"].lower()) or p["id"]
+                if seen.get(k, 0) >= a.per_chain: continue
+                seen[k] = seen.get(k, 0) + 1; balanced.append(p)
+            picked = balanced[: a.per_city]
             for p in picked: out.write(json.dumps(p, ensure_ascii=False) + "\n")
             total += len(picked)
             wa = sum(1 for p in picked if p["whatsapp"]); ph = sum(1 for p in picked if p["phone"])

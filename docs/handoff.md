@@ -23,12 +23,13 @@ No real users yet, so nothing needs to be preserved except the curated data belo
   listings" note, local restaurants shown on Zood when a city has restaurants but no menus, MCP `callUrl`/`websiteUrl`.
 - `scripts/import-openprices.ts --out file.jsonl` stages prices without a database; `scripts/import-prices-jsonl.ts` loads them.
 
-## Written but NOT yet run
-- `scripts/overture_extract.py` + `scripts/cities.json`: pulls restaurants/cafes for ~40 world cities from Overture Maps
-  (S3 reachable through the proxy with `pip install pyarrow s3fs phonenumbers`; set AWS_CA_BUNDLE=/root/.ccr/ca-bundle.crt).
-  Run: `python3 scripts/overture_extract.py --out data/overture-places.jsonl --per-city 150` (a few minutes; the user cancelled the
-  last two attempts, so confirm before running), then `npx tsx scripts/import-places-jsonl.ts data/overture-places.jsonl [--apply]`.
-- Open Prices coverage: USD ~39k, EUR ~240k, GBP, CAD, INR, AUD (KES = 0). Stage several with `--out`, then load.
+## Staged data (ready to load; no database needed to produce it)
+- `data/overture-places.jsonl`: restaurants/cafes for 43 world cities (Overture Maps, balanced so chains don't crowd out independents:
+  max 2 branches per name per city, up to 300 per city). Produced by `python3 scripts/overture_extract.py --out data/overture-places.jsonl
+  --per-city 300 --per-chain 2` (about 25 minutes). Load: `npx tsx scripts/import-places-jsonl.ts data/overture-places.jsonl --apply`.
+  WhatsApp is set only for WhatsApp-capable mobiles; everything else is Call/Website (Mexico, Japan, Korea, US, CA show 0 WhatsApp by design).
+- `data/prices.jsonl`: ~15k Open Prices rows in 45 countries / 629 cities (EUR, USD, NOK, SEK, PLN, GBP, DKK, CHF, CAD, JPY, INR, MXN, ...).
+  Load: `npx tsx scripts/import-prices-jsonl.ts data/prices.jsonl --apply`. Kenya has no Open Prices data (Nairobi prices come from the curated list).
 
 ## Still to do
 1. Create the Supabase project, apply `supabase/migrations/0001_init.sql`, set `DATABASE_URL` (TRANSACTION POOLER string, port 6543) on
