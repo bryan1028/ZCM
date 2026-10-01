@@ -69,3 +69,48 @@ export async function sendPasswordReset(email: string): Promise<void> {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ requestType: "PASSWORD_RESET", email }),
   });
 }
+
+/** Live check (not the 14-day session cookie), so clicking the email link takes effect without signing in again. */
+export async function isEmailVerified(uid: string): Promise<boolean> {
+  try { return (await adminAuth().getUser(uid)).emailVerified === true; } catch { return false; }
+}
+
+/** Signed in AND email verified; otherwise sent to /verify. Used before pledging, zummoning and claiming, so bots can't spam them. */
+export async function requireVerified(next: string): Promise<SessionUser> {
+  const u = await requireUser(next);
+  if (!(await isEmailVerified(u.uid))) redirect(`/verify?next=${encodeURIComponent(safeNext(next, "/"))}`);
+  return u;
+}
+
+/** Firebase emails the person a verification link (its standard template). Works from just a user id, no password needed. */
+export async function sendVerificationEmail(uid: string): Promise<boolean> {
+  try {
+    const custom = await adminAuth().createCustomToken(uid);
+    const signed = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=${WEB_API_KEY}`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token: custom, returnSecureToken: true }),
+    });
+    const { idToken } = (await signed.json()) as { idToken?: string };
+    if (!idToken) return false;
+    const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${WEB_API_KEY}`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ requestType: "VERIFY_EMAIL", idToken }),
+    });
+    return res.ok;
+  } catch { return false; }
+}
+
+/**
+ * reCAPTCHA (Google, v2 checkbox). Active only when RECAPTCHA_SECRET is set, so the site keeps working before keys exist.
+ * Returns true when the check passes or isn't configured.
+ */
+export async function captchaOk(formData: FormData): Promise<boolean> {
+  const secret = process.env.RECAPTCHA_SECRET;
+  if (!secret) return true;
+  const token = String(formData.get("g-recaptcha-response") ?? "");
+  if (!token) return false;
+  try {
+    const res = await fetch("https://www.google.com/recaptcha/api/siteverify", {
+      method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ secret, response: token }),
+    });
+    return ((await res.json()) as { success?: boolean }).success === true;
+  } catch { return false; }
+}

@@ -1,9 +1,10 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { adminAuth } from "@/lib/firebase-admin";
-import { endSession, passwordSignIn, requireUser, safeNext, sendPasswordReset, startSession } from "@/lib/session";
+import { captchaOk, endSession, isEmailVerified, passwordSignIn, sendVerificationEmail, requireUser, safeNext, sendPasswordReset, startSession } from "@/lib/session";
 import { getStore, isDemo } from "@/lib/store";
 import { DIETS, type Diet } from "@/lib/types";
 
@@ -24,6 +25,7 @@ export async function signUp(formData: FormData) {
   const back = (error: string) => redirect(`/signup?error=${error}&next=${encodeURIComponent(next)}`);
   if (clean(formData.get("website"))) redirect("/"); // honeypot
   if (isDemo()) back("unavailable");
+  if (!(await captchaOk(formData))) back("captcha");
 
   const username = clean(formData.get("username"), 30).toLowerCase();
   const email = clean(formData.get("email"), 120).toLowerCase();
@@ -55,6 +57,7 @@ export async function signUp(formData: FormData) {
   const signed = await passwordSignIn(email, password);
   if ("error" in signed) redirect("/login?error=failed");
   await startSession(signed.idToken);
+  await sendVerificationEmail(uid);
   redirect(next);
 }
 
@@ -106,4 +109,24 @@ export async function saveAccount(formData: FormData) {
   });
   revalidatePath("/account");
   redirect("/account?saved=1");
+}
+
+/** Resend the verification email (at most once a minute per browser). */
+export async function resendVerification(formData: FormData) {
+  const next = safeNext(formData.get("next"), "/");
+  const user = await requireUser("/verify");
+  const jar = await cookies();
+  if (!jar.get("zv_sent")) {
+    await sendVerificationEmail(user.uid);
+    jar.set("zv_sent", "1", { httpOnly: true, sameSite: "lax", maxAge: 60, path: "/" });
+  }
+  redirect(`/verify?sent=1&next=${encodeURIComponent(next)}`);
+}
+
+/** "I've clicked the link": re-check with Firebase and carry on. */
+export async function checkVerified(formData: FormData) {
+  const next = safeNext(formData.get("next"), "/");
+  const user = await requireUser("/verify");
+  if (await isEmailVerified(user.uid)) redirect(next);
+  redirect(`/verify?waiting=1&next=${encodeURIComponent(next)}`);
 }

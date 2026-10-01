@@ -107,3 +107,8 @@ Do not upgrade firebase-admin past 13.x on Netlify (ESM-only jose breaks functio
 - `/pledge/[city]` (any city slug): gradient header with real pledge and restaurant counts, share bar (WhatsApp/X/Facebook/copy/native share, `app/share.tsx`), and the Wanted board. Nairobi is the launch city: homepage ribbon links to `/pledge/nairobi`; other cities work the same and are in the sitemap.
 - Link-preview images are generated per page (`app/pledge/[city]/opengraph-image.tsx`, `app/r/[id]/opengraph-image.tsx`, next/og, live data, no emoji because the default font lacks them).
 - After pledging, `?pledged=1` shows a thank-you plus a share bar on home, city and restaurant pages. Unclaimed restaurant pages always have a share bar.
+
+## Update: email verification and reCAPTCHA
+- Signup now sends Firebase's standard verification email (`sendVerificationEmail`, via a custom token so no password is needed). `requireVerified()` gates pledging, zummoning/backing, claiming and price reports; unverified users are sent to `/verify` (resend once a minute, "I've verified" re-checks live with Firebase, so no re-login). Verified end to end on a draft with a throwaway account (deleted).
+- The verification email comes from Firebase's default template/sender. Branding it or sending from our own domain needs a mailer (Resend) later.
+- reCAPTCHA v2 checkbox is built into signup (`app/captcha.tsx`, `captchaOk` in lib/session.ts) but OFF until two Netlify env vars exist: `RECAPTCHA_SITE_KEY` and `RECAPTCHA_SECRET` (create keys at google.com/recaptcha/admin, type v2 checkbox, domain zist.it.com). Not yet tested with real keys.

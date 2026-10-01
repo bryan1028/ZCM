@@ -4,6 +4,7 @@ import { DIETS } from "@/lib/types";
 import { requireUser } from "@/lib/session";
 import { getStore } from "@/lib/store";
 import { regionName } from "@/lib/util";
+import { isEmailVerified } from "@/lib/session";
 import { saveAccount } from "../auth-actions";
 import { deleteAccount } from "../social-actions";
 
@@ -15,10 +16,12 @@ export default async function Account({ searchParams }: { searchParams: Promise<
   const user = await requireUser("/account");
   const p = user.profile;
   const mine = await getStore().requestsBy(user.uid);
+  const verified = await isEmailVerified(user.uid);
   return (
     <section className="hero">
       <h1>{p.username ? `@${p.username}` : "Your account"}</h1>
       <p className="meta">{user.email}</p>
+      {!verified && <div className="notice">Your email isn't verified yet, so you can't pledge or add places. <Link href="/verify?next=/account">Verify it now</Link>.</div>}
       {sp.saved && <div className="notice">Saved.</div>}
       {sp.error === "username" && <div className="notice">That username isn't available.</div>}
       {sp.error === "confirm" && <div className="notice">Type DELETE in capitals to confirm.</div>}

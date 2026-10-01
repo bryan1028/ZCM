@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getStore } from "@/lib/store";
 import { requireAdmin } from "@/lib/auth";
-import { requireUser } from "@/lib/session";
+import { requireUser, requireVerified } from "@/lib/session";
 import { parseMenuText, currencyFor } from "@/lib/menu-text";
 import { normalizeWhatsapp, slugify } from "@/lib/util";
 
@@ -15,7 +15,7 @@ const TRIAL_DAYS = 90;
 export async function submitClaim(formData: FormData) {
   const claimId = clean(formData.get("claimId"), 120) || undefined;
   const back = (e: string) => redirect(`/list?error=${e}${claimId ? `&claim=${encodeURIComponent(claimId)}` : ""}`);
-  const user = await requireUser(claimId ? `/list?claim=${claimId}` : "/list");
+  const user = await requireVerified(claimId ? `/list?claim=${claimId}` : "/list");
   if (clean(formData.get("website"))) redirect("/account/restaurant"); // honeypot
 
   const store = getStore();

@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { requireUser, safeNext } from "@/lib/session";
+import { requireUser, requireVerified, safeNext } from "@/lib/session";
 import { getStore } from "@/lib/store";
 import { normalizeWhatsapp, slugify } from "@/lib/util";
 import { wantedKey } from "@/lib/wanted";
@@ -12,7 +12,7 @@ const MAX_REQUESTS_PER_DAY = 10;
 
 /** "Please add this place." Signed with the user's handle; if it already exists, the user's support is added instead. */
 export async function submitRequest(formData: FormData) {
-  const user = await requireUser("/requests/new");
+  const user = await requireVerified("/requests/new");
   if (clean(formData.get("website_hp"))) redirect("/requests");
 
   const kind = clean(formData.get("kind"), 12) === "store" ? "store" : "restaurant";
@@ -49,7 +49,7 @@ export async function submitRequest(formData: FormData) {
 
 export async function supportRequestAction(formData: FormData) {
   const back = safeNext(formData.get("returnTo"), "/requests");
-  const user = await requireUser(back);
+  const user = await requireVerified(back);
   await getStore().supportRequest(clean(formData.get("id"), 160), { uid: user.uid, handle: user.handle });
   redirect(back);
 }
@@ -57,7 +57,7 @@ export async function supportRequestAction(formData: FormData) {
 /** "I want this restaurant on Zood": signs the community request for an existing (unlisted) restaurant, merging with any zummon for it. */
 export async function wantRestaurantAction(formData: FormData) {
   const back = safeNext(formData.get("returnTo"), "/");
-  const user = await requireUser(back);
+  const user = await requireVerified(back);
   const store = getStore();
   const r = await store.getRestaurant(clean(formData.get("id"), 160));
   if (!r || r.status !== "unclaimed") redirect(back);
