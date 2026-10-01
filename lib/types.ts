@@ -42,13 +42,20 @@ export interface Restaurant {
   lat?: number;
   lng?: number;
   geohash?: string;
-  /** E.164 digits only, no "+", e.g. 254712345678. Null if unknown. */
+  /** E.164 digits only, no "+", e.g. 254712345678. Null if unknown. Used by the Message button. */
   whatsapp: string | null;
+  /** Public contact phone (E.164 digits). May not be on WhatsApp; used by the Call button. */
+  phone?: string | null;
+  website?: string;
+  /** Lower-case search words (name, cuisines, dish names) so text search never needs to scan a city. */
+  tokens?: string[];
+  /** 0-1 quality score from the source, used to list better-known places first. */
+  rank?: number;
   cuisines: string[];
   diets: Diet[];
   menu: MenuItem[];
   status: RestaurantStatus;
-  source: "osm" | "owner" | "import" | "demo";
+  source: "osm" | "overture" | "owner" | "import" | "demo";
   /** Id in the source dataset, so re-imports don't duplicate */
   sourceId?: string;
   plan: "free" | "trial" | "paid";
@@ -57,6 +64,7 @@ export interface Restaurant {
 }
 
 export type LeadSource = "web" | "chatgpt" | "unknown";
+export type LeadChannel = "whatsapp" | "call" | "website";
 
 export interface Lead {
   id?: string;
@@ -67,6 +75,8 @@ export interface Lead {
   itemId?: string;
   itemName?: string;
   source: LeadSource;
+  /** How they reached out. Missing on older leads, which were all WhatsApp. */
+  channel?: LeadChannel;
   /** Short code placed in the WhatsApp message so owners can confirm it. */
   ref: string;
   /** Anonymous visitor id (cookie), used to de-duplicate repeat taps. */

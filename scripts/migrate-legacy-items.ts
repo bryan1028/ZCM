@@ -8,12 +8,12 @@
  */
 import { adminDb } from "../lib/firebase-admin";
 import { productKey, tokenize } from "../lib/prices";
-import { getStore } from "../lib/store";
+import { getStore, isDemo } from "../lib/store";
 import { slugify } from "../lib/util";
 import type { PricePoint } from "../lib/types";
 
 const apply = process.argv.includes("--apply");
-if (!process.env.FIREBASE_SERVICE_ACCOUNT) { console.error("Set FIREBASE_SERVICE_ACCOUNT."); process.exit(1); }
+if (!process.env.FIREBASE_SERVICE_ACCOUNT) { console.error("Set FIREBASE_SERVICE_ACCOUNT (this script reads the old Firestore data)."); process.exit(1); }
 
 // Store ids used by the old Zist Find.
 const STORES: Record<string, string> = {

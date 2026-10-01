@@ -4,8 +4,9 @@ import { geohashForLocation } from "geofire-common";
 import { FieldValue, type DocumentSnapshot, type Query } from "firebase-admin/firestore";
 import { adminDb, parseServiceAccount } from "./firebase-admin";
 import { tokenize } from "./prices";
-import { flattenDishes, type DishHit, type DishQuery } from "./dishes";
+import { flattenDishes, queryWords, restaurantTokens, type DishHit, type DishQuery } from "./dishes";
 import { DIETS } from "./types";
+import { createLazyPoolSql, createPgStore } from "./pg-store";
 import type { Claim, Deal, Diet, Lead, MenuItem, PlaceRequest, PricePoint, Profile, Restaurant } from "./types";
 
 export interface SearchOptions {
@@ -28,9 +29,13 @@ export interface Store {
   getRestaurant(id: string): Promise<Restaurant | null>;
   /** Dishes (menu items) matching the query, optionally within a country/city. */
   searchDishes(o: DishQuery & { country?: string; citySlug?: string; limit?: number }): Promise<DishHit[]>;
+  /** Cities with listings. Reads ONE precomputed summary doc (see scripts/rebuild-cities.ts), never the restaurant list. */
   listCities(): Promise<CitySummary[]>;
+  setCities(list: CitySummary[]): Promise<void>;
+  /** Rebuild the city summary by scanning public restaurants once (for scripts, not page views). */
+  computeCities(): Promise<CitySummary[]>;
   /** Insert or update by (source, sourceId). Never overwrites owner-edited menus. */
-  upsertImported(rs: Omit<Restaurant, "id">[]): Promise<{ created: number; skipped: number }>;
+  upsertImported(rs: (Omit<Restaurant, "id"> & { id?: string })[]): Promise<{ created: number; skipped: number }>;
   createRestaurant(r: Omit<Restaurant, "id">): Promise<string>;
   setMenu(id: string, menu: MenuItem[]): Promise<void>;
   recordLead(lead: Lead): Promise<void>;
@@ -119,10 +124,10 @@ function matches(r: Restaurant, o: SearchOptions): boolean {
   if (o.country && r.country !== o.country) return false;
   if (o.citySlug && r.citySlug !== o.citySlug) return false;
   if (o.diet?.length && !o.diet.every((d) => r.diets.includes(d))) return false;
-  if (o.q) {
-    const q = o.q.toLowerCase();
-    const hay = [r.name, ...r.cuisines, ...r.menu.map((m) => m.name)].join(" ").toLowerCase();
-    if (!hay.includes(q)) return false;
+  const words = queryWords(o.q);
+  if (words.length) {
+    const hay = queryWords([r.name, ...r.cuisines, ...r.menu.map((m) => `${m.name} ${m.description ?? ""}`)].join(" ")).join(" ");
+    if (!words.every((w) => hay.includes(w))) return false;
   }
   return true;
 }
@@ -130,7 +135,7 @@ function matches(r: Restaurant, o: SearchOptions): boolean {
 /** Verified restaurants first, then those with menus, then alphabetical. */
 function rank(a: Restaurant, b: Restaurant): number {
   const score = (r: Restaurant) => (r.status === "active" ? 2 : 0) + (r.menu.length ? 1 : 0);
-  return score(b) - score(a) || a.name.localeCompare(b.name);
+  return score(b) - score(a) || (b.rank ?? 0) - (a.rank ?? 0) || a.name.localeCompare(b.name);
 }
 
 function summarize(rs: Restaurant[]): CitySummary[] {
@@ -217,6 +222,8 @@ function createDemoStore(): Store {
     async listCities() {
       return summarize(restaurants);
     },
+    async setCities() { /* demo data is computed on the fly */ },
+    async computeCities() { return summarize(restaurants); },
     async upsertImported() {
       throw new Error("Imports need Firestore. Set FIREBASE_SERVICE_ACCOUNT.");
     },
@@ -462,14 +469,17 @@ function createFirestoreStore(): Store {
     },
     async searchRestaurants(o) {
       const limit = o.limit ?? 60;
+      const words = queryWords(o.q);
       const out: Restaurant[] = [];
-      // Two passes so verified restaurants are never crowded out by thousands of seeded ones.
+      // Verified restaurants first. Only ever read about `limit*3` docs per status, never a whole city.
       for (const status of ["active", "unclaimed"] as const) {
         let q: Query = col.where("status", "==", status);
         if (o.country) q = q.where("country", "==", o.country);
         if (o.citySlug) q = q.where("citySlug", "==", o.citySlug);
-        if (o.diet?.length) q = q.where("diets", "array-contains", o.diet[0]);
-        const snap = await q.limit(400).get();
+        // Firestore allows one array-contains: prefer the text word, else the first diet.
+        if (words.length) q = q.where("tokens", "array-contains", words[0]);
+        else if (o.diet?.length) q = q.where("diets", "array-contains", o.diet[0]);
+        const snap = await q.limit(Math.min(limit * 3, 240)).get();
         out.push(...snap.docs.map(toR).filter((r) => matches(r, o)));
         if (out.length >= limit) break;
       }
@@ -488,9 +498,15 @@ function createFirestoreStore(): Store {
       return flattenDishes(snap.docs.map(toR), o).slice(0, o.limit ?? 60);
     },
     async listCities() {
-      // Cheap enough until ~100k docs; replace with a maintained `cities` collection after that.
+      const d = await db.collection("meta").doc("cities").get();
+      return d.exists ? ((d.data()?.list ?? []) as CitySummary[]) : [];
+    },
+    async setCities(list) {
+      await db.collection("meta").doc("cities").set({ list: list.slice(0, 300), updatedAt: new Date().toISOString() });
+    },
+    async computeCities() {
       const snap = await col.where("status", "in", ["active", "unclaimed"]).select("country", "city", "citySlug", "status").get();
-      return summarize(snap.docs.map((d: DocumentSnapshot) => ({ ...d.data(), menu: [] }) as unknown as Restaurant)).slice(0, 200);
+      return summarize(snap.docs.map((d: DocumentSnapshot) => ({ ...d.data(), menu: [] }) as unknown as Restaurant));
     },
     async upsertImported(rs) {
       let created = 0;
@@ -498,11 +514,12 @@ function createFirestoreStore(): Store {
       for (let i = 0; i < rs.length; i += 400) {
         const batch = db.batch();
         const chunk = rs.slice(i, i + 400);
-        const ids = chunk.map((r) => `${r.source}-${r.sourceId}`.replace(/\//g, "_"));
+        const ids = chunk.map((r) => r.id ?? `${r.source}-${r.sourceId}`.replace(/\//g, "_"));
         const existing = await db.getAll(...ids.map((id: string) => col.doc(id)));
         chunk.forEach((r, j) => {
           if (existing[j].exists) { skipped++; return; }
-          const withHash = r.lat != null && r.lng != null ? { ...r, geohash: geohashForLocation([r.lat, r.lng]) } : r;
+          const base = { ...r, tokens: r.tokens ?? restaurantTokens(r) };
+          const withHash = r.lat != null && r.lng != null ? { ...base, geohash: geohashForLocation([r.lat, r.lng]) } : base;
           batch.set(col.doc(ids[j]), withHash);
           created++;
         });
@@ -515,7 +532,9 @@ function createFirestoreStore(): Store {
       return ref.id;
     },
     async setMenu(id, menu) {
-      await col.doc(id).update({ menu, diets: [...new Set(menu.flatMap((m) => m.diets))] });
+      const cur = await col.doc(id).get();
+      const r = cur.data() as Restaurant;
+      await col.doc(id).update({ menu, diets: [...new Set([...(r?.diets ?? []), ...menu.flatMap((m) => m.diets)])], tokens: restaurantTokens({ name: r?.name ?? "", cuisines: r?.cuisines ?? [], menu }) });
     },
     async recordLead(lead) {
       const batch = db.batch();
@@ -540,8 +559,11 @@ function createFirestoreStore(): Store {
 export { parseServiceAccount };
 
 const g = globalThis as unknown as { __zistStore?: Store };
+/** Postgres (Supabase) when DATABASE_URL is set; else Firestore when its credential is set; else local demo data. */
 export function getStore(): Store {
-  return (g.__zistStore ??= process.env.FIREBASE_SERVICE_ACCOUNT ? createFirestoreStore() : createDemoStore());
+  return (g.__zistStore ??= process.env.DATABASE_URL
+    ? createPgStore(createLazyPoolSql(process.env.DATABASE_URL))
+    : process.env.FIREBASE_SERVICE_ACCOUNT ? createFirestoreStore() : createDemoStore());
 }
 
-export const isDemo = () => !process.env.FIREBASE_SERVICE_ACCOUNT;
+export const isDemo = () => !process.env.DATABASE_URL && !process.env.FIREBASE_SERVICE_ACCOUNT;

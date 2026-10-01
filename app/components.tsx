@@ -18,18 +18,20 @@ export function DishCard({ h }: { h: DishHit }) {
           <h3>{m.name}</h3>
           <div className="meta"><Link href={`/r/${h.restaurantId}`}>{h.restaurantName}</Link> · {h.city}, {regionName(h.country)}</div>
         </div>
-        {m.price != null && <div className="dish-price">{formatPrice(m.price, m.currency)}</div>}
       </div>
       {m.description && <div className="meta">{m.description}</div>}
       <div>
         {m.diets.map((d) => <span key={d} className="tag">{dietLabel(d)}</span>)}
         {m.allergens.length > 0 ? m.allergens.map((a) => <span key={a} className="tag warn">has {a}</span>) : <span className="tag gray">no allergens listed</span>}
       </div>
-      <div className="dish-actions">
-        {h.canMessage
-          ? <a className="btn wa" href={`/go/${h.restaurantId}?item=${encodeURIComponent(m.id)}&src=web`} rel="nofollow noopener" target="_blank">💬 {MSG}</a>
-          : <span className="meta">Not on WhatsApp yet</span>}
-        <Link className="btn ghost" href={`/r/${h.restaurantId}`}>Pick more</Link>
+      <div className="dish-priceline">
+        {m.price != null && <span className="dish-price">{formatPrice(m.price, m.currency)}</span>}
+        <div className="dish-actions">
+          {h.canMessage
+            ? <a className="btn wa" href={`/go/${h.restaurantId}?item=${encodeURIComponent(m.id)}&src=web`} rel="nofollow noopener" target="_blank">💬 {MSG}</a>
+            : <span className="meta">Not on WhatsApp yet</span>}
+          <Link className="btn ghost sm" href={`/r/${h.restaurantId}`}>Pick more</Link>
+        </div>
       </div>
     </article>
   );
@@ -62,7 +64,7 @@ export function PriceCard({ c }: { c: PriceComparison }) {
           <h3>{displayName(c)}</h3>
           <div className="meta">📍 {c.city}, {regionName(c.country)}</div>
         </div>
-        <div className="count"><b>{formatPrice(c.min, c.currency)}</b><span className="meta">{c.stores.length > 1 ? "lowest" : "seen at"}</span></div>
+        <div className="count"><b>{formatPrice(c.min, c.currency)}</b><span className="meta">{c.stores.length > 1 ? "lowest" : "only seen"}</span></div>
       </div>
       {c.stores.length > 1 && c.savingsPct > 0 && <div className="meta">Buy at <b>{c.stores[0].storeName}</b> and save up to <b>{c.savingsPct}%</b></div>}
       {c.stores.length === 1 && <div className="meta">Only one store has been sniffed so far. <Link href="/find/report">Add another price</Link></div>}

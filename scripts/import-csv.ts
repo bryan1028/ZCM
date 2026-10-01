@@ -13,7 +13,7 @@
  */
 import { readFileSync } from "node:fs";
 import { parseCsv } from "./csv";
-import { getStore } from "../lib/store";
+import { getStore, isDemo } from "../lib/store";
 import { DIETS, type Diet, type MenuItem, type Restaurant } from "../lib/types";
 import { normalizeWhatsapp, slugify } from "../lib/util";
 
@@ -22,7 +22,7 @@ const file = args.find((a) => !a.startsWith("--"));
 const menusFile = args.includes("--menus") ? args[args.indexOf("--menus") + 1] : undefined;
 const status: Restaurant["status"] = args.includes("--active") ? "active" : "unclaimed";
 if (!file) { console.error("usage: import-csv <restaurants.csv> [--menus menus.csv] [--active]"); process.exit(1); }
-if (!process.env.FIREBASE_SERVICE_ACCOUNT) { console.error("Set FIREBASE_SERVICE_ACCOUNT first."); process.exit(1); }
+if (isDemo()) { console.error("Set DATABASE_URL (Supabase) or FIREBASE_SERVICE_ACCOUNT first."); process.exit(1); }
 
 const list = (s: string) => s.split(";").map((x) => x.trim()).filter(Boolean);
 const diets = (s: string): Diet[] => list(s).filter((d): d is Diet => DIETS.some((x) => x.id === d));

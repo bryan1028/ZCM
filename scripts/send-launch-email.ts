@@ -9,7 +9,7 @@
  * a postal address is REQUIRED for --send (CAN-SPAM and similar laws); --city restricts to one city; always run a
  * dry run and then --limit 1 to your own address first. Sending uses Resend (your domain already has its DNS records).
  */
-import { getStore } from "../lib/store";
+import { getStore, isDemo } from "../lib/store";
 import { unsubUrl } from "../lib/unsub";
 
 const args = process.argv.slice(2);
@@ -35,7 +35,7 @@ ${address ?? "[mailing address]"}
 `;
 
 (async () => {
-  if (!process.env.FIREBASE_SERVICE_ACCOUNT) throw new Error("Set FIREBASE_SERVICE_ACCOUNT.");
+  if (isDemo()) throw new Error("Set DATABASE_URL (Supabase) or FIREBASE_SERVICE_ACCOUNT.");
   let ps = (await getStore().listProfiles(50000)).filter((p) => p.optIn && p.email);
   if (city) ps = ps.filter((p) => (p.city ?? "").toLowerCase() === city);
   if (limit) ps = ps.slice(0, limit);

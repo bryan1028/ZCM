@@ -11,13 +11,13 @@
  * used as a fallback — it may be a landline that is not on WhatsApp, so those chats can fail.
  * Seeded restaurants are `unclaimed`: visible, no menu, with a "claim this listing" prompt.
  */
-import { getStore } from "../lib/store";
+import { getStore, isDemo } from "../lib/store";
 import { DIETS, type Diet, type Restaurant } from "../lib/types";
 import { normalizeWhatsapp, slugify } from "../lib/util";
 
 const [country, city, ...flags] = process.argv.slice(2);
 if (!country || !city) { console.error("usage: seed-osm <ISO2 country> <city name> [--use-phone]"); process.exit(1); }
-if (!process.env.FIREBASE_SERVICE_ACCOUNT) { console.error("Set FIREBASE_SERVICE_ACCOUNT first."); process.exit(1); }
+if (isDemo()) { console.error("Set DATABASE_URL (Supabase) or FIREBASE_SERVICE_ACCOUNT first."); process.exit(1); }
 const usePhone = flags.includes("--use-phone");
 const signalOnly = flags.includes("--signal");
 const OVERPASS = process.env.OVERPASS_URL ?? "https://overpass-api.de/api/interpreter";

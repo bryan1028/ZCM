@@ -26,7 +26,9 @@ export function shortRef(): string {
 export function formatPrice(price?: number, currency?: string): string {
   if (price == null) return "";
   try {
-    return new Intl.NumberFormat("en", { style: "currency", currency: currency || "USD", maximumFractionDigits: 2 }).format(price);
+    // Whole amounts read better without ".00" (KES 1,185); fractional ones keep two places ($7.99).
+    const whole = Number.isInteger(price);
+    return new Intl.NumberFormat("en", { style: "currency", currency: currency || "USD", minimumFractionDigits: whole ? 0 : 2, maximumFractionDigits: whole ? 0 : 2 }).format(price);
   } catch {
     return `${currency ?? ""} ${price}`.trim();
   }

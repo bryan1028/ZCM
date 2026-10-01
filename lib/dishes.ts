@@ -76,3 +76,11 @@ export const dishEmoji = (cuisines: string[], name = ""): string => {
   for (const h of hay) for (const k of Object.keys(EMOJI)) if (h.includes(k)) return EMOJI[k];
   return "🍽️";
 };
+
+/** Search words for a restaurant: its name, cuisines and dish names. Stored on the doc so Firestore can match text without scanning. */
+export function restaurantTokens(r: Pick<Restaurant, "name" | "cuisines" | "menu">): string[] {
+  const words = new Set<string>();
+  const add = (t: string) => queryWords(t).forEach((w) => words.add(w));
+  add(r.name); r.cuisines.forEach(add); r.menu.forEach((m) => add(m.name));
+  return [...words].slice(0, 60);
+}

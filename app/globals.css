@@ -31,7 +31,7 @@ button, .btn { font: inherit; font-weight: 600; padding: 11px 18px; border: 0; b
 button:hover, .btn:hover { background: var(--fire-dim); }
 .btn.wa { background: var(--wa); } .btn.wa:hover { background: #178a45; }
 .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--border); }
-.grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); margin: 16px 0 48px; }
+.grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); margin: 16px 0 48px; }
 .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 8px; }
 .card h3 { font-size: 20px; margin: 0; } .card h3 a { text-decoration: none; }
 .meta { color: var(--ink-muted); font-size: 14px; }
@@ -50,20 +50,16 @@ th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--bor
 footer.site { border-top: 1px solid var(--border); padding: 24px 0 48px; color: var(--ink-muted); font-size: 13px; }
 label.f { display: grid; gap: 4px; font-size: 14px; font-weight: 500; } form.stack { display: grid; gap: 14px; max-width: 520px; }
 
-.bar-row { display: grid; grid-template-columns: 112px 1fr 84px; gap: 8px; align-items: center; font-size: 14px; }
-.bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bar-track { background: #f1ebe0; border-radius: 8px; overflow: hidden; }
 .bar { background: #cdbfa8; color: var(--ink); padding: 4px 8px; font-weight: 600; font-size: 13px; white-space: nowrap; border-radius: 8px; }
 .bar.cheapest { background: var(--sage); color: #fff; }
-.bar-age { text-align: right; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-@media (max-width: 420px) { .bar-row { grid-template-columns: 70px 1fr; } .bar-age { display: none; } }
 form.inline { display: inline; } form.inline button { padding: 4px 10px; font-size: 12px; }
 .auth-slot { display: inline-flex; align-items: center; gap: 10px; margin-left: 16px; min-width: 40px; }
 .auth-link { font-size: 14px; font-weight: 600; text-decoration: none; color: var(--fire-dim); }
 button.linklike { background: none; color: var(--ink-muted); padding: 0; font-weight: 400; font-size: 13px; text-decoration: underline; }
 button.linklike:hover { background: none; color: var(--ink); }
-.req-row { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; }
-.count { text-align: center; min-width: 52px; } .count b { display: block; font-size: 22px; font-family: "Playfair Display", serif; }
+.req-row { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; } .req-row > :first-child { min-width: 0; flex: 1; } .req-row h3 { overflow-wrap: anywhere; }
+.count { text-align: right; flex-shrink: 0; } .count b { display: block; font-size: 20px; line-height: 1.1; white-space: nowrap; font-family: "Playfair Display", serif; }
 .sig { color: var(--fire-dim); font-weight: 600; }
 .checkline { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; } .checkline input { margin-top: 4px; }
 @media (max-width: 520px) { nav a:nth-child(n+3) { display: inline; } nav a { margin-left: 10px; } .auth-slot { margin-left: 10px; } }
@@ -84,13 +80,23 @@ footer.site a { color: inherit; margin-right: 14px; }
 .pillnav .zood { background: #fff2ec; color: #c44614; } .pillnav .zind { background: #e8f5ec; color: #14572f; }
 .pillnav a:hover { filter: brightness(.95); }
 .dish-top { display: flex; gap: 12px; align-items: flex-start; }
-.dish-body { flex: 1; min-width: 0; } .dish-body h3 { margin: 0 0 2px; }
 .dish-emoji { width: 52px; height: 52px; border-radius: 14px; background: var(--fire-soft); display: flex; align-items: center; justify-content: center; font-size: 28px; flex-shrink: 0; }
 .dish-emoji.sm { width: 40px; height: 40px; font-size: 22px; }
-.dish-price { font-weight: 700; white-space: nowrap; font-family: "Playfair Display", Georgia, serif; font-size: 18px; }
-.dish-actions { display: flex; gap: 8px; margin-top: auto; align-items: center; flex-wrap: wrap; }
 .menu-item.pick { align-items: center; cursor: pointer; } .menu-item.pick input { width: 20px; height: 20px; accent-color: var(--wa); flex-shrink: 0; }
 .menu-item.pick:has(input:checked) { background: #eefaf2; border-radius: 12px; }
 .tray { position: sticky; bottom: 0; margin-top: 12px; background: var(--paper); border-top: 1px solid var(--border); padding: 12px 0; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 button.wa-btn { background: var(--wa); } button.wa-btn:hover { background: #178a45; }
 .hero h2 { margin-top: 0; }
+
+/* price bars: label + age on one line, the bar full width underneath, so nothing gets clipped */
+.bar-row { display: grid; grid-template-columns: 1fr auto; column-gap: 8px; row-gap: 3px; align-items: baseline; font-size: 14px; }
+.bar-label { grid-column: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-age { grid-column: 2; text-align: right; font-size: 12px; white-space: nowrap; }
+.bar-track { grid-column: 1 / -1; background: #f1ebe0; border-radius: 8px; overflow: hidden; }
+.bar { min-width: max-content; }
+/* dish cards */
+.dish-body { flex: 1; min-width: 0; } .dish-body h3 { overflow-wrap: anywhere; }
+.dish-priceline { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: auto; padding-top: 4px; }
+.dish-price { font-weight: 700; white-space: nowrap; font-family: "Playfair Display", Georgia, serif; font-size: 20px; }
+.dish-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.btn.sm { padding: 8px 12px; font-size: 14px; }

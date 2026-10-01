@@ -16,7 +16,7 @@ import { normalizeWhatsapp, slugify } from "../lib/util";
 
 const apply = process.argv.includes("--apply");
 const backupPath = process.argv.includes("--backup") ? process.argv[process.argv.indexOf("--backup") + 1] : undefined;
-if (!process.env.FIREBASE_SERVICE_ACCOUNT) { console.error("Set FIREBASE_SERVICE_ACCOUNT."); process.exit(1); }
+if (!process.env.FIREBASE_SERVICE_ACCOUNT) { console.error("Set FIREBASE_SERVICE_ACCOUNT (this script reads the old Firestore data)."); process.exit(1); }
 if (apply && !backupPath) { console.error("--apply requires --backup <file>."); process.exit(1); }
 
 const CURRENCY: Record<string, string> = { KE: "KES", GB: "GBP", US: "USD", NG: "NGN", ZA: "ZAR", UG: "UGX", TZ: "TZS" };
