@@ -4,6 +4,7 @@ import { geohashForLocation } from "geofire-common";
 import { FieldValue, type DocumentSnapshot, type Query } from "firebase-admin/firestore";
 import { adminDb, parseServiceAccount } from "./firebase-admin";
 import { tokenize } from "./prices";
+import { flattenDishes, type DishHit, type DishQuery } from "./dishes";
 import { DIETS } from "./types";
 import type { Claim, Deal, Diet, Lead, MenuItem, PlaceRequest, PricePoint, Profile, Restaurant } from "./types";
 
@@ -25,6 +26,8 @@ export interface CitySummary {
 export interface Store {
   searchRestaurants(opts: SearchOptions): Promise<Restaurant[]>;
   getRestaurant(id: string): Promise<Restaurant | null>;
+  /** Dishes (menu items) matching the query, optionally within a country/city. */
+  searchDishes(o: DishQuery & { country?: string; citySlug?: string; limit?: number }): Promise<DishHit[]>;
   listCities(): Promise<CitySummary[]>;
   /** Insert or update by (source, sourceId). Never overwrites owner-edited menus. */
   upsertImported(rs: Omit<Restaurant, "id">[]): Promise<{ created: number; skipped: number }>;
@@ -206,6 +209,10 @@ function createDemoStore(): Store {
     },
     async getRestaurant(id) {
       return restaurants.find((r) => r.id === id) ?? null;
+    },
+    async searchDishes(o) {
+      const rs = restaurants.filter((r) => (!o.country || r.country === o.country) && (!o.citySlug || r.citySlug === o.citySlug));
+      return flattenDishes(rs, o).slice(0, o.limit ?? 60);
     },
     async listCities() {
       return summarize(restaurants);
@@ -471,6 +478,14 @@ function createFirestoreStore(): Store {
     async getRestaurant(id) {
       const d = await col.doc(id).get();
       return d.exists ? toR(d) : null;
+    },
+    async searchDishes(o) {
+      // Only verified restaurants have menus; unclaimed listings have none.
+      let q: Query = col.where("status", "==", "active");
+      if (o.country) q = q.where("country", "==", o.country);
+      if (o.citySlug) q = q.where("citySlug", "==", o.citySlug);
+      const snap = await q.limit(500).get();
+      return flattenDishes(snap.docs.map(toR), o).slice(0, o.limit ?? 60);
     },
     async listCities() {
       // Cheap enough until ~100k docs; replace with a maintained `cities` collection after that.

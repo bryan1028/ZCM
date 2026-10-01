@@ -22,8 +22,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.redirect(new URL("/", req.url), 302);
   }
 
-  const itemId = req.nextUrl.searchParams.get("item") ?? undefined;
-  const item = itemId ? r.menu.find((m) => m.id === itemId) : undefined;
+  // One or several dishes: /go/<id>?item=a&item=b ("pick your meal", then message the restaurant once).
+  const picked = [...new Set(req.nextUrl.searchParams.getAll("item"))].slice(0, 12).map((id) => r.menu.find((m) => m.id === id)).filter((m): m is NonNullable<typeof m> => Boolean(m));
   const srcParam = req.nextUrl.searchParams.get("src") as LeadSource;
   const source: LeadSource = SOURCES.includes(srcParam) ? srcParam : "unknown";
 
@@ -41,8 +41,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         restaurantName: r.name,
         country: r.country,
         city: r.city,
-        itemId: item?.id,
-        itemName: item?.name,
+        itemId: picked.length ? picked.map((m) => m.id).join(",").slice(0, 200) : undefined,
+        itemName: picked.length ? picked.map((m) => m.name).join(", ").slice(0, 300) : undefined,
         source,
         ref,
         visitor,
@@ -56,7 +56,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     }
   }
 
-  const text = `Hi ${r.name}! I found you on Zist (ref ${ref}).` + (item ? ` I'm interested in the ${item.name}.` : "");
+  const text = `Hi ${r.name}! I found you on Zood (ref ${ref}).` +
+    (picked.length === 1 ? ` I'd like the ${picked[0].name}.` : picked.length > 1 ? ` I'd like: ${picked.map((m) => m.name).join(", ")}.` : "");
   const res = NextResponse.redirect(`https://wa.me/${r.whatsapp}?text=${encodeURIComponent(text)}`, 302);
   res.headers.set("Cache-Control", "no-store");
   res.headers.set("X-Robots-Tag", "noindex, nofollow");

@@ -1,50 +1,68 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getStore } from "@/lib/store";
+import { detectPlace } from "@/lib/geo";
 import { comparePrices } from "@/lib/prices";
-import { slugify } from "@/lib/util";
+import { getStore } from "@/lib/store";
+import { regionName, slugify } from "@/lib/util";
+import { ZindMark } from "../brand";
 import { PriceCard } from "../components";
 
 export const metadata: Metadata = {
-  title: "Compare grocery prices near you",
-  description: "Search any product and see its price at each store in your city, reported by shoppers.",
+  title: "Zind — find what anything costs",
+  description: "Type any item and see its price at every store Zind knows, in any city.",
 };
 export const dynamic = "force-dynamic";
 
-type SP = Promise<{ q?: string; city?: string; country?: string; thanks?: string }>;
+type SP = Promise<{ q?: string; city?: string; thanks?: string }>;
+const TRY = ["milk", "rice", "bread", "eggs", "cooking oil", "toothpaste"];
 
-export default async function Find({ searchParams }: { searchParams: SP }) {
+export default async function Zind({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
-  const searching = Boolean(sp.q);
-  const points = searching
-    ? await getStore().searchPrices({ q: sp.q, citySlug: sp.city ? slugify(sp.city) : undefined, country: sp.country?.toUpperCase() || undefined })
-    : [];
-  const results = comparePrices(points);
+  const place = await detectPlace();
+  const submitted = "q" in sp || "city" in sp;
+  const city = (submitted ? sp.city : place.city ?? "")?.trim() ?? "";
+  const citySlug = city ? slugify(city) : undefined;
+  const q = sp.q?.trim() || undefined;
+  // First visit with no city known: start in the visitor's country (Zind widens by itself if nothing is there).
+  const scopeCountry = !submitted && !city ? place.country : undefined;
+  const where = city || (scopeCountry ? regionName(scopeCountry) : "");
+
+  const store = getStore();
+  let comps = comparePrices(await store.searchPrices({ q, citySlug, country: scopeCountry, limit: 800 }), Date.now(), q, citySlug);
+  let widened = false;
+  if (!comps.length && (citySlug || scopeCountry)) { comps = comparePrices(await store.searchPrices({ q, limit: 800 }), Date.now(), q, citySlug); widened = comps.length > 0; }
+  comps = comps.slice(0, 24);
 
   return (
-    <>
-      <section className="hero">
-        <h1>Where is it cheapest?</h1>
-        <p>Search a product to compare its price across stores in your city. Prices are reported by shoppers like you, so you can help too.</p>
-        <form className="search" action="/find" method="get">
-          <div className="row">
-            <input type="text" name="q" placeholder="e.g. milk, maize flour, rice" defaultValue={sp.q} aria-label="Product" required />
-            <input type="text" name="city" placeholder="City (e.g. Nairobi)" defaultValue={sp.city} aria-label="City" />
-            <button type="submit">Compare</button>
-          </div>
-        </form>
-        <p style={{ marginTop: 14 }}><Link href="/find/report">+ Report a price</Link> · <Link href="/deals">See deals</Link></p>
+    <div className="theme-zind">
+      <section className="hero brandhero">
+        <ZindMark size={72} />
+        <div>
+          <h1>Zind it for less.</h1>
+          <p>Type any item. Zind sniffs out what it costs at every store it knows.</p>
+        </div>
       </section>
-      {sp.thanks === "1" && <div className="notice">Thanks! Your price is live.</div>}
-      {sp.thanks === "review" && <div className="notice">Thanks! That price looks unusual, so we'll check it before showing it.</div>}
-      {searching && (
-        <>
-          <h2>{results.length} product{results.length === 1 ? "" : "s"}</h2>
-          {results.length === 0 && <p className="meta">No prices yet. Be the first: <Link href="/find/report">report a price</Link>.</p>}
-          <div className="grid">{results.map((c) => <PriceCard key={c.productKey} c={c} />)}</div>
-          <p className="meta">Only prices from the last 4 months are shown. Prices can change; check the shelf tag.</p>
-        </>
-      )}
-    </>
+
+      <form className="search" action="/find" method="get">
+        <div className="row">
+          <input type="text" name="q" placeholder="rice, milk, dettol, anything…" defaultValue={q} aria-label="What are you hunting for?" autoFocus={!submitted} />
+          <input type="text" name="city" placeholder="Where? any city on Earth" defaultValue={city} aria-label="City" />
+          <button type="submit">Zind it</button>
+        </div>
+        <div className="cities" aria-label="Try">
+          {TRY.map((t) => <Link key={t} href={`/find?q=${encodeURIComponent(t)}${city ? `&city=${encodeURIComponent(city)}` : ""}`}>{t}</Link>)}
+        </div>
+      </form>
+
+      {sp.thanks === "1" && <div className="notice">Thanks, that sighting is live! 🎉</div>}
+      {sp.thanks === "review" && <div className="notice">Thanks! That price looks unusual, so we'll double-check it before showing it.</div>}
+      {widened && <div className="notice">Zind hasn't sniffed around <b>{where}</b> yet 🐾 Here's what it found elsewhere. <Link href="/find/report">Be its nose: add a price</Link>.</div>}
+
+      <h2>{comps.length ? (q ? `${comps.length} find${comps.length === 1 ? "" : "s"} for “${q}”` : where && !widened ? `Fresh sniffs in ${where}` : "Fresh sniffs from around the world") : "Zind sniffed everywhere and found nothing 🐽"}</h2>
+      {!comps.length && <p className="meta">No one has reported “{q ?? "that"}”{where ? ` in ${where}` : ""} yet. <Link href="/find/report">Be the first to add a price</Link>, or try a simpler word.</p>}
+      <div className="grid">{comps.map((c) => <PriceCard key={`${c.productKey}|${c.citySlug}`} c={c} />)}</div>
+      <p className="meta">Prices come from shoppers and from the open Open Prices dataset. Only the last 4 months are shown, and prices change, so check the shelf tag.</p>
+      <p style={{ margin: "14px 0 48px" }}><Link className="btn" href="/find/report">➕ Add a price you saw</Link> <Link className="btn ghost" href="/deals">See deals</Link> <Link className="btn ghost" href="/">Hungry instead? Zood it</Link></p>
+    </div>
   );
 }

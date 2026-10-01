@@ -1,31 +1,47 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "zist",
-  "version": "1.0.0",
-  "description": "Find restaurants that suit your diet, compare grocery prices between stores, and get a link to message a restaurant on WhatsApp.",
+  "version": "1.1.0",
+  "description": "Zood finds the dish you are craving and gives you a link to message the restaurant. Zind compares what an item costs at different stores.",
   "author": {
     "name": "Zist",
     "url": "https://zist.it.com"
   },
   "homepage": "https://zist.it.com",
-  "keywords": ["restaurants", "dietary", "vegan", "halal", "grocery prices", "deals"],
+  "keywords": [
+    "restaurants",
+    "dishes",
+    "dietary",
+    "vegan",
+    "halal",
+    "allergies",
+    "grocery prices",
+    "price comparison",
+    "deals"
+  ],
   "extensions": {
     "com.openai": {
       "interface": {
         "displayName": "Zist",
-        "shortDescription": "Diet-friendly food & prices",
-        "longDescription": "Zist helps you find restaurants that match how you eat, and see where groceries cost less.\n\nWhat you can do:\n- Search restaurants in a city by diet (vegan, vegetarian, gluten-free, halal, kosher, dairy-free, nut-free), cuisine or dish, and see menu highlights with allergens as the restaurant listed them.\n- Open a restaurant's menu and get a link to message it on WhatsApp.\n- Compare the latest community-reported grocery price for a product across stores in a city.\n- See current deals in a city.\n- See which restaurants and stores the community has asked Zist to add.\n\nGood to know:\n- Restaurant listings currently focus on Nairobi, Kenya, and grow as people request places. Grocery prices come from shoppers and from the open Open Prices dataset, and are strongest in a few US cities; coverage elsewhere is limited.\n- Menu and allergen details come from restaurants and the community and can be out of date. If you have a food allergy, always confirm with the restaurant before ordering.\n- Zist does not take orders or payments. The message link opens WhatsApp so you can talk to the restaurant directly.\n- You only need to name a city. Zist never needs your exact location, and your searches are not stored.",
+        "shortDescription": "Zood for food, Zind for prices",
+        "longDescription": "Zist has two parts.\n\nZood helps you find what to eat. Say what you are craving (a dish, an ingredient, a cuisine), optionally for a diet (vegan, vegetarian, gluten-free, halal, kosher, dairy-free, nut-free) or skipping certain allergens, and Zood returns matching dishes with prices and the restaurant, plus a link to message that restaurant on WhatsApp about the dish.\n\nZind helps you find what things cost. Name any item and Zind shows the latest community-reported price at each store, per city, so you can see where it is cheaper. You can also see current deals and which places the community has asked Zist to add.\n\nGood to know:\n- Searches work in any city. Coverage is uneven and growing: restaurant listings and menus are richest in Nairobi, Kenya today, and price data is richest in Nairobi and a few US cities. When nothing is found, Zist says so and shows how to ask for a place to be added.\n- Menu and allergen details come from restaurants and the community and can be out of date. \"No allergens listed\" does not mean allergen-free. If you have a food allergy, always confirm with the restaurant before ordering.\n- Zist does not take orders or payments. The message link opens WhatsApp so you can talk to the restaurant directly.\n- You only need to name a city, and you can leave it out. Zist never needs your exact location, and your searches are not stored.",
         "developerName": "Zist",
         "category": "Other",
-        "capabilities": ["Search restaurants by diet", "View menus and allergens", "Compare grocery prices", "Find deals", "Message restaurants"],
+        "capabilities": [
+          "Search dishes by craving, diet and allergens",
+          "View menus and declared allergens",
+          "Compare item prices across stores",
+          "Find deals",
+          "Message restaurants on WhatsApp"
+        ],
         "websiteURL": "https://zist.it.com",
         "supportURL": "https://zist.it.com/support",
         "privacyPolicyURL": "https://zist.it.com/privacy",
         "termsOfServiceURL": "https://zist.it.com/terms",
         "defaultPrompt": [
-          "Find vegetarian restaurants in Nairobi.",
-          "Compare milk prices in New York.",
-          "Which places do people want added in Nairobi?"
+          "I'm craving chicken. What can I order in Nairobi?",
+          "What does basmati rice cost in Nairobi?",
+          "Compare milk prices in New York."
         ],
         "brandColor": "#E8531A",
         "brandColorDark": "#F2683A",
@@ -39,34 +55,34 @@
         "test_cases": {
           "positive": [
             {
-              "description": "Find restaurants for a diet in a city",
-              "prompt": "Find vegetarian restaurants in Nairobi.",
-              "tools_triggered": "search_restaurants",
-              "expected_behavior": "Lists vegetarian restaurants in Nairobi, including Haandi (Westlands) and Carnivore (Langata), with a message link for each and a reminder to confirm allergens with the restaurant."
+              "description": "Find a dish by craving",
+              "prompt": "I'm craving chicken. What can I order in Nairobi?",
+              "tools_triggered": "search_dishes",
+              "expected_behavior": "Lists chicken dishes in Nairobi, including the Chicken Tikka Tandoori at Haandi (Westlands) with its price in KES and the allergen the restaurant declared (dairy), a link to message the restaurant about that dish, and a reminder to confirm allergens with the restaurant."
             },
             {
               "description": "Open a restaurant's menu",
               "prompt": "Show me the menu for Haandi in Westlands, Nairobi, with the allergens.",
               "tools_triggered": "search_restaurants, get_restaurant",
-              "expected_behavior": "Finds Haandi (Westlands) and shows its menu items with prices and the allergens the restaurant listed, plus the allergy reminder."
+              "expected_behavior": "Finds Haandi (Westlands) and shows its menu items with prices and the allergens the restaurant listed. It does not call a dish allergen-free when none are listed, and includes the allergy reminder."
             },
             {
-              "description": "Get a link to message a restaurant",
-              "prompt": "How can I message Haandi in Westlands, Nairobi on WhatsApp?",
-              "tools_triggered": "search_restaurants, get_restaurant",
-              "expected_behavior": "Returns the zist.it.com message link for Haandi (Westlands). It does not show or guess a phone number."
+              "description": "Message a restaurant about a dish",
+              "prompt": "I want the Lamb Seekh Kebabs from Haandi in Westlands, Nairobi. How do I message them?",
+              "tools_triggered": "search_dishes",
+              "expected_behavior": "Returns a zist.it.com message link specific to the Lamb Seekh Kebabs at Haandi (Westlands). It does not show or guess a phone number and says Zist does not take orders or payments."
             },
             {
-              "description": "Compare grocery prices across stores",
+              "description": "Compare prices across stores in a city",
               "prompt": "Compare milk prices in New York.",
               "tools_triggered": "compare_prices",
               "expected_behavior": "Shows community-reported milk products in New York with the price at each store, for example Organic Valley 0% Milk at Morton Williams and Dumbo Market, and notes that prices can be out of date."
             },
             {
-              "description": "See what places the community wants added",
-              "prompt": "Which places do people want added to Zist in Nairobi?",
-              "tools_triggered": "list_requested_places",
-              "expected_behavior": "Lists open requests for Nairobi with how many people back each, or says there are none yet, and gives the link to request a place. It does not reveal who requested them."
+              "description": "Price of an item in another city",
+              "prompt": "What does basmati rice cost in Nairobi?",
+              "tools_triggered": "compare_prices",
+              "expected_behavior": "Shows Daawat Basmati Rice 5Kg in Nairobi at Carrefour, Quickmart and Naivas in KES, with the cheapest store, and notes that prices can be out of date."
             }
           ],
           "negative": [

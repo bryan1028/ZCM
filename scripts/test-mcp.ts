@@ -14,7 +14,7 @@ const ok = (m: string) => console.log("PASS", m);
   const instr = client.getInstructions() ?? ""; assert.ok(instr.length > 50 && instr.length < 1500); ok(`instructions present (${instr.length} chars; key point in first 512: ${/allerg/i.test(instr.slice(0, 512))})`);
 
   const { tools } = await client.listTools();
-  assert.deepEqual(tools.map((t) => t.name).sort(), ["compare_prices", "find_deals", "get_restaurant", "list_requested_places", "search_restaurants"]);
+  assert.deepEqual(tools.map((t) => t.name).sort(), ["compare_prices", "find_deals", "get_restaurant", "list_requested_places", "search_dishes", "search_restaurants"]);
   for (const t of tools) {
     assert.equal(t.annotations?.readOnlyHint, true, `${t.name} readOnlyHint`);
     assert.equal(t.annotations?.destructiveHint, false, `${t.name} destructiveHint`);
@@ -22,7 +22,7 @@ const ok = (m: string) => console.log("PASS", m);
     assert.ok(t.description && t.description.startsWith("Use this when"), `${t.name} description`);
     assert.ok(t.outputSchema, `${t.name} outputSchema`);
   }
-  ok(`5 tools, all readOnly/non-destructive/closed-world, with descriptions + output schemas`);
+  ok(`6 tools, all readOnly/non-destructive/closed-world, with descriptions + output schemas`);
 
   const s = await call("search_restaurants", { city: "Nairobi", diets: ["vegetarian"] });
   assert.ok(!s.isError); const rs = s.structuredContent!.results as any[]; assert.ok(rs.length >= 1);
@@ -39,7 +39,12 @@ const ok = (m: string) => console.log("PASS", m);
   const q = await call("list_requested_places", { city: "Nairobi" }); assert.ok(!q.isError); assert.ok(!JSON.stringify(q.structuredContent).includes("handle")); ok(`list_requested_places -> ${(q.structuredContent!.requests as any[]).length} request(s), no handles exposed`);
   const e = await call("search_restaurants", { city: "Nairobi", limit: 99 }).catch((x) => ({ isError: true, content: [{ text: String(x.message) }] })); assert.ok((e as any).isError); ok("limit=99 rejected (input validation)");
   const e2 = await call("search_restaurants", { city: "Nairobi", diets: ["keto"] }).catch((x) => ({ isError: true, content: [{ text: String(x.message) }] })); assert.ok((e2 as any).isError); ok("unknown diet rejected");
-  const e3 = await call("search_restaurants", {}).catch((x) => ({ isError: true, content: [{ text: String(x.message) }] })); assert.ok((e3 as any).isError); ok("missing city rejected");
+  const wide = await call("search_restaurants", {}); assert.ok(!wide.isError && (wide.structuredContent!.results as any[]).length >= 1); ok("search_restaurants works with NO city (searches everywhere)");
+  const dsh = await call("search_dishes", { query: "chicken" }); assert.ok(!dsh.isError); const dd = dsh.structuredContent!.dishes as any[]; assert.ok(dd.length >= 1, "dishes found"); ok(`search_dishes "chicken" anywhere -> ${dd.map((d) => d.name).join(", ")}`);
+  assert.ok(dd.every((d) => d.allergens !== undefined) && dd.find((d) => d.messageUrl)?.messageUrl.match(/\/go\/.+\?item=.+&src=chatgpt/)); ok("dish messageUrl is item-specific + tracked");
+  const nodairy = await call("search_dishes", { query: "potato", avoid_allergens: ["dairy"] }); assert.ok(!(nodairy.structuredContent!.dishes as any[]).some((d) => d.allergens.includes("dairy"))); ok("avoid_allergens removes dishes that declare the allergen");
+  const veg = await call("search_dishes", { diets: ["vegetarian"], city: "Nairobi" }); assert.ok((veg.structuredContent!.dishes as any[]).every((d) => d.diets.includes("vegetarian"))); ok("search_dishes diet filter is per dish");
+  const bad = await call("search_dishes", { avoid_allergens: ["lead"] }).catch((x) => ({ isError: true })); assert.ok((bad as any).isError); ok("unknown allergen rejected");
   const none = await call("search_restaurants", { city: "Atlantis" }); assert.equal((none.structuredContent!.results as any[]).length, 0); ok("unknown city -> empty results with a helpful message");
   await client.close(); console.log("\nMCP contract: all checks passed");
 })().catch((e) => { console.error("MCP TEST FAILED:", e.message); process.exit(1); });

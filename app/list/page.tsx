@@ -25,7 +25,7 @@ export default async function ListPage({ searchParams }: { searchParams: SP }) {
     <section className="hero">
       <h1>{existing ? `Claim ${existing.name}` : "Get customers messaging you on WhatsApp"}</h1>
       <p>Free for your first 3 months. Diners find you by diet, allergy and cuisine, and message you directly.</p>
-      {sp.error && <div className="notice">Please fill in every field, including your WhatsApp number with country code (e.g. +254 712 345 678).</div>}
+      {sp.error && <div className="notice">Please fill in every field, including your WhatsApp number with country code (e.g. +1 555 123 4567).</div>}
       <form className="stack" action={submitListing}>
         <input type="hidden" name="claimId" value={existing?.id ?? ""} />
         <input type="text" name="website" tabIndex={-1} autoComplete="off" style={{ display: "none" }} aria-hidden />
@@ -33,7 +33,7 @@ export default async function ListPage({ searchParams }: { searchParams: SP }) {
         <label className="f">City<input type="text" name="city" required defaultValue={existing?.city} /></label>
         <label className="f">Country code (2 letters, e.g. KE, GB, US)<input type="text" name="country" required maxLength={2} defaultValue={existing?.country} style={{ textTransform: "uppercase" }} /></label>
         <label className="f">Your name<input type="text" name="contactName" required /></label>
-        <label className="f">WhatsApp number (with country code)<input type="tel" name="whatsapp" required placeholder="+254 712 345 678" /></label>
+        <label className="f">WhatsApp number (with country code)<input type="tel" name="whatsapp" required placeholder="+1 555 123 4567" /></label>
         <label className="f">Email (optional)<input type="email" name="email" /></label>
         {!existing && (
           <div className="chips" role="group" aria-label="Diets you cater for">

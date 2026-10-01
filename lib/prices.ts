@@ -44,12 +44,14 @@ const MAX_AGE_DAYS = 120;
  *  - keep each store's most recent price
  *  - only compare within the product's most common currency (never mix KES and USD)
  */
-export function comparePrices(points: PricePoint[], now = Date.now()): PriceComparison[] {
+export function comparePrices(points: PricePoint[], now = Date.now(), query?: string, preferCitySlug?: string): PriceComparison[] {
   const cutoff = now - MAX_AGE_DAYS * 864e5;
+  // One comparison per product PER CITY: a store's price in one city says nothing about another city.
   const byProduct = new Map<string, PricePoint[]>();
   for (const p of points) {
     if (p.status !== "ok" || Date.parse(p.observedAt) < cutoff) continue;
-    (byProduct.get(p.productKey) ?? byProduct.set(p.productKey, []).get(p.productKey)!).push(p);
+    const k = `${p.productKey}|${p.citySlug}`;
+    (byProduct.get(k) ?? byProduct.set(k, []).get(k)!).push(p);
   }
 
   const out: PriceComparison[] = [];
@@ -68,13 +70,27 @@ export function comparePrices(points: PricePoint[], now = Date.now()): PriceComp
     const min = stores[0].price, max = stores[stores.length - 1].price;
     const first = stores[0];
     out.push({
-      productKey: key, productName: first.productName, brand: first.brand, size: first.size, currency,
+      productKey: key.split("|")[0], productName: first.productName, brand: first.brand, size: first.size, city: first.city, citySlug: first.citySlug, country: first.country, currency,
       stores: stores.map((s) => ({ storeName: s.storeName, price: s.price, observedAt: s.observedAt, source: s.source, isCheapest: s.price === min, by: s.reporterHandle })),
       min, max, savingsPct: stores.length > 1 && max > 0 ? Math.round(((max - min) / max) * 100) : 0,
     });
   }
-  // Products compared across more stores first, then by biggest saving.
-  return out.sort((a, b) => b.stores.length - a.stores.length || b.savingsPct - a.savingsPct);
+  // Best match to what was typed first (whole-word in the name beats a stray word), then the user's own city,
+  // then products compared across more stores, then the biggest saving.
+  // English puts the main noun last ("Whole Milk" is milk; "Milk Chocolate" is chocolate), so a match on the LAST word
+  // of the name ranks highest, then the first word, then anywhere. An exact name match gets a bonus.
+  const words = (query ?? "").toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  const rel = (c: PriceComparison) => {
+    if (!words.length) return 0;
+    const nameWords = c.productName.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+    const all = [c.brand, c.productName].filter(Boolean).join(" ").toLowerCase().split(/[^a-z0-9]+/);
+    const tail = nameWords[nameWords.length - 1], lead = nameWords[0];
+    const exact = nameWords.join(" ") === words.join(" ") ? 3 : 0;
+    return exact + words.reduce((n, w) => n + (tail === w ? 5 : lead === w ? 2.5 : all.includes(w) ? 2 : 1), 0);
+  };
+  return out.sort((a, b) =>
+    rel(b) - rel(a) || Number(b.citySlug === preferCitySlug) - Number(a.citySlug === preferCitySlug) ||
+    b.stores.length - a.stores.length || b.savingsPct - a.savingsPct);
 }
 
 export function agoLabel(iso: string, now = Date.now()): string {
@@ -83,4 +99,15 @@ export function agoLabel(iso: string, now = Date.now()): string {
   if (days === 1) return "yesterday";
   if (days < 30) return `${days} days ago`;
   return `${Math.floor(days / 30)} mo ago`;
+}
+
+/** A readable item name: add the brand/size only when the name doesn't already say them, and skip run-on brand strings. */
+export function displayName(c: { brand?: string; productName: string; size?: string }, withSize = true): string {
+  const name = c.productName.trim();
+  const flat = (v: string) => v.toLowerCase().replace(/[^a-z0-9%]/g, "");
+  const parts: string[] = [];
+  if (c.brand && c.brand.length <= 24 && !flat(name).includes(flat(c.brand))) parts.push(c.brand);
+  parts.push(name);
+  if (withSize && c.size && !flat(name).includes(flat(c.size))) parts.push(c.size);
+  return parts.join(" ");
 }

@@ -29,8 +29,8 @@ export default async function SignUp({ searchParams }: { searchParams: Promise<{
         <label className="f">Email<input type="email" name="email" required autoComplete="email" /></label>
         <label className="f">Password (8+ characters)<input type="password" name="password" required minLength={8} autoComplete="new-password" /></label>
         <div className="row" style={{ display: "flex", gap: 10 }}>
-          <label className="f" style={{ flex: 2 }}>Your city<input type="text" name="city" placeholder="Nairobi" /></label>
-          <label className="f" style={{ flex: 1 }}>Country (2)<input type="text" name="country" maxLength={2} placeholder="KE" style={{ textTransform: "uppercase" }} /></label>
+          <label className="f" style={{ flex: 2 }}>Your city<input type="text" name="city" placeholder="Your city" /></label>
+          <label className="f" style={{ flex: 1 }}>Country (2)<input type="text" name="country" maxLength={2} placeholder="e.g. KE, GB, US" style={{ textTransform: "uppercase" }} /></label>
         </div>
         <div className="chips" role="group" aria-label="Your diet">
           {DIETS.map((d) => <label key={d.id}><input type="checkbox" name="diet" value={d.id} /><span>{d.label}</span></label>)}

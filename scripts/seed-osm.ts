@@ -3,6 +3,8 @@
  *
  *   npm run seed:osm -- KE Nairobi
  *   npm run seed:osm -- GB London --use-phone
+ *   npm run seed:osm -- FR Paris --signal      # only places with a WhatsApp number or diet tags (the useful ones)
+ *   OVERPASS_URL=https://overpass.kumi.systems/api/interpreter npm run seed:osm -- NG Lagos --signal
  *
  * OSM data is licensed ODbL: keep the "© OpenStreetMap contributors" credit (it is in the site footer).
  * Only `contact:whatsapp` is treated as a WhatsApp number. With --use-phone, a plain `phone` tag is
@@ -17,6 +19,8 @@ const [country, city, ...flags] = process.argv.slice(2);
 if (!country || !city) { console.error("usage: seed-osm <ISO2 country> <city name> [--use-phone]"); process.exit(1); }
 if (!process.env.FIREBASE_SERVICE_ACCOUNT) { console.error("Set FIREBASE_SERVICE_ACCOUNT first."); process.exit(1); }
 const usePhone = flags.includes("--use-phone");
+const signalOnly = flags.includes("--signal");
+const OVERPASS = process.env.OVERPASS_URL ?? "https://overpass-api.de/api/interpreter";
 
 interface El { type: string; id: number; lat?: number; lon?: number; center?: { lat: number; lon: number }; tags?: Record<string, string> }
 
@@ -38,7 +42,7 @@ function dietsFrom(t: Record<string, string>): Diet[] {
 }
 
 async function main() {
-  const res = await fetch("https://overpass-api.de/api/interpreter", {
+  const res = await fetch(OVERPASS, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": "zist-seed/0.1 (https://zist.it.com)" },
     body: "data=" + encodeURIComponent(query),
@@ -50,6 +54,7 @@ async function main() {
   for (const e of elements) {
     const t = e.tags ?? {};
     if (!t.name) continue;
+    if (signalOnly && !t["contact:whatsapp"] && !Object.keys(t).some((k) => k.startsWith("diet:"))) continue;
     const lat = e.lat ?? e.center?.lat, lng = e.lon ?? e.center?.lon;
     const address = [t["addr:housenumber"], t["addr:street"], t["addr:suburb"]].filter(Boolean).join(" ") || undefined;
     items.push({

@@ -7,7 +7,7 @@ export default function Privacy() {
   return (
     <article className="legal">
       <h1>Privacy policy</h1>
-      <p className="meta">Effective 1 October 2026. Zist ("we") runs zist.it.com and the Zist app in ChatGPT.</p>
+      <p className="meta">Effective 1 October 2026. Zist ("we") runs zist.it.com, including Zood (restaurants and dishes) and Zind (prices), and the Zist app in ChatGPT.</p>
 
       <h2>What we collect</h2>
       <ul>
@@ -15,6 +15,7 @@ export default function Privacy() {
         <li><b>Profile preferences</b> you choose to add: city and country, diets (for example vegan or halal), and allergies. Diet and allergy information can be sensitive. It is optional, used to personalise your experience, and never shared with restaurants or sold.</li>
         <li><b>Things you add</b>: places you request or back, prices you report, and people you follow. These show publicly with your username.</li>
         <li><b>Message taps</b>: when you tap "Message" we record the restaurant, the time, where you came from (website or ChatGPT), your username if you are signed in, and a random visitor ID in a cookie. We do not see your WhatsApp conversation. Restaurants receive your message directly from you on WhatsApp, which shows them your phone number.</li>
+        <li><b>Approximate location</b>: to prefill the city box on Zood and Zind we use the approximate city your connection appears to be in (from your IP address). It is used for that one page view, is not stored, and you can change or clear it to search anywhere.</li>
         <li><b>Messages to support</b>: your email and what you write.</li>
         <li><b>Email opt-in</b>: whether you agreed to launch emails. It is off unless you tick it.</li>
       </ul>

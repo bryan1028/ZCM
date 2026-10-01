@@ -50,7 +50,7 @@ th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--bor
 footer.site { border-top: 1px solid var(--border); padding: 24px 0 48px; color: var(--ink-muted); font-size: 13px; }
 label.f { display: grid; gap: 4px; font-size: 14px; font-weight: 500; } form.stack { display: grid; gap: 14px; max-width: 520px; }
 
-.bar-row { display: grid; grid-template-columns: 96px 1fr 84px; gap: 8px; align-items: center; font-size: 14px; }
+.bar-row { display: grid; grid-template-columns: 112px 1fr 84px; gap: 8px; align-items: center; font-size: 14px; }
 .bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bar-track { background: #f1ebe0; border-radius: 8px; overflow: hidden; }
 .bar { background: #cdbfa8; color: var(--ink); padding: 4px 8px; font-weight: 600; font-size: 13px; white-space: nowrap; border-radius: 8px; }
@@ -71,3 +71,26 @@ button.linklike:hover { background: none; color: var(--ink); }
 textarea { font: inherit; padding: 11px 12px; border: 1px solid var(--border); border-radius: 12px; width: 100%; }
 button.danger { background: #b3261e; } button.danger:hover { background: #8c1d18; }
 footer.site a { color: inherit; margin-right: 14px; }
+
+/* ── Zood & Zind ───────────────────────────────────── */
+.theme-zind { --fire: #1a6b3a; --fire-dim: #14572f; --fire-soft: #e8f5ec; --wa: #1fa855; }
+.brandhero { display: flex; gap: 16px; align-items: center; padding-bottom: 12px; }
+.brandhero h1 { margin: 0 0 4px; } .brandhero p { margin: 0; }
+.mark { flex-shrink: 0; animation: bob 4s ease-in-out infinite; }
+@keyframes bob { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-4px) rotate(2deg); } }
+@media (prefers-reduced-motion: reduce) { .mark { animation: none; } }
+.pillnav { display: inline-flex; gap: 6px; margin-left: 14px; }
+.pillnav a { margin: 0; padding: 5px 13px; border-radius: 999px; font-weight: 700; font-size: 14px; text-decoration: none; }
+.pillnav .zood { background: #fff2ec; color: #c44614; } .pillnav .zind { background: #e8f5ec; color: #14572f; }
+.pillnav a:hover { filter: brightness(.95); }
+.dish-top { display: flex; gap: 12px; align-items: flex-start; }
+.dish-body { flex: 1; min-width: 0; } .dish-body h3 { margin: 0 0 2px; }
+.dish-emoji { width: 52px; height: 52px; border-radius: 14px; background: var(--fire-soft); display: flex; align-items: center; justify-content: center; font-size: 28px; flex-shrink: 0; }
+.dish-emoji.sm { width: 40px; height: 40px; font-size: 22px; }
+.dish-price { font-weight: 700; white-space: nowrap; font-family: "Playfair Display", Georgia, serif; font-size: 18px; }
+.dish-actions { display: flex; gap: 8px; margin-top: auto; align-items: center; flex-wrap: wrap; }
+.menu-item.pick { align-items: center; cursor: pointer; } .menu-item.pick input { width: 20px; height: 20px; accent-color: var(--wa); flex-shrink: 0; }
+.menu-item.pick:has(input:checked) { background: #eefaf2; border-radius: 12px; }
+.tray { position: sticky; bottom: 0; margin-top: 12px; background: var(--paper); border-top: 1px solid var(--border); padding: 12px 0; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+button.wa-btn { background: var(--wa); } button.wa-btn:hover { background: #178a45; }
+.hero h2 { margin-top: 0; }

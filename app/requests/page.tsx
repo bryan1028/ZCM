@@ -6,14 +6,14 @@ import { regionName, slugify } from "@/lib/util";
 import { supportRequestAction } from "../request-actions";
 
 export const metadata: Metadata = {
-  title: "Requested places",
-  description: "Restaurants and stores the Zist community wants added. Add your support or request a new place.",
+  title: "Zummon a place",
+  description: "Restaurants and stores the community wants on Zood and Zind. Back one, or zummon a new place.",
 };
 export const dynamic = "force-dynamic";
 
 type SP = Promise<{ city?: string; kind?: string; done?: string }>;
 const DONE: Record<string, string> = {
-  created: "Thanks! Your request is live with your signature on it.", supported: "Thanks! You've added your support.",
+  created: "Zummoned! Your request is live with your signature on it.", supported: "Backed! Thanks for adding your voice.",
   already: "You've already backed this one.",
 };
 
@@ -30,16 +30,16 @@ export default async function Requests({ searchParams }: { searchParams: SP }) {
   return (
     <>
       <section className="hero">
-        <h1>Places the community wants</h1>
-        <p>Missing a restaurant or store? Request it. When enough people back a place, we reach out to them to join Zist.</p>
+        <h1>Zummon a place ✨</h1>
+        <p>Missing a restaurant or store? Zummon it. When enough people back a place, we go knock on their door and ask them to join.</p>
         <form className="search" action="/requests" method="get">
           <div className="row">
-            <input type="text" name="city" placeholder="City (e.g. Nairobi)" defaultValue={sp.city} aria-label="City" />
+            <input type="text" name="city" placeholder="Any city" defaultValue={sp.city} aria-label="City" />
             <select name="kind" defaultValue={kind ?? ""} aria-label="Type"><option value="">Restaurants &amp; stores</option><option value="restaurant">Restaurants</option><option value="store">Stores</option></select>
             <button type="submit">Filter</button>
           </div>
         </form>
-        <p style={{ marginTop: 14 }}><Link className="btn" href="/requests/new">+ Request a place</Link></p>
+        <p style={{ marginTop: 14 }}><Link className="btn" href="/requests/new">✨ Zummon a place</Link></p>
       </section>
       {sp.done && DONE[sp.done] && <div className="notice">{DONE[sp.done]}</div>}
       {rs.length === 0 && <p className="meta">No requests yet{sp.city ? ` in ${sp.city}` : ""}. Be the first.</p>}
@@ -52,12 +52,12 @@ export default async function Requests({ searchParams }: { searchParams: SP }) {
                 <h3>{r.name}</h3>
                 <div className="meta">{r.city}, {regionName(r.country)}</div>
               </div>
-              <div className="count"><b>{r.supportCount}</b><span className="meta">want this</span></div>
+              <div className="count"><b>{r.supportCount}</b><span className="meta">want it</span></div>
             </div>
             {r.note && <div className="meta">“{r.note}”</div>}
             <div className="meta">Requested by {r.createdBy.uid === "deleted" ? <span className="sig">@{r.createdBy.handle}</span> : <Link className="sig" href={`/u/${r.createdBy.handle}`}>@{r.createdBy.handle}</Link>}</div>
-            {mine.has(r.id) ? <span className="tag">You want this</span> : user ? (
-              <form action={supportRequestAction}><input type="hidden" name="id" value={r.id} /><input type="hidden" name="returnTo" value={back} /><button type="submit">I want this too</button></form>
+            {mine.has(r.id) ? <span className="tag">You're in 🙌</span> : user ? (
+              <form action={supportRequestAction}><input type="hidden" name="id" value={r.id} /><input type="hidden" name="returnTo" value={back} /><button type="submit">{r.kind === "store" ? "I'd shop there too" : "I'd eat there too"}</button></form>
             ) : (
               <Link className="btn ghost" href={`/login?next=${encodeURIComponent(back)}`}>Sign in to back this</Link>
             )}

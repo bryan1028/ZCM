@@ -2,15 +2,15 @@ import type { Metadata } from "next";
 import { requireUser } from "@/lib/session";
 import { submitRequest } from "../../request-actions";
 
-export const metadata: Metadata = { title: "Request a place" };
+export const metadata: Metadata = { title: "Zummon a place" };
 export const dynamic = "force-dynamic";
 
 export default async function NewRequest({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const [{ error }, user] = await Promise.all([searchParams, requireUser("/requests/new")]);
   return (
     <section className="hero">
-      <h1>Request a place</h1>
-      <p>It will show as requested by <span className="sig">@{user.handle}</span>, and others can back it.</p>
+      <h1>Zummon a place ✨</h1>
+      <p>It will show as zummoned by <span className="sig">@{user.handle}</span>, and others can back it.</p>
       {error === "limit" && <div className="notice">You've reached today's limit of requests. Please come back tomorrow.</div>}
       {error === "1" && <div className="notice">Please give the place's name, city and 2-letter country code.</div>}
       <form className="stack" action={submitRequest}>
@@ -22,9 +22,9 @@ export default async function NewRequest({ searchParams }: { searchParams: Promi
           <label className="f" style={{ flex: 1 }}>Country (2)<input type="text" name="country" required maxLength={2} defaultValue={user.profile.country} style={{ textTransform: "uppercase" }} /></label>
         </div>
         <label className="f">Why do you want it on Zist? (optional)<textarea name="note" rows={3} maxLength={300} /></label>
-        <label className="f">Their WhatsApp number, if you know it (optional)<input type="tel" name="whatsapp" placeholder="+254 712 345 678" /></label>
+        <label className="f">Their WhatsApp number, if you know it (optional)<input type="tel" name="whatsapp" placeholder="+1 555 123 4567" /></label>
         <label className="f">Website (optional)<input type="text" name="website" placeholder="https://" /></label>
-        <button type="submit">Submit request</button>
+        <button type="submit">Zummon it</button>
       </form>
     </section>
   );

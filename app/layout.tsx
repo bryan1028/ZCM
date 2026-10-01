@@ -7,8 +7,8 @@ const site = process.env.NEXT_PUBLIC_SITE_URL ?? "https://zist.it.com";
 
 export const metadata: Metadata = {
   metadataBase: new URL(site),
-  title: { default: "Zist — Restaurants that match what you actually eat", template: "%s · Zist" },
-  description: "Find restaurants near you that match your diet and allergies, see their menus, and message them on WhatsApp.",
+  title: { default: "Zist — Zood finds the food, Zind finds the price", template: "%s · Zist" },
+  description: "Zood finds the dish you're craving and messages the restaurant for you. Zind finds what anything costs at every store. Anywhere in the world.",
   openGraph: { siteName: "Zist", type: "website" },
 };
 
@@ -25,12 +25,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="wrap">
             <Link href="/" className="logo">Zist</Link>
             <nav>
-              <Link href="/">Food</Link>
-              <Link href="/find">Prices</Link>
+              <span className="pillnav"><Link href="/" className="zood">🍜 Zood</Link><Link href="/find" className="zind">🔎 Zind</Link></span>
               <Link href="/deals">Deals</Link>
-              <Link href="/requests">Requests</Link>
+              <Link href="/requests">Zummon</Link>
               <AuthNav />
-              <Link href="/list">List your restaurant</Link>
             </nav>
           </div>
         </header>
@@ -38,7 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <footer className="site">
           <div className="wrap">
             Menu and allergen details are provided by restaurants and may be out of date. If you have a severe allergy, always confirm with the restaurant before ordering.
-            <br /><Link href="/privacy">Privacy</Link><Link href="/terms">Terms</Link><Link href="/support">Support</Link><br />Some restaurant locations © OpenStreetMap contributors. Some prices from Open Food Facts contributors (Open Prices).
+            <br />Zood and Zind are made by Zist. <br /><Link href="/privacy">Privacy</Link><Link href="/terms">Terms</Link><Link href="/support">Support</Link><br />Some restaurant locations © OpenStreetMap contributors. Some prices from Open Food Facts contributors (Open Prices).
           </div>
         </footer>
       </body>

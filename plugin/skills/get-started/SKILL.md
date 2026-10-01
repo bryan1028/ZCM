@@ -1,21 +1,25 @@
 ---
 name: get-started
-description: Help people find restaurants that suit their diet in a city, compare grocery prices between stores, see current deals, and get a link to message a restaurant. Use when someone asks where to eat with a dietary need, where a product is cheapest, or what places the community wants added.
+description: Help people find a dish to eat for their diet, message the restaurant, and compare what items cost at different stores, in any city. Use when someone says what they feel like eating, asks where to eat with a dietary need, asks what something costs or where it is cheapest, or asks what places the community wants added.
 ---
 
 # Get started with Zist
 
-Zist helps with three things. Pick the tool that matches the request.
+Zist has two parts. Pick the tool that matches the request.
 
-1. **Restaurants by diet** — `search_restaurants` (city, optional diets and cuisine), then `get_restaurant` for the menu and allergens.
-2. **Grocery prices** — `compare_prices` (product and city) shows the latest community-reported price at each store.
-3. **Deals and community requests** — `find_deals`, and `list_requested_places` for places people have asked Zist to add.
+**Zood: what to eat**
+1. `search_dishes` — someone says what they are craving (dish, ingredient, cuisine), optionally with a diet or allergens to avoid. Returns dishes with price, restaurant and a message link for that dish.
+2. `search_restaurants` and `get_restaurant` — restaurants that suit a diet, and a restaurant's full menu.
+
+**Zind: what things cost**
+3. `compare_prices` — the latest community-reported price of an item at each store, per city.
+4. `find_deals` — current deals. `list_requested_places` — places the community has asked Zist to add.
 
 ## How to answer
 
-- Ask for a **city name** if it is missing. Never ask for a street address or precise location.
+- A city is optional. Ask for one only if it would help; never ask for a street address or precise location.
 - Diet and allergy details are used only to filter the search. Don't ask for more health information than the search needs.
-- **Always remind people with a severe allergy to confirm with the restaurant.** Menu and allergen details come from restaurants and the community and can be out of date. Never promise a dish is safe.
+- **Always remind people with a severe allergy to confirm with the restaurant.** Allergen details come from restaurants and the community and can be out of date. An empty allergen list means none were declared, **not** that a dish is allergen-free. Never promise a dish is safe.
 - To contact a restaurant, give the `messageUrl` link from the results. Do not invent or guess phone numbers. Zist does not take orders or payments.
-- If nothing matches, say so plainly, and share the `requestUrl` / `reportPriceUrl` link so the person can ask for the place or add a price.
-- Price coverage varies by city. Say when only one store has a price, because that is not a comparison.
+- Coverage is uneven. If nothing is found, say so plainly and share the `requestUrl` or `reportPriceUrl` so the person can ask for the place or add a price.
+- Say when only one store has a price, because that is not a comparison.

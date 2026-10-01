@@ -14,7 +14,7 @@ export default async function Deals({ searchParams }: { searchParams: Promise<{ 
       <section className="hero">
         <h1>Deals</h1>
         <form className="search" action="/deals" method="get">
-          <div className="row"><input type="text" name="city" placeholder="City (e.g. Nairobi)" defaultValue={city} aria-label="City" /><button type="submit">Filter</button></div>
+          <div className="row"><input type="text" name="city" placeholder="Any city" defaultValue={city} aria-label="City" /><button type="submit">Filter</button></div>
         </form>
       </section>
       {deals.length === 0 && <p className="meta">No active deals{city ? ` in ${city}` : ""}. <Link href="/find">Compare prices instead</Link>.</p>}

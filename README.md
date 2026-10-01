@@ -108,7 +108,7 @@ sign-up is open: `profiles` are readable only by their owner, `usernames` (which
   Inputs are city names only; diet/allergy filters and search text are never stored or logged. Output has no raw phone numbers and no user handles.
   "Message" results are tracked `/go/<id>?src=chatgpt` links, so leads from ChatGPT are counted separately in `/admin`.
 - Test it: `npx tsx scripts/test-mcp.ts https://zist.it.com/mcp` (checks the contract, annotations, validation, no PII).
-- `plugin/` is the submission package; `python3 scripts/build-plugin-zip.py` builds `zist-plugin-1.0.0.zip`. Step-by-step submission, tool justifications and a demo script: [`docs/plugin-submission.md`](docs/plugin-submission.md).
+- `plugin/` is the submission package; `python3 scripts/build-plugin-zip.py` builds `zist-plugin-1.1.0.zip`. Step-by-step submission, tool justifications and a demo script: [`docs/plugin-submission.md`](docs/plugin-submission.md).
 - Domain verification: set `OPENAI_APPS_CHALLENGE` (token from the portal) and redeploy; it is served at `/.well-known/openai-apps-challenge`.
 - Legal pages required for review: `/privacy`, `/terms`, `/support` (a contact form stored in `support_messages`, shown in `/admin`). **Have a lawyer review the privacy policy and terms before you rely on them.**
 
@@ -117,3 +117,15 @@ sign-up is open: `profiles` are readable only by their owner, `usernames` (which
 - `/u/<handle>` public profile (handle, join month, requests only; never diet, allergies, email or city), follow/unfollow, and `/feed` of what people you follow added.
 - `/account` has **Delete my account**: removes login, profile, username and follows; strips identity from leads, prices, requests and backings (content stays as "former member").
 - `/unsubscribe` uses a signed token (`lib/unsub.ts`). `scripts/send-launch-email.ts` is a **dry run by default**, only targets opted-in users, adds an unsubscribe link and `List-Unsubscribe`, and refuses `--send` without a postal address. Note the one existing opted-in profile came from the old site; confirm that consent before emailing it.
+
+## Zood & Zind (the product names)
+
+- **Zood** (`/`) is dish-first: type what you're craving, optionally pick diets and "skip anything with" allergens, and get **dishes** (not just restaurants) with price, tags and **Message to order**.
+  On a restaurant page you tick several dishes and press one button; WhatsApp opens with all of them in the message (`/go/<id>?item=a&item=b`).
+  "No allergens listed" is never shown as "allergen-free".
+- **Zind** (`/find`) is item-first: type any item and see its price at each store, grouped per city (never mixing cities or currencies). With no search it shows fresh sightings.
+- Both are worldwide: the "where?" box is prefilled from the approximate city of the request (`lib/geo.ts`, never stored) and can be cleared to search everywhere. If a city has no data the page widens the search and says so, with a "zummon" call to action.
+- **Zummon** (`/requests`) is the name for requesting a place. Same data model as before.
+- `npx tsx scripts/test-dishes.ts` and `scripts/test-prices.ts` cover the matching and ranking rules.
+- `scripts/migrate-legacy-items.ts` moved the old Zist Find catalogue (20 Nairobi items, 22 store prices) into Zind.
+- Seeding restaurants for other cities needs OpenStreetMap, which may be blocked in some sandboxes: run `npm run seed:osm -- FR Paris --signal` from a machine that can reach Overpass (`--signal` keeps only places with a WhatsApp number or diet tags).

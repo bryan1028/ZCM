@@ -151,6 +151,9 @@ export interface PriceComparison {
   productName: string;
   brand?: string;
   size?: string;
+  city: string;
+  citySlug: string;
+  country: string;
   currency: string;
   stores: { storeName: string; price: number; observedAt: string; source: PriceSource; isCheapest: boolean; by?: string }[];
   min: number;
