@@ -19,6 +19,8 @@ export interface DishHit {
   cuisines: string[];
   /** True when the restaurant has a WhatsApp number on file, so "Message to order" works. */
   canMessage: boolean;
+  /** Restaurant hasn't joined Zood: the button records interest instead of opening WhatsApp. */
+  unclaimed: boolean;
   item: MenuItem;
   score: number;
 }
@@ -59,7 +61,7 @@ export function flattenDishes(rs: Restaurant[], o: DishQuery): DishHit[] {
       }
       out.push({
         restaurantId: r.id, restaurantName: r.name, city: r.city, country: r.country, address: r.address, cuisines: r.cuisines,
-        canMessage: Boolean(r.whatsapp), item: m, score,
+        canMessage: r.status === "unclaimed" || Boolean(r.whatsapp), unclaimed: r.status === "unclaimed", item: m, score,
       });
     }
   }

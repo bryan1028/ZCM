@@ -27,14 +27,18 @@ const city = z.string().trim().min(2).max(80).optional().describe("Optional city
 const country = z.string().trim().length(2).optional().describe("Optional 2-letter country code, for example GB.");
 
 /** Tracked contact links. The raw phone number is never returned; the link redirects and logs the click. */
-function contactLinks(r: { id: string; whatsapp: string | null; phone?: string | null; website?: string }) {
+function contactLinks(r: { id: string; status?: string; whatsapp: string | null; phone?: string | null; website?: string }) {
   const base = `${SITE()}/go/${r.id}`;
+  // Restaurants not on Zood yet: one link that records "I want to order here"; no contact details are shared.
+  if (r.status === "unclaimed") return { messageUrl: `${base}?src=chatgpt`, callUrl: null, websiteUrl: null };
   return {
     messageUrl: r.whatsapp ? `${base}?src=chatgpt` : null,
     callUrl: r.phone ? `${base}?mode=call&src=chatgpt` : null,
     websiteUrl: r.website ? `${base}?mode=website&src=chatgpt` : null,
   };
 }
+
+const WANT_NOTE = "not on Zood yet; this link registers the user's wish to order here and does NOT contact the restaurant. Do not tell the user the restaurant was messaged";
 
 function ok(structured: Record<string, unknown>, text: string) {
   return { structuredContent: structured, content: [{ type: "text" as const, text }] };
@@ -74,8 +78,9 @@ export function createZistServer(): McpServer {
         restaurant: { id: h.restaurantId, name: h.restaurantName, city: h.city, country: h.country },
         pageUrl: `${SITE()}/r/${h.restaurantId}`, messageUrl: h.canMessage ? `${SITE()}/go/${h.restaurantId}?item=${encodeURIComponent(h.item.id)}&src=chatgpt` : null,
       }));
+      const unclaimedUrls = new Set(rs.filter((h) => h.unclaimed).map((h) => `${SITE()}/go/${h.restaurantId}?item=${encodeURIComponent(h.item.id)}&src=chatgpt`));
       const text = dishes.length
-        ? dishes.map((d) => `- ${d.name}${d.price != null ? ` (${d.price} ${d.currency ?? ""})` : ""} at ${d.restaurant.name}, ${d.restaurant.city}${d.diets.length ? ` — ${d.diets.join(", ")}` : ""}${d.allergens.length ? ` — declared allergens: ${d.allergens.join(", ")}` : ""}${d.messageUrl ? ` — message about it: ${d.messageUrl}` : ""}`).join("\n") + `\n${ALLERGY_NOTE}`
+        ? dishes.map((d) => `- ${d.name}${d.price != null ? ` (${d.price} ${d.currency ?? ""})` : ""} at ${d.restaurant.name}, ${d.restaurant.city}${d.diets.length ? ` — ${d.diets.join(", ")}` : ""}${d.allergens.length ? ` — declared allergens: ${d.allergens.join(", ")}` : ""}${d.messageUrl ? ` — ${unclaimedUrls.has(d.messageUrl) ? WANT_NOTE : "message about it"}: ${d.messageUrl}` : ""}`).join("\n") + `\n${ALLERGY_NOTE}`
         : `No matching dishes${c ? ` in ${c}` : ""}. Zood is growing city by city; people can zummon a place at ${SITE()}/requests/new.`;
       return ok({ dishes, note: ALLERGY_NOTE }, text);
     },
@@ -113,7 +118,7 @@ export function createZistServer(): McpServer {
         pageUrl: `${SITE()}/r/${r.id}`, ...contactLinks(r),
       }));
       const text = results.length
-        ? `Found ${results.length} restaurant${results.length === 1 ? "" : "s"}${c ? ` in ${c}` : ""}:\n` + results.map((r) => `- ${r.name}${r.address ? ` (${r.address})` : ""}${r.diets.length ? ` — ${r.diets.join(", ")}` : ""}${r.messageUrl ? ` — message: ${r.messageUrl}` : r.callUrl ? ` — call: ${r.callUrl}` : r.websiteUrl ? ` — website: ${r.websiteUrl}` : ""}`).join("\n") + `\n${ALLERGY_NOTE}`
+        ? `Found ${results.length} restaurant${results.length === 1 ? "" : "s"}${c ? ` in ${c}` : ""}:\n` + results.map((r) => `- ${r.name}${r.address ? ` (${r.address})` : ""}${r.diets.length ? ` — ${r.diets.join(", ")}` : ""}${r.messageUrl ? ` — ${rs.find((x) => x.id === r.id)?.status === "unclaimed" ? "I want to order here (" + WANT_NOTE + ")" : "message"}: ${r.messageUrl}` : r.callUrl ? ` — call: ${r.callUrl}` : r.websiteUrl ? ` — website: ${r.websiteUrl}` : ""}`).join("\n") + `\n${ALLERGY_NOTE}`
         : `No restaurants found${c ? ` in ${c}` : ""} for that search. Zood is growing city by city; people can zummon a place at ${SITE()}/requests/new.`;
       return ok({ results, note: ALLERGY_NOTE }, text);
     },
@@ -145,7 +150,7 @@ export function createZistServer(): McpServer {
         pageUrl: `${SITE()}/r/${r.id}`, ...contactLinks(r),
       };
       const text = `${r.name} (${r.city}). ` + (r.menu.length ? `${r.menu.length} menu item${r.menu.length === 1 ? "" : "s"}.` : "The menu has not been added yet.") +
-        (restaurant.messageUrl ? ` Message them: ${restaurant.messageUrl}` : restaurant.callUrl ? ` No WhatsApp number is listed; you can call: ${restaurant.callUrl}` : restaurant.websiteUrl ? ` No phone is listed; their website: ${restaurant.websiteUrl}` : " No contact details are listed yet.") + ` ${ALLERGY_NOTE}`;
+        (restaurant.messageUrl ? (r.status === "unclaimed" ? ` Register that you want to order here (${WANT_NOTE}): ${restaurant.messageUrl}` : ` Message them: ${restaurant.messageUrl}`) : restaurant.callUrl ? ` No WhatsApp number is listed; you can call: ${restaurant.callUrl}` : restaurant.websiteUrl ? ` No phone is listed; their website: ${restaurant.websiteUrl}` : " No contact details are listed yet.") + ` ${ALLERGY_NOTE}`;
       return ok({ found: true, restaurant, note: ALLERGY_NOTE }, text);
     },
   );

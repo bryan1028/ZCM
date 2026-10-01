@@ -25,10 +25,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   let target: string | undefined;
   let text = "";
-  const picked = channel === "whatsapp"
+  const unclaimed = r.status === "unclaimed";
+  const picked = channel === "whatsapp" || unclaimed
     ? [...new Set(req.nextUrl.searchParams.getAll("item"))].slice(0, 12).map((iid) => r.menu.find((m) => m.id === iid)).filter((m): m is NonNullable<typeof m> => Boolean(m))
     : [];
-  if (channel === "whatsapp" && r.whatsapp) {
+  if (unclaimed) {
+    // Not on Zood yet, so we don't hand out their contact details (or free leads). The tap is a demand signal:
+    // we count it, tell the person so honestly, and use the totals to invite the restaurant to join.
+    target = undefined;
+  } else if (channel === "whatsapp" && r.whatsapp) {
     // We can't run orders yet, so a WhatsApp tap is an explicit order request: counted as a lead, signed with the
     // person's @handle when they're signed in, and phrased so the restaurant knows exactly what is being asked.
     const ask = picked.length === 1 ? `I'd like to order the ${picked[0].name}.` : picked.length > 1 ? `I'd like to order: ${picked.map((m) => m.name).join(", ")}.` : "I'd like to order from you.";
@@ -38,7 +43,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   } else if (channel === "website" && r.website && /^https?:\/\//i.test(r.website)) {
     target = r.website;
   }
-  if (!target && !(channel === "whatsapp" && r.whatsapp)) return home();
+  if (!unclaimed && !target && !(channel === "whatsapp" && r.whatsapp)) return home();
 
   const srcParam = req.nextUrl.searchParams.get("src") as LeadSource;
   const source: LeadSource = SOURCES.includes(srcParam) ? srcParam : "unknown";
@@ -64,7 +69,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 
   const signed = user ? `${text.replace("REF", ref)}\n— @${user.handle} on Zood` : text.replace("REF", ref);
-  const dest = target ?? `https://wa.me/${r.whatsapp}?text=${encodeURIComponent(signed)}`;
+  const thanks = new URL(`/r/${encodeURIComponent(r.id)}/thanks`, req.url);
+  if (picked.length) thanks.searchParams.set("d", picked.map((m) => m.name).join(", ").slice(0, 200));
+  const dest = unclaimed ? thanks.toString() : target ?? `https://wa.me/${r.whatsapp}?text=${encodeURIComponent(signed)}`;
   const res = NextResponse.redirect(dest, 302);
   res.headers.set("Cache-Control", "no-store");
   res.headers.set("X-Robots-Tag", "noindex, nofollow");

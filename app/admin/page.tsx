@@ -20,12 +20,23 @@ export default async function Admin() {
   const day = Date.now() - 864e5;
   const week = Date.now() - 7 * 864e5;
   const since = (t: number) => leads.filter((l) => Date.parse(l.createdAt) >= t).length;
+  const recent = leads.filter((l) => Date.parse(l.createdAt) >= Date.now() - 30 * 864e5);
+  const byPlace = new Map<string, { id: string; name: string; city: string; country: string; asks: number; visitors: Set<string> }>();
+  const byCity = new Map<string, { asks: number; places: Set<string> }>();
+  for (const l of recent) {
+    const e = byPlace.get(l.restaurantId) ?? { id: l.restaurantId, name: l.restaurantName, city: l.city, country: l.country, asks: 0, visitors: new Set<string>() };
+    e.asks++; e.visitors.add(l.visitor); byPlace.set(l.restaurantId, e);
+    const c = byCity.get(`${l.city}|${l.country}`) ?? { asks: 0, places: new Set<string>() };
+    c.asks++; c.places.add(l.restaurantId); byCity.set(`${l.city}|${l.country}`, c);
+  }
+  const pitch = [...byPlace.values()].sort((a, b) => b.visitors.size - a.visitors.size || b.asks - a.asks).slice(0, 25)
+    .map((p) => ({ ...p, people: p.visitors.size, cityAsks: byCity.get(`${p.city}|${p.country}`)?.asks ?? 0, cityPlaces: byCity.get(`${p.city}|${p.country}`)?.places.size ?? 0 }));
   const uniqueVisitors = new Set(leads.map((l) => l.visitor)).size;
 
   return (
     <section style={{ padding: "28px 0 56px" }}>
       <h1>Lead dashboard</h1>
-      <p className="meta">A lead is one person tapping "Message" and being sent to the restaurant's WhatsApp. Repeat taps by the same visitor within an hour and bots are not counted. Confirmed conversations can be matched by the <b>ref</b> code in the restaurant's chat.</p>
+      <p className="meta">A lead is one person tapping "I want to order here" (restaurants not on Zood yet: counted, never forwarded) or "Message" (restaurants that have joined: sent to their WhatsApp). Repeat taps by the same visitor within an hour and bots are not counted.</p>
       <div className="stats">
         <div className="stat"><b>{leads.length}</b>leads (last 1000)</div>
         <div className="stat"><b>{since(day)}</b>last 24h</div>
@@ -33,6 +44,16 @@ export default async function Admin() {
         <div className="stat"><b>{uniqueVisitors}</b>unique visitors</div>
         <div className="stat"><b>{leads.filter((l) => l.source === "chatgpt").length}</b>from ChatGPT</div>
       </div>
+
+      <h2 style={{ marginTop: 28 }}>Restaurants to pitch (real demand, last 30 days)</h2>
+      <p className="meta">Only real numbers: people who tapped "I want to order here". Use the line in the last column when you contact a restaurant. Cities with more demand per listing make a stronger pitch.</p>
+      <div className="table-scroll"><table>
+        <thead><tr><th>Restaurant</th><th>City</th><th>Asks</th><th>People</th><th>Pitch line</th></tr></thead>
+        <tbody>{pitch.map((p) => (
+          <tr key={p.id}><td><a href={`/r/${p.id}`}>{p.name}</a></td><td>{p.city}, {p.country}</td><td>{p.asks}</td><td>{p.people}</td>
+            <td className="meta">{`${p.people} ${p.people === 1 ? "person" : "people"} asked to order from ${p.name} on Zood in the last 30 days${p.cityAsks > p.asks ? `; across ${p.city}, ${p.cityAsks} orders were requested from ${p.cityPlaces} restaurants` : ""}. Claim your listing for a free trial to edit your profile and menu.`}</td></tr>
+        ))}{!pitch.length && <tr><td colSpan={5} className="meta">No taps yet.</td></tr>}</tbody>
+      </table></div>
 
       <h2 style={{ marginTop: 28 }}>Demand (your proof of concept)</h2>
       <div className="stats">

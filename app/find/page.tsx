@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { VisionStory } from "../vision";
 import { detectPlace } from "@/lib/geo";
 import { comparePrices } from "@/lib/prices";
 import { getStore } from "@/lib/store";
@@ -63,6 +64,7 @@ export default async function Zind({ searchParams }: { searchParams: SP }) {
       <div className="grid">{comps.map((c) => <PriceCard key={`${c.productKey}|${c.citySlug}`} c={c} />)}</div>
       <p className="meta">Prices come from shoppers and from the open Open Prices dataset. Only the last 4 months are shown, and prices change, so check the shelf tag.</p>
       <p style={{ margin: "14px 0 48px" }}><Link className="btn" href="/find/report">➕ Add a price you saw</Link> <Link className="btn ghost" href="/deals">See deals</Link> <Link className="btn ghost" href="/">Hungry instead? Zood it</Link></p>
+      <VisionStory product="zind" />
     </div>
   );
 }

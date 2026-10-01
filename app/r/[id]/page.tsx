@@ -31,7 +31,8 @@ export default async function RestaurantPage({ params }: { params: P }) {
     address: { "@type": "PostalAddress", streetAddress: r.address, addressLocality: r.city, addressCountry: r.country },
     ...(r.lat != null && r.lng != null ? { geo: { "@type": "GeoCoordinates", latitude: r.lat, longitude: r.lng } } : {}),
   };
-  const canOrder = Boolean(r.whatsapp) && r.menu.length > 0;
+  const unclaimed = r.status === "unclaimed";
+  const canOrder = (unclaimed || Boolean(r.whatsapp)) && r.menu.length > 0;
 
   return (
     <article className="theme-zood" style={{ padding: "28px 0 56px" }}>
@@ -40,20 +41,19 @@ export default async function RestaurantPage({ params }: { params: P }) {
       <h1>{r.name}</h1>
       <div className="meta">{[r.address, `${r.city}, ${regionName(r.country)}`].filter(Boolean).join(" · ")}</div>
       <p>{r.diets.map((d) => <span key={d} className="tag">{label(d)}</span>)}{r.cuisines.map((c) => <span key={c} className="tag gray">{c}</span>)}</p>
-      {r.leadCount > 0 && <p className="meta">🔥 {r.leadCount} {r.leadCount === 1 ? "person has" : "people have"} reached out through Zood</p>}
+      {r.leadCount > 0 && <p className="meta">🔥 {r.leadCount} {r.leadCount === 1 ? "person wants" : "people want"} to order from {unclaimed ? "here" : "this restaurant"} through Zood</p>}
 
       {r.status === "unclaimed" && (
-        <div className="notice">Is this your restaurant? <Link href={`/list?claim=${r.id}`}>Claim it</Link> to add your menu and get customer messages.</div>
+        <div className="notice">Is this your restaurant? {r.leadCount > 0 ? <>{r.leadCount} {r.leadCount === 1 ? "person has" : "people have"} already asked to order from you on Zood. </> : null}<Link href={`/list?claim=${r.id}`}>Claim it</Link> for a free trial: edit your profile and menu, and start receiving customers directly, with no commission.</div>
       )}
       <p style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><ContactButtons r={r} /></p>
-      {!r.whatsapp && !r.phone && !r.website && <div className="notice">We don't have a way to contact this restaurant yet.</div>}
-      {(r.phone || r.website) && r.source !== "owner" && r.source !== "import" && <p className="meta">Contact details come from public listings and may be out of date. {r.phone && !r.whatsapp ? "The number may not be on WhatsApp, so Zood offers Call." : ""}</p>}
+      {unclaimed && <p className="meta">This restaurant hasn't joined Zood yet. Tapping the button tells us you want to order here; we use it to invite them.</p>}
 
       <h2>Pick your meal</h2>
-      {r.menu.length === 0 && <p className="meta">The menu hasn't landed yet. Use the buttons above to ask them directly.</p>}
+      {r.menu.length === 0 && <p className="meta">The menu hasn't landed yet. Tell us you want to order here and we'll ask them to put it up.</p>}
 
       {/* No JavaScript needed: tick dishes, press the button, and WhatsApp opens with everything you picked. */}
-      <form action={`/go/${r.id}`} method="get" target="_blank">
+      <form action={`/go/${r.id}`} method="get" target={unclaimed ? undefined : "_blank"}>
         <input type="hidden" name="src" value="web" />
         {r.menu.map((m) => (
           <label className="menu-item pick" key={m.id}>
@@ -73,7 +73,7 @@ export default async function RestaurantPage({ params }: { params: P }) {
         {canOrder && (
           <div className="tray">
             <span className="meta">Tick what you want, then</span>
-            <button type="submit" className="wa-btn">💬 Message {r.name} with my picks</button>
+            <button type="submit" className="wa-btn">{unclaimed ? `🙋 I want these at ${r.name}` : `💬 Message ${r.name} with my picks`}</button>
           </div>
         )}
       </form>
