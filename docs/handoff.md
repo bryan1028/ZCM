@@ -91,3 +91,7 @@ Do not upgrade firebase-admin past 13.x on Netlify (ESM-only jose breaks functio
   The legacy username/profile in Firestore were not copied (Firestore quota was still exhausted).
 - Zood hero: photo mosaic (`public/img/mosaic`, Unsplash) across the top with the headline/search centred at the bottom; peach palette tokens (`--peach`, `--peach-deep`, `--peach-soft`) in globals.css.
 - Zind ticker: `lib/ticker.ts` + `Store.priceMedians` (Postgres) give the median shelf price per country for 8 staples; cached 10 min per server. Sizes vary, so the page says so.
+
+## Update: top strips and centred heroes
+- Zood: moving strip of place-labelled dishes (`PinStrip`) above a centred hero (Unsplash mosaic behind a brand gradient). Zind: moving strip of grocery photo cards with prices in 3 countries (`StapleStrip`, photos in `public/img/staples`) above a centred hero on a supermarket-aisle photo, then the price ticker.
+- Staples are in `lib/ticker.ts` (sugar was dropped for lack of a photo). To add one: add a photo to `public/img/staples` and an entry with `img`.

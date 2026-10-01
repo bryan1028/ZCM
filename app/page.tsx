@@ -6,7 +6,7 @@ import { getStore, isDemo } from "@/lib/store";
 import { DIETS, type Diet } from "@/lib/types";
 import { regionName, slugify } from "@/lib/util";
 import { DishCard, RestaurantCard } from "./components";
-import { PinBoard } from "./pins";
+import { PinStrip } from "./pins";
 import { WantedBoard } from "./wanted";
 import { wantedKey } from "@/lib/wanted";
 
@@ -58,6 +58,8 @@ export default async function Zood({ searchParams }: { searchParams: SP }) {
 
   return (
     <div className="theme-zood">
+      <PinStrip />
+
       <section className="bighero zood heroed">
         <div className="mosaic" aria-hidden>
           {Array.from({ length: 12 }, (_, i) => (
@@ -85,8 +87,6 @@ export default async function Zood({ searchParams }: { searchParams: SP }) {
           </form>
         </div>
       </section>
-
-      <PinBoard />
 
       {isDemo() && <div className="notice">Running on demo data. Set <code>FIREBASE_SERVICE_ACCOUNT</code> to use the live database.</div>}
       {usingProfile && <p className="meta">Using your saved diet and allergies. Change them anytime on <Link href="/account">your account</Link>.</p>}

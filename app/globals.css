@@ -179,3 +179,26 @@ header.site { background: linear-gradient(90deg, #fff3ea, #ffd9c2); border-botto
 .mission { box-shadow: 6px 6px 0 var(--peach-deep); } .theme-zind .mission { box-shadow: 6px 6px 0 #1a6b3a; }
 .card { border-color: rgba(255,138,85,.35); } .theme-zind .card { border-color: var(--border); }
 .ticker em { font-style: normal; margin-left: 12px; } .ticker span { margin: 0 26px; }
+
+/* ── Top strips + centred hero ── */
+.strip { overflow: hidden; margin: 14px 0 0; border-radius: 20px; -webkit-mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent); mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent); }
+.strip-track { display: flex; gap: 12px; width: max-content; animation: slide 55s linear infinite; padding: 2px 0; }
+.strip-track.slow { animation-duration: 70s; }
+.strip:hover .strip-track { animation-play-state: paused; }
+@keyframes slide { from { transform: translateX(0); } to { transform: translateX(calc(-50% - 6px)); } }
+.strip .pin { flex: 0 0 auto; width: 170px; margin: 0; }
+.strip .pin img { width: 100%; height: 220px; object-fit: cover; aspect-ratio: auto; }
+.staple { flex: 0 0 auto; width: 200px; border-radius: 18px; overflow: hidden; background: #fff; border: 2px solid #7fcfa0; text-decoration: none; color: var(--ink); box-shadow: var(--shadow); display: flex; flex-direction: column; }
+.staple img { width: 100%; height: 120px; object-fit: cover; display: block; }
+.staple .sbody { padding: 8px 10px 10px; display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
+.staple .sbody b { font-family: "Playfair Display", Georgia, serif; font-size: 17px; margin-bottom: 2px; }
+.staple:hover { transform: translateY(-3px); } .staple { transition: transform .15s; }
+@media (prefers-reduced-motion: reduce) { .strip { overflow-x: auto; } .strip-track { animation: none; } }
+
+.bighero.heroed { min-height: 0; justify-content: center; margin-top: 14px; }
+.bighero.heroed .herotext { padding: clamp(36px, 7vw, 72px) clamp(16px, 4vw, 40px); }
+.mosaic { opacity: 1; }
+.bighero.zood.heroed::before { background: linear-gradient(135deg, rgba(232,83,26,.74), rgba(214,40,106,.76) 60%, rgba(155,47,174,.8)); }
+.bighero.zind.heroed { background: #0b2a1c url(/img/staples/aisle.jpg) center / cover; }
+.bighero.zind.heroed::before { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(135deg, rgba(11,122,75,.82), rgba(10,138,143,.8) 60%, rgba(27,111,181,.84)); }
+.bighero.zind .herotext .kicker { background: #b8f2cf; color: #05301c; }

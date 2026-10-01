@@ -5,6 +5,7 @@ import { comparePrices } from "@/lib/prices";
 import { getStore } from "@/lib/store";
 import { regionName, slugify } from "@/lib/util";
 import { PriceCard } from "../components";
+import { StapleStrip } from "../pins";
 import { flag, groceryTicker } from "@/lib/ticker";
 
 export const metadata: Metadata = {
@@ -36,7 +37,10 @@ export default async function Zind({ searchParams }: { searchParams: SP }) {
 
   return (
     <div className="theme-zind">
-      <section className="bighero zind">
+      {ticker.length > 0 && <StapleStrip items={ticker} />}
+
+      <section className="bighero zind heroed">
+        <div className="herotext">
         <span className="kicker">The Wikipedia of prices</span>
         <h1>Someone is always at a store. Tell the world what it costs.</h1>
         <p>Zind is an open, crowd-sourced price tracker. Search any item to see who's cheapest, then add the prices and deals you spot, so everyone can see what things really cost.</p>
@@ -50,6 +54,7 @@ export default async function Zind({ searchParams }: { searchParams: SP }) {
             {TRY.map((t) => <Link key={t} href={`/find?q=${encodeURIComponent(t)}${city ? `&city=${encodeURIComponent(city)}` : ""}`}>{t}</Link>)}
           </div>
         </form>
+        </div>
       </section>
 
       {ticker.length > 0 && (
