@@ -1,0 +1,46 @@
+// Snapshot of the rules currently documented for project zist-de662 (copied from the legacy index.html).
+// The Next.js site uses the Admin SDK and bypasses these rules. Do not deploy a different file
+// until the legacy app and Zist Find are retired, or they will lose access.
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /items/{itemId} {                                           // Zist Find
+      allow read: if true;                                            // anyone can search
+      allow write: if request.auth != null &&
+        request.auth.token.email in ['sirwinstonchurchill254@gmail.com'];   // admin only
+    }
+    match /profiles/{uid} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == uid;
+    }
+    match /usernames/{username} {
+      allow read: if true;                                            // must resolve username -> email pre-login
+      allow create: if request.auth != null &&
+        request.auth.uid == request.resource.data.uid;
+      allow update, delete: if request.auth != null &&
+        request.auth.uid == resource.data.uid;
+    }
+    match /contacts/{docId} {
+      allow read, delete: if request.auth != null &&
+        request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null &&
+        request.auth.uid == request.resource.data.userId;
+    }
+    match /restaurants/{docId} {
+      allow read: if true;                                            // public feed
+      allow write: if request.auth != null &&
+        request.auth.token.email in ['sirwinstonchurchill254@gmail.com'];   // admin only
+    }
+    match /offers/{offerId} {
+      allow read: if true;                                            // public — anyone can browse offers
+      allow write: if request.auth != null &&
+        request.auth.token.email in ['sirwinstonchurchill254@gmail.com'];   // admin only
+    }
+    match /leads/{docId} {
+      allow create: if request.auth != null;                          // any signed-in user can order
+      allow read: if request.auth != null &&
+        request.auth.token.email in ['sirwinstonchurchill254@gmail.com'];   // only admin reads the log
+    }
+  }
+}
+ 

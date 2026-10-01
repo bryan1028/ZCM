@@ -1,0 +1,13 @@
+import type { MetadataRoute } from "next";
+import { getStore } from "@/lib/store";
+
+export const dynamic = "force-dynamic";
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const site = process.env.NEXT_PUBLIC_SITE_URL ?? "https://zist.it.com";
+  const cities = await getStore().listCities();
+  return [
+    { url: site },
+    ...cities.map((c) => ({ url: `${site}/c/${c.country.toLowerCase()}/${c.citySlug}` })),
+  ];
+}

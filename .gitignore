@@ -1,0 +1,8 @@
+node_modules
+.next
+.env*.local
+.env
+data/leads.jsonl
+data/claims.jsonl
+*.tsbuildinfo
+next-env.d.ts

@@ -1,0 +1,16 @@
+[
+  { "id": "demo-nairobi-green-bowl", "name": "Green Bowl Kitchen (demo)", "country": "KE", "city": "Nairobi", "citySlug": "nairobi", "address": "Ngong Rd, Nairobi", "lat": -1.2995, "lng": 36.7889, "whatsapp": "254700000001", "cuisines": ["healthy", "vegan"], "diets": ["vegan", "vegetarian", "gluten_free"], "status": "active", "source": "demo", "plan": "trial", "leadCount": 0, "createdAt": "2026-10-01T00:00:00.000Z",
+    "menu": [
+      { "id": "m1", "name": "Jackfruit Tacos", "description": "Smoked jackfruit, avocado, lime slaw", "price": 650, "currency": "KES", "diets": ["vegan", "vegetarian"], "allergens": ["gluten"] },
+      { "id": "m2", "name": "Quinoa Power Bowl", "description": "Quinoa, roasted veg, tahini", "price": 800, "currency": "KES", "diets": ["vegan", "vegetarian", "gluten_free"], "allergens": ["sesame"] }
+    ] },
+  { "id": "demo-nairobi-karibu-grill", "name": "Karibu Grill (demo)", "country": "KE", "city": "Nairobi", "citySlug": "nairobi", "address": "Westlands, Nairobi", "lat": -1.2676, "lng": 36.8108, "whatsapp": "254700000002", "cuisines": ["grill", "african"], "diets": ["halal"], "status": "active", "source": "demo", "plan": "trial", "leadCount": 0, "createdAt": "2026-10-01T00:00:00.000Z",
+    "menu": [
+      { "id": "m1", "name": "Nyama Choma Platter", "description": "Charcoal-grilled goat, kachumbari, ugali", "price": 1500, "currency": "KES", "diets": ["halal"], "allergens": [] }
+    ] },
+  { "id": "demo-nairobi-unclaimed-cafe", "name": "Corner Cafe (demo, unclaimed)", "country": "KE", "city": "Nairobi", "citySlug": "nairobi", "address": "Kilimani, Nairobi", "whatsapp": null, "cuisines": ["cafe"], "diets": [], "status": "unclaimed", "source": "demo", "plan": "free", "leadCount": 0, "createdAt": "2026-10-01T00:00:00.000Z", "menu": [] },
+  { "id": "demo-london-plant-house", "name": "Plant House (demo)", "country": "GB", "city": "London", "citySlug": "london", "address": "Shoreditch, London", "lat": 51.5246, "lng": -0.0786, "whatsapp": "447000000003", "cuisines": ["vegan", "british"], "diets": ["vegan", "vegetarian", "dairy_free"], "status": "active", "source": "demo", "plan": "trial", "leadCount": 0, "createdAt": "2026-10-01T00:00:00.000Z",
+    "menu": [
+      { "id": "m1", "name": "Mushroom Wellington", "description": "Seasonal mushrooms in flaky pastry", "price": 16, "currency": "GBP", "diets": ["vegan", "vegetarian", "dairy_free"], "allergens": ["gluten"] }
+    ] }
+]
