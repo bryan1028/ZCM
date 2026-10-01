@@ -67,3 +67,7 @@ button.linklike:hover { background: none; color: var(--ink); }
 .sig { color: var(--fire-dim); font-weight: 600; }
 .checkline { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; } .checkline input { margin-top: 4px; }
 @media (max-width: 520px) { nav a:nth-child(n+3) { display: inline; } nav a { margin-left: 10px; } .auth-slot { margin-left: 10px; } }
+.legal { max-width: 720px; padding: 28px 0 56px; } .legal h2 { font-size: 22px; margin-top: 28px; } .legal li { margin-bottom: 8px; }
+textarea { font: inherit; padding: 11px 12px; border: 1px solid var(--border); border-radius: 12px; width: 100%; }
+button.danger { background: #b3261e; } button.danger:hover { background: #8c1d18; }
+footer.site a { color: inherit; margin-right: 14px; }

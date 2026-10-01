@@ -1,51 +1,63 @@
 /**
- * Import real shop prices from Open Prices (Open Food Facts) for a country. Needs FIREBASE_SERVICE_ACCOUNT.
+ * Import real shop prices from Open Prices (Open Food Facts). Needs FIREBASE_SERVICE_ACCOUNT unless --dry.
  *
- *   npm run import:openprices -- KE            # up to 5 pages (500 prices)
- *   npm run import:openprices -- KE 20         # up to 20 pages
+ *   npm run import:openprices -- USD 40            # 40 pages x 100 newest USD prices
+ *   npm run import:openprices -- EUR 20 --country FR
+ *   npm run import:openprices -- USD 3 --dry       # preview only, writes nothing
  *
- * Source: https://prices.openfoodfacts.org  (open data, crowdsourced; keep the Open Food Facts credit in the footer —
- * check their current license terms before large-scale use). Only the newest prices per page are taken; re-runs skip duplicates.
+ * IMPORTANT: Open Prices cannot filter by country, only by currency, so we filter by currency and optionally keep one country.
+ * Coverage is mostly USD (US) and EUR (Europe). There is NO Kenyan data (KES has 0 prices), so Nairobi relies on community reports.
+ * Source: https://prices.openfoodfacts.org (open data; keep the Open Food Facts credit in the footer and check their licence terms).
  */
 import { getStore } from "../lib/store";
 import { productKey, tokenize } from "../lib/prices";
 import { slugify } from "../lib/util";
 import type { PricePoint } from "../lib/types";
 
-const [country, pagesArg] = process.argv.slice(2);
-if (!country || !/^[A-Za-z]{2}$/.test(country)) { console.error("usage: import-openprices <ISO2 country> [pages]"); process.exit(1); }
-if (!process.env.FIREBASE_SERVICE_ACCOUNT) { console.error("Set FIREBASE_SERVICE_ACCOUNT first."); process.exit(1); }
-const pages = Math.min(Number(pagesArg) || 5, 100);
+const args = process.argv.slice(2);
+const [currency, pagesArg] = args.filter((a) => !a.startsWith("--"));
+const country = args.includes("--country") ? args[args.indexOf("--country") + 1]?.toUpperCase() : undefined;
+const dry = args.includes("--dry");
+if (!currency || !/^[A-Za-z]{3}$/.test(currency)) { console.error("usage: import-openprices <CURRENCY> [pages] [--country XX] [--dry]"); process.exit(1); }
+if (!dry && !process.env.FIREBASE_SERVICE_ACCOUNT) { console.error("Set FIREBASE_SERVICE_ACCOUNT first (or use --dry)."); process.exit(1); }
+const pages = Math.min(Number(pagesArg) || 5, 200);
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 async function main() {
   const out: Omit<PricePoint, "id">[] = [];
+  let seen = 0;
   for (let page = 1; page <= pages; page++) {
-    const url = `https://prices.openfoodfacts.org/api/v1/prices?location__osm_address_country_code=${country.toUpperCase()}&order_by=-date&size=100&page=${page}`;
-    const res = await fetch(url, { headers: { "User-Agent": "zist-import/0.1 (https://zist.it.com)" } });
+    const url = `https://prices.openfoodfacts.org/api/v1/prices?currency=${currency.toUpperCase()}&order_by=-created&size=100&page=${page}`;
+    const res = await fetch(url, { headers: { "User-Agent": "zist-import/0.2 (https://zist.it.com)" } });
     if (!res.ok) throw new Error(`Open Prices ${res.status}`);
     const body: any = await res.json();
     for (const it of body.items ?? []) {
-      const loc = it.location ?? {};
-      const prod = it.product ?? {};
+      seen++;
+      const loc = it.location ?? {}, prod = it.product ?? {};
       const name: string | undefined = prod.product_name || it.product_name;
       const price = Number(it.price);
       const city: string | undefined = loc.osm_address_city || loc.osm_address_town || loc.osm_address_village;
+      const cc: string | undefined = loc.osm_address_country_code?.toUpperCase();
       const store: string | undefined = loc.osm_name;
-      if (!name || !store || !city || !Number.isFinite(price) || price <= 0 || !it.currency) continue;
+      if (!name || !store || !city || !cc || !Number.isFinite(price) || price <= 0) continue;
+      if (country && cc !== country) continue;
+      if (it.price_per && it.price_per !== "UNIT") continue; // per-kg prices aren't comparable to per-pack prices
       const brand = typeof prod.brands === "string" ? prod.brands.split(",")[0].trim() || undefined : undefined;
       const size = prod.product_quantity ? `${prod.product_quantity}${prod.product_quantity_unit ?? ""}` : undefined;
-      const date = it.date ? new Date(it.date).toISOString() : new Date().toISOString();
+      const when = new Date(it.date ?? it.created ?? Date.now()).toISOString();
       out.push({
         productKey: productKey(name, brand, size, it.product_code), productName: name, brand, size, barcode: it.product_code || undefined,
-        storeName: store, country: country.toUpperCase(), city, citySlug: slugify(city), lat: loc.osm_lat, lng: loc.osm_lon,
-        price, currency: String(it.currency).toUpperCase(), tokens: tokenize(name, brand), source: "openprices", status: "ok",
-        observedAt: date, createdAt: new Date().toISOString(), sourceId: String(it.id),
+        storeName: store, country: cc, city, citySlug: slugify(city), lat: loc.osm_lat, lng: loc.osm_lon,
+        price, currency: currency.toUpperCase(), tokens: tokenize(name, brand), source: "openprices", status: "ok",
+        observedAt: when, createdAt: new Date().toISOString(), sourceId: String(it.id),
       });
     }
     if (page >= (body.pages ?? 1)) break;
   }
-  console.log(`${out.length} usable prices`);
+  const byCity = new Map<string, number>(); out.forEach((p) => byCity.set(`${p.city}, ${p.country}`, (byCity.get(`${p.city}, ${p.country}`) ?? 0) + 1));
+  console.log(`${seen} fetched, ${out.length} usable. Top cities:`, JSON.stringify([...byCity.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8)));
+  console.log("sample:", JSON.stringify(out.slice(0, 2).map((p) => ({ n: p.productName, b: p.brand, s: p.size, store: p.storeName, city: p.city, price: p.price, cur: p.currency, at: p.observedAt.slice(0, 10) }))));
+  if (dry) return console.log("DRY RUN: nothing written.");
   console.log(await getStore().upsertPrices(out));
 }
 main().catch((e) => { console.error(e); process.exit(1); });

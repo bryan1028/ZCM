@@ -55,7 +55,7 @@ export default async function Requests({ searchParams }: { searchParams: SP }) {
               <div className="count"><b>{r.supportCount}</b><span className="meta">want this</span></div>
             </div>
             {r.note && <div className="meta">“{r.note}”</div>}
-            <div className="meta">Requested by <span className="sig">@{r.createdBy.handle}</span></div>
+            <div className="meta">Requested by {r.createdBy.uid === "deleted" ? <span className="sig">@{r.createdBy.handle}</span> : <Link className="sig" href={`/u/${r.createdBy.handle}`}>@{r.createdBy.handle}</Link>}</div>
             {mine.has(r.id) ? <span className="tag">You want this</span> : user ? (
               <form action={supportRequestAction}><input type="hidden" name="id" value={r.id} /><input type="hidden" name="returnTo" value={back} /><button type="submit">I want this too</button></form>
             ) : (

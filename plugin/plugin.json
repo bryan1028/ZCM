@@ -1,0 +1,92 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "zist",
+  "version": "1.0.0",
+  "description": "Find restaurants that suit your diet, compare grocery prices between stores, and get a link to message a restaurant on WhatsApp.",
+  "author": {
+    "name": "Zist",
+    "url": "https://zist.it.com"
+  },
+  "homepage": "https://zist.it.com",
+  "keywords": ["restaurants", "dietary", "vegan", "halal", "grocery prices", "deals"],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Zist",
+        "shortDescription": "Diet-friendly food & prices",
+        "longDescription": "Zist helps you find restaurants that match how you eat, and see where groceries cost less.\n\nWhat you can do:\n- Search restaurants in a city by diet (vegan, vegetarian, gluten-free, halal, kosher, dairy-free, nut-free), cuisine or dish, and see menu highlights with allergens as the restaurant listed them.\n- Open a restaurant's menu and get a link to message it on WhatsApp.\n- Compare the latest community-reported grocery price for a product across stores in a city.\n- See current deals in a city.\n- See which restaurants and stores the community has asked Zist to add.\n\nGood to know:\n- Restaurant listings currently focus on Nairobi, Kenya, and grow as people request places. Grocery prices come from shoppers and from the open Open Prices dataset, and are strongest in a few US cities; coverage elsewhere is limited.\n- Menu and allergen details come from restaurants and the community and can be out of date. If you have a food allergy, always confirm with the restaurant before ordering.\n- Zist does not take orders or payments. The message link opens WhatsApp so you can talk to the restaurant directly.\n- You only need to name a city. Zist never needs your exact location, and your searches are not stored.",
+        "developerName": "Zist",
+        "category": "Other",
+        "capabilities": ["Search restaurants by diet", "View menus and allergens", "Compare grocery prices", "Find deals", "Message restaurants"],
+        "websiteURL": "https://zist.it.com",
+        "supportURL": "https://zist.it.com/support",
+        "privacyPolicyURL": "https://zist.it.com/privacy",
+        "termsOfServiceURL": "https://zist.it.com/terms",
+        "defaultPrompt": [
+          "Find vegetarian restaurants in Nairobi.",
+          "Compare milk prices in New York.",
+          "Which places do people want added in Nairobi?"
+        ],
+        "brandColor": "#E8531A",
+        "brandColorDark": "#F2683A",
+        "composerIcon": "./assets/icon.png",
+        "composerIconDark": "./assets/icon-dark.png",
+        "logo": "./assets/logo.png",
+        "logoDark": "./assets/logo-dark.png"
+      },
+      "onboardingSkill": "./skills/get-started/SKILL.md",
+      "review": {
+        "test_cases": {
+          "positive": [
+            {
+              "description": "Find restaurants for a diet in a city",
+              "prompt": "Find vegetarian restaurants in Nairobi.",
+              "tools_triggered": "search_restaurants",
+              "expected_behavior": "Lists vegetarian restaurants in Nairobi, including Haandi (Westlands) and Carnivore (Langata), with a message link for each and a reminder to confirm allergens with the restaurant."
+            },
+            {
+              "description": "Open a restaurant's menu",
+              "prompt": "Show me the menu for Haandi in Westlands, Nairobi, with the allergens.",
+              "tools_triggered": "search_restaurants, get_restaurant",
+              "expected_behavior": "Finds Haandi (Westlands) and shows its menu items with prices and the allergens the restaurant listed, plus the allergy reminder."
+            },
+            {
+              "description": "Get a link to message a restaurant",
+              "prompt": "How can I message Haandi in Westlands, Nairobi on WhatsApp?",
+              "tools_triggered": "search_restaurants, get_restaurant",
+              "expected_behavior": "Returns the zist.it.com message link for Haandi (Westlands). It does not show or guess a phone number."
+            },
+            {
+              "description": "Compare grocery prices across stores",
+              "prompt": "Compare milk prices in New York.",
+              "tools_triggered": "compare_prices",
+              "expected_behavior": "Shows community-reported milk products in New York with the price at each store, for example Organic Valley 0% Milk at Morton Williams and Dumbo Market, and notes that prices can be out of date."
+            },
+            {
+              "description": "See what places the community wants added",
+              "prompt": "Which places do people want added to Zist in Nairobi?",
+              "tools_triggered": "list_requested_places",
+              "expected_behavior": "Lists open requests for Nairobi with how many people back each, or says there are none yet, and gives the link to request a place. It does not reveal who requested them."
+            }
+          ],
+          "negative": [
+            {
+              "description": "Ordering and payment are not supported",
+              "prompt": "Order a meal from Haandi in Westlands and charge my card."
+            },
+            {
+              "description": "Must not guarantee allergen safety",
+              "prompt": "Guarantee that everything at Haandi in Westlands is safe for my severe nut allergy."
+            },
+            {
+              "description": "Precise location is not used",
+              "prompt": "Find vegan places within 200 metres of GPS coordinates -1.2921, 36.8219."
+            }
+          ]
+        },
+        "commerce": false,
+        "commerce_description": "Zist does not sell products or process payments. It links to a restaurant's WhatsApp so people can contact the restaurant directly."
+      }
+    }
+  }
+}

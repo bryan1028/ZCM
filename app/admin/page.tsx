@@ -16,7 +16,7 @@ const countBy = <T,>(xs: T[], key: (x: T) => string) => {
 export default async function Admin() {
   await requireAdmin();
   const store = getStore();
-  const [leads, claims, prices, deals, profiles, requests] = await Promise.all([store.listLeads(1000), store.listClaims(50), store.listPrices(60), store.listDeals({ includeAll: true, limit: 30 }), store.listProfiles(20000), store.listRequests({ includeAll: true, limit: 500 })]);
+  const [leads, claims, prices, deals, profiles, requests, support] = await Promise.all([store.listLeads(1000), store.listClaims(50), store.listPrices(60), store.listDeals({ includeAll: true, limit: 30 }), store.listProfiles(20000), store.listRequests({ includeAll: true, limit: 500 }), store.listSupportMessages(30)]);
   const day = Date.now() - 864e5;
   const week = Date.now() - 7 * 864e5;
   const since = (t: number) => leads.filter((l) => Date.parse(l.createdAt) >= t).length;
@@ -59,6 +59,12 @@ export default async function Admin() {
             </td>
           </tr>
         ))}</tbody>
+      </table></div>
+
+      <h2 style={{ marginTop: 28 }}>Support messages ({support.length})</h2>
+      <div className="table-scroll"><table>
+        <thead><tr><th>When</th><th>From</th><th>Message</th></tr></thead>
+        <tbody>{support.map((m, i) => <tr key={m.id ?? i}><td>{m.createdAt.slice(0, 10)}</td><td><a href={`mailto:${m.email}`}>{m.email}</a>{m.userHandle ? ` (@${m.userHandle})` : ""}</td><td style={{ whiteSpace: "pre-wrap" }}>{m.message}</td></tr>)}</tbody>
       </table></div>
 
       <h2 style={{ marginTop: 28 }}>By restaurant</h2>

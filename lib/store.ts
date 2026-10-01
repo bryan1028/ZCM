@@ -62,7 +62,25 @@ export interface Store {
   setRequestStatus(id: string, status: PlaceRequest["status"]): Promise<void>;
   requestsBy(uid: string): Promise<PlaceRequest[]>;
   supportedBy(uid: string, ids: string[]): Promise<Set<string>>;
+
+  // Social
+  findUidByUsername(username: string): Promise<string | null>;
+  follow(me: { uid: string; handle: string }, them: { uid: string; handle: string }): Promise<void>;
+  unfollow(meUid: string, themUid: string): Promise<void>;
+  isFollowing(meUid: string, themUid: string): Promise<boolean>;
+  following(uid: string): Promise<{ uid: string; handle: string }[]>;
+  followerCount(uid: string): Promise<number>;
+  /** Latest requests and price reports by the given users (max 30 uids). */
+  activityBy(uids: string[]): Promise<{ requests: PlaceRequest[]; prices: PricePoint[] }>;
+
+  // Account lifecycle & support
+  /** Removes the user's profile, username and follows, and strips their identity from leads, prices and requests. */
+  deleteAccountData(uid: string, handle: string): Promise<void>;
+  addSupportMessage(m: SupportMessage): Promise<void>;
+  listSupportMessages(limit: number): Promise<SupportMessage[]>;
 }
+
+export interface SupportMessage { id?: string; email: string; message: string; name?: string; userHandle?: string; createdAt: string }
 
 export interface PriceQuery {
   q?: string;
@@ -147,6 +165,11 @@ function createDemoStore(): Store {
   return {
     getProfile: needsDb, saveProfile: needsDb, claimUsername: needsDb, releaseUsername: needsDb, findEmailByUsername: needsDb,
     upsertRequest: needsDb, supportRequest: needsDb, setRequestStatus: needsDb,
+    findUidByUsername: needsDb, follow: needsDb, unfollow: needsDb, deleteAccountData: needsDb,
+    async isFollowing() { return false; }, async following() { return []; }, async followerCount() { return 0; },
+    async activityBy() { return { requests: [], prices: [] }; },
+    async addSupportMessage(m) { appendFileSync(path.join(DATA_DIR, "support.jsonl"), JSON.stringify(m) + "\n"); },
+    async listSupportMessages(limit) { return readLines<SupportMessage>(path.join(DATA_DIR, "support.jsonl")).reverse().slice(0, limit); },
     async listProfiles() { return []; },
     async listRequests() { return []; },
     async requestsBy() { return []; },
@@ -230,6 +253,8 @@ function createFirestoreStore(): Store {
   const profiles = db.collection("profiles");
   const usernames = db.collection("usernames");
   const requests = db.collection("requests");
+  const follows = db.collection("follows");
+  const releaseName = async (name: string, uid: string) => { const r = usernames.doc(name); const d = await r.get(); if (d.exists && d.data()?.uid === uid) await r.delete(); };
   const iso = (v: unknown): string => (v && typeof (v as { toDate?: unknown }).toDate === "function" ? (v as { toDate(): Date }).toDate().toISOString() : typeof v === "string" ? v : new Date(0).toISOString());
   const toProfile = (d: DocumentSnapshot): Profile => {
     const x = d.data() as Record<string, unknown>;
@@ -326,6 +351,63 @@ function createFirestoreStore(): Store {
       const refs = ids.map((id) => requests.doc(id).collection("supporters").doc(uid));
       const docs = await db.getAll(...refs);
       return new Set(ids.filter((_, i) => docs[i].exists));
+    },
+    async findUidByUsername(username) {
+      const d = await usernames.doc(username).get();
+      return d.exists ? String(d.data()?.uid ?? "") || null : null;
+    },
+    async follow(me, them) {
+      if (me.uid === them.uid) return;
+      await follows.doc(`${me.uid}_${them.uid}`).set({ follower: me, followee: them, at: new Date().toISOString() });
+    },
+    async unfollow(meUid, themUid) {
+      await follows.doc(`${meUid}_${themUid}`).delete();
+    },
+    async isFollowing(meUid, themUid) {
+      return (await follows.doc(`${meUid}_${themUid}`).get()).exists;
+    },
+    async following(uid) {
+      const snap = await follows.where("follower.uid", "==", uid).limit(200).get();
+      return snap.docs.map((d) => d.data().followee as { uid: string; handle: string });
+    },
+    async followerCount(uid) {
+      return (await follows.where("followee.uid", "==", uid).count().get()).data().count;
+    },
+    async activityBy(uids) {
+      const ids = uids.slice(0, 30);
+      if (!ids.length) return { requests: [], prices: [] };
+      const [rq, pr] = await Promise.all([
+        requests.where("createdBy.uid", "in", ids).limit(100).get(),
+        prices.where("reporter", "in", ids).limit(100).get(),
+      ]);
+      return {
+        requests: rq.docs.map(reqFrom).filter((r) => r.status === "open").sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 20),
+        prices: pr.docs.map((d) => withId<PricePoint>(d)).filter((p) => p.status === "ok").sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 20),
+      };
+    },
+    async deleteAccountData(uid, handle) {
+      const batchDelete = async (q: Query) => { for (const d of (await q.limit(500).get()).docs) await d.ref.delete(); };
+      await profiles.doc(uid).delete();
+      if (handle) await releaseName(handle, uid);
+      await batchDelete(follows.where("follower.uid", "==", uid));
+      await batchDelete(follows.where("followee.uid", "==", uid));
+      for (const d of (await db.collection("leads").where("userId", "==", uid).limit(500).get()).docs) await d.ref.update({ userId: FieldValue.delete(), userHandle: FieldValue.delete() });
+      for (const d of (await prices.where("reporter", "==", uid).limit(500).get()).docs) await d.ref.update({ reporter: FieldValue.delete(), reporterHandle: FieldValue.delete() });
+      for (const d of (await requests.where("createdBy.uid", "==", uid).limit(500).get()).docs) await d.ref.update({ createdBy: { uid: "deleted", handle: "former-member" } });
+      // Backings stay in the counts but lose the name. (Doc id is the uid, which no longer maps to anyone once the login is deleted.)
+      const all = (await requests.limit(2000).get()).docs;
+      for (let i = 0; i < all.length; i += 300) {
+        const refs = all.slice(i, i + 300).map((d) => d.ref.collection("supporters").doc(uid));
+        const found = await db.getAll(...refs);
+        await Promise.all(found.filter((f) => f.exists).map((f) => f.ref.update({ handle: "former-member" })));
+      }
+    },
+    async addSupportMessage(m) {
+      await db.collection("support_messages").add(m);
+    },
+    async listSupportMessages(limit) {
+      const snap = await db.collection("support_messages").orderBy("createdAt", "desc").limit(limit).get();
+      return snap.docs.map((d) => withId<SupportMessage>(d));
     },
     async searchPrices(o) {
       let q: Query = prices;

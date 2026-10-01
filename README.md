@@ -39,13 +39,14 @@ Link taps count *intent to message*; WhatsApp doesn't tell us whether the messag
 | `/api/prices?q=&city=&country=` | Public JSON comparison, for the ChatGPT app |
 
 Prices come from shoppers plus the open **Open Prices** dataset (Open Food Facts) — no scraping of retailer sites.
+**Coverage reality:** Open Prices is mostly US (USD, ~39k prices) and Europe (EUR, ~240k). It has **no Kenyan prices** (KES = 0), so Nairobi depends on community reports. About 2,900 US prices (New York, Mountain View, Rochester Hills, ...) are already imported. Cross-store comparisons are sparse: most products have a price at only one store.
 Quality guards: only the latest price per store counts; prices older than 120 days are ignored; currencies are never mixed;
 a report far from the local median (3x) is held as `flagged` until an admin approves it in `/admin`; plus a honeypot and a
 20-reports/day cap per visitor cookie (a speed bump, not strong anti-abuse — add accounts or photo proof before scale).
 
 ```bash
 npm test                              # price-logic unit tests
-npm run import:openprices -- KE 10    # seed Kenya from Open Prices (10 pages x 100)
+npm run import:openprices -- USD 30   # 30 pages x 100 newest USD prices (filters by CURRENCY; add --country FR to keep one country)
 ```
 
 Firestore collections added: `prices`, `deals_find` (the legacy Find app's `items`/`deals` are untouched).
@@ -100,3 +101,19 @@ sign-up is open: `profiles` are readable only by their owner, `usernames` (which
 - Price reports and "Message" clicks are attributed to the signed-in user when there is one.
 - Marketing consent: the opt-in box is **unticked by default**. `/admin/export?type=users` only ever exports opted-in emails.
 - Admin `/admin`: accounts, opt-ins, requests, backings, and CSV exports (the proof-of-concept numbers for restaurants and investors).
+
+## ChatGPT plugin
+
+- `/mcp`: remote MCP server (Streamable HTTP, stateless, no auth) with 5 read-only tools: `search_restaurants`, `get_restaurant`, `compare_prices`, `find_deals`, `list_requested_places` (`lib/mcp.ts`).
+  Inputs are city names only; diet/allergy filters and search text are never stored or logged. Output has no raw phone numbers and no user handles.
+  "Message" results are tracked `/go/<id>?src=chatgpt` links, so leads from ChatGPT are counted separately in `/admin`.
+- Test it: `npx tsx scripts/test-mcp.ts https://zist.it.com/mcp` (checks the contract, annotations, validation, no PII).
+- `plugin/` is the submission package; `python3 scripts/build-plugin-zip.py` builds `zist-plugin-1.0.0.zip`. Step-by-step submission, tool justifications and a demo script: [`docs/plugin-submission.md`](docs/plugin-submission.md).
+- Domain verification: set `OPENAI_APPS_CHALLENGE` (token from the portal) and redeploy; it is served at `/.well-known/openai-apps-challenge`.
+- Legal pages required for review: `/privacy`, `/terms`, `/support` (a contact form stored in `support_messages`, shown in `/admin`). **Have a lawyer review the privacy policy and terms before you rely on them.**
+
+## Social, email and account lifecycle
+
+- `/u/<handle>` public profile (handle, join month, requests only; never diet, allergies, email or city), follow/unfollow, and `/feed` of what people you follow added.
+- `/account` has **Delete my account**: removes login, profile, username and follows; strips identity from leads, prices, requests and backings (content stays as "former member").
+- `/unsubscribe` uses a signed token (`lib/unsub.ts`). `scripts/send-launch-email.ts` is a **dry run by default**, only targets opted-in users, adds an unsubscribe link and `List-Unsubscribe`, and refuses `--send` without a postal address. Note the one existing opted-in profile came from the old site; confirm that consent before emailing it.

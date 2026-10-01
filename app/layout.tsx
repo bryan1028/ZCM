@@ -38,7 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <footer className="site">
           <div className="wrap">
             Menu and allergen details are provided by restaurants and may be out of date. If you have a severe allergy, always confirm with the restaurant before ordering.
-            <br />Some restaurant locations © OpenStreetMap contributors. Some prices from Open Food Facts contributors (Open Prices).
+            <br /><Link href="/privacy">Privacy</Link><Link href="/terms">Terms</Link><Link href="/support">Support</Link><br />Some restaurant locations © OpenStreetMap contributors. Some prices from Open Food Facts contributors (Open Prices).
           </div>
         </footer>
       </body>

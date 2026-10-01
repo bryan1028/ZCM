@@ -11,6 +11,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${site}/find` },
     { url: `${site}/deals` },
     { url: `${site}/requests` },
+    { url: `${site}/privacy` },
+    { url: `${site}/terms` },
+    { url: `${site}/support` },
     ...cities.map((c) => ({ url: `${site}/c/${c.country.toLowerCase()}/${c.citySlug}` })),
   ];
 }

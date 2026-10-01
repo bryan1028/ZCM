@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/session";
 import { getStore } from "@/lib/store";
 import { regionName } from "@/lib/util";
 import { saveAccount } from "../auth-actions";
+import { deleteAccount } from "../social-actions";
 
 export const metadata: Metadata = { title: "Your account", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -19,7 +20,8 @@ export default async function Account({ searchParams }: { searchParams: Promise<
       <h1>{p.username ? `@${p.username}` : "Your account"}</h1>
       <p className="meta">{user.email}</p>
       {sp.saved && <div className="notice">Saved.</div>}
-      {sp.error && <div className="notice">That username isn't available.</div>}
+      {sp.error === "username" && <div className="notice">That username isn't available.</div>}
+      {sp.error === "confirm" && <div className="notice">Type DELETE in capitals to confirm.</div>}
       <form className="stack" action={saveAccount}>
         {!p.username && <label className="f">Choose your public username<input type="text" name="username" required pattern="[A-Za-z0-9_]{3,20}" autoCapitalize="none" /></label>}
         <div className="row" style={{ display: "flex", gap: 10 }}>
@@ -33,11 +35,18 @@ export default async function Account({ searchParams }: { searchParams: Promise<
         <label className="checkline"><input type="checkbox" name="optIn" defaultChecked={p.optIn} /><span>Email me when Zist launches in my city, and about restaurants I asked for.</span></label>
         <button type="submit">Save</button>
       </form>
+      <p className="meta" style={{ marginTop: 14 }}>{p.username && <><Link href={`/u/${p.username}`}>Your public profile</Link> · </>}<Link href="/feed">Your feed</Link></p>
       <h2 style={{ marginTop: 32 }}>Your requests</h2>
       {mine.length === 0 && <p className="meta">You haven't requested anything yet. <Link href="/requests/new">Request a place</Link>.</p>}
       {mine.map((r) => (
         <p key={r.id} className="meta"><b>{r.name}</b> · {r.city}, {regionName(r.country)} · {r.supportCount} {r.supportCount === 1 ? "person wants" : "people want"} this</p>
       ))}
+    <h2 style={{ marginTop: 40 }}>Delete my account</h2>
+      <p className="meta">This permanently removes your login, profile and username. Your past requests and prices stay, signed as "former member". This can't be undone.</p>
+      <form className="stack" action={deleteAccount}>
+        <label className="f">Type DELETE to confirm<input type="text" name="confirm" autoComplete="off" /></label>
+        <button type="submit" className="danger">Delete my account</button>
+      </form>
     </section>
   );
 }
