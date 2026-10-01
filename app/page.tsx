@@ -58,24 +58,32 @@ export default async function Zood({ searchParams }: { searchParams: SP }) {
 
   return (
     <div className="theme-zood">
-      <section className="bighero zood">
-        <span className="kicker">The Pinterest of restaurants</span>
-        <h1>Every dish. Every corner of the world. Straight from the kitchen.</h1>
-        <p>Pin your craving, find the restaurant, and message them directly. No middleman, no hidden markups.</p>
-        <form className="search" action="/" method="get">
-          <div className="row">
-            <input type="text" name="q" placeholder="pizza, egusi, chai, spicy noodles…" defaultValue={q} aria-label="What are you craving?" />
-            <input type="text" name="city" placeholder="Where? any city on Earth" defaultValue={city} aria-label="City" />
-            <button type="submit" className="light">Zood it</button>
-          </div>
-          <div className="chips" role="group" aria-label="I eat">
-            {DIETS.map((d) => <label key={d.id}><input type="checkbox" name="diet" value={d.id} defaultChecked={diets.includes(d.id)} /><span>{d.label}</span></label>)}
-          </div>
-          <div className="chips" role="group" aria-label="Skip dishes with">
-            <span className="meta" style={{ alignSelf: "center" }}>Skip anything with</span>
-            {ALLERGENS.map((a) => <label key={a}><input type="checkbox" name="avoid" value={a} defaultChecked={avoid.includes(a)} /><span>{a}</span></label>)}
-          </div>
-        </form>
+      <section className="bighero zood heroed">
+        <div className="mosaic" aria-hidden>
+          {Array.from({ length: 12 }, (_, i) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={i} src={`/img/mosaic/${String(i + 1).padStart(2, "0")}.jpg`} alt="" width={400} height={400} loading={i < 6 ? "eager" : "lazy"} />
+          ))}
+        </div>
+        <div className="herotext">
+          <span className="kicker">The Pinterest of restaurants</span>
+          <h1>Every dish. Every corner of the world. Straight from the kitchen.</h1>
+          <p>Pin your craving, find the restaurant, and message them directly. No middleman, no hidden markups.</p>
+          <form className="search" action="/" method="get">
+            <div className="row">
+              <input type="text" name="q" placeholder="pizza, egusi, chai, spicy noodles…" defaultValue={q} aria-label="What are you craving?" />
+              <input type="text" name="city" placeholder="Where? any city on Earth" defaultValue={city} aria-label="City" />
+              <button type="submit" className="light">Zood it</button>
+            </div>
+            <div className="chips" role="group" aria-label="I eat">
+              {DIETS.map((d) => <label key={d.id}><input type="checkbox" name="diet" value={d.id} defaultChecked={diets.includes(d.id)} /><span>{d.label}</span></label>)}
+            </div>
+            <div className="chips" role="group" aria-label="Skip dishes with">
+              <span className="meta" style={{ alignSelf: "center" }}>Skip anything with</span>
+              {ALLERGENS.map((a) => <label key={a}><input type="checkbox" name="avoid" value={a} defaultChecked={avoid.includes(a)} /><span>{a}</span></label>)}
+            </div>
+          </form>
+        </div>
       </section>
 
       <PinBoard />

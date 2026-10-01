@@ -212,6 +212,12 @@ export function createPgStore(db: Sql): Store {
       }
       return { created, skipped: ps.length - created };
     },
+    async priceMedians(match, reject, limit) {
+      const r = await q(`select country, currency, (percentile_cont(0.5) within group (order by price))::float8 as median, count(*)::int as n
+                         from prices where status = 'ok' and product_name ~* $1 and ($2 = '' or product_name !~* $2)
+                         group by country, currency having count(*) >= 2 order by n desc limit $3`, [match, reject, limit]);
+      return r.rows.map((x: any) => ({ country: x.country, currency: x.currency, median: Number(x.median), count: x.n }));
+    },
     async listPrices(limit) {
       return (await q(`select ${PRICE_COLS} from prices order by created_at desc limit $1`, [limit])).rows.map(toPrice);
     },

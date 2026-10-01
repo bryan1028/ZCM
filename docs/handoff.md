@@ -85,3 +85,9 @@ Do not upgrade firebase-admin past 13.x on Netlify (ESM-only jose breaks functio
   A signature is a `requests` row keyed by `lib/wanted.ts` (same key as the zummon form), so counts merge with "Zummon a place". Unclaimed restaurant pages show the same button and the owner claim CTA.
 - Zind home is "the Wikipedia of prices": green gradient hero, price ticker, crowd-sourcing mission (add a price / see deals / join spotters).
 - Commons API is heavily rate-limited from the sandbox: use curl with a descriptive User-Agent and long sleeps.
+
+## Update: hero mosaic, peach, grocery ticker, sign-in fix
+- **Sign-in bug:** accounts created before the Postgres move (the one Firebase Auth user) had no `profiles` row, so `currentUser()` returned null even after a successful login. `lib/session.ts` now creates a blank profile on first sight; the person picks a username on /account. Verified on a draft deploy: signup, login by email and by username, and the missing-profile case. (Test account deleted.)
+  The legacy username/profile in Firestore were not copied (Firestore quota was still exhausted).
+- Zood hero: photo mosaic (`public/img/mosaic`, Unsplash) across the top with the headline/search centred at the bottom; peach palette tokens (`--peach`, `--peach-deep`, `--peach-soft`) in globals.css.
+- Zind ticker: `lib/ticker.ts` + `Store.priceMedians` (Postgres) give the median shelf price per country for 8 staples; cached 10 min per server. Sizes vary, so the page says so.

@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { detectPlace } from "@/lib/geo";
-import { comparePrices, displayName } from "@/lib/prices";
+import { comparePrices } from "@/lib/prices";
 import { getStore } from "@/lib/store";
-import { formatPrice, regionName, slugify } from "@/lib/util";
+import { regionName, slugify } from "@/lib/util";
 import { PriceCard } from "../components";
+import { flag, groceryTicker } from "@/lib/ticker";
 
 export const metadata: Metadata = {
   title: "Zind — find what anything costs",
@@ -31,6 +32,7 @@ export default async function Zind({ searchParams }: { searchParams: SP }) {
   let widened = false;
   if (!comps.length && (citySlug || scopeCountry)) { comps = comparePrices(await store.searchPrices({ q, limit: 800 }), Date.now(), q, citySlug); widened = comps.length > 0; }
   comps = comps.slice(0, 24);
+  const ticker = await groceryTicker(store);
 
   return (
     <div className="theme-zind">
@@ -50,14 +52,19 @@ export default async function Zind({ searchParams }: { searchParams: SP }) {
         </form>
       </section>
 
-      {comps.length > 0 && (
-        <div className="ticker" aria-label="Latest prices">
-          <div className="track">
-            {[0, 1].map((k) => comps.slice(0, 12).map((c) => (
-              <span key={`${k}${c.productKey}${c.citySlug}`} aria-hidden={k === 1}>{displayName(c)} · {c.stores[0].storeName} <b className="up">{formatPrice(c.min, c.currency)}</b></span>
-            )))}
+      {ticker.length > 0 && (
+        <>
+          <div className="ticker" role="marquee" aria-label="Everyday grocery prices around the world">
+            <div className="track">
+              {[0, 1].map((k) => ticker.map((t) => (
+                <span key={`${k}${t.label}`} aria-hidden={k === 1}>
+                  {t.emoji} <b>{t.label}</b>{t.countries.map((c) => <em key={c.country}> {flag(c.country)} <b className="up">{c.text}</b></em>)}
+                </span>
+              )))}
+            </div>
           </div>
-        </div>
+          <p className="meta" style={{ marginTop: -8 }}>Typical shelf prices people have reported, by country. Pack sizes vary, so search an item for exact comparisons.</p>
+        </>
       )}
 
       {sp.thanks === "1" && <div className="notice">Thanks, that sighting is live! 🎉</div>}

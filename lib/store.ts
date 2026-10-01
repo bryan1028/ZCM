@@ -59,6 +59,8 @@ export interface Store {
 
   // Zist Find
   searchPrices(o: PriceQuery): Promise<PricePoint[]>;
+  /** Typical (median) shelf price per country for products whose name matches `match` and not `reject` (regex words). Postgres only. */
+  priceMedians(match: string, reject: string, limit: number): Promise<{ country: string; currency: string; median: number; count: number }[]>;
   addPrice(p: Omit<PricePoint, "id">): Promise<string>;
   /** Bulk insert, de-duplicated on (source, sourceId). */
   upsertPrices(ps: Omit<PricePoint, "id">[]): Promise<{ created: number; skipped: number }>;
@@ -186,6 +188,7 @@ function createDemoStore(): Store {
 
   return {
     getProfile: needsDb, saveProfile: needsDb, claimUsername: needsDb, releaseUsername: needsDb, findEmailByUsername: needsDb,
+    priceMedians: async () => [],
     getClaim: needsDb, listClaimsByUser: needsDb, updateClaim: needsDb, approveClaim: needsDb, addClaimMessage: needsDb, listClaimMessages: needsDb,
     listAllClaimMessages: needsDb, listMyRestaurants: needsDb, updateRestaurantProfile: needsDb,
     upsertRequest: needsDb, supportRequest: needsDb, setRequestStatus: needsDb,
@@ -304,6 +307,7 @@ function createFirestoreStore(): Store {
 
   return {
     // Claims, owner accounts and the claim inbox live in Postgres only (Firestore is retired).
+    priceMedians: async () => [],
     getClaim: retired, listClaimsByUser: retired, updateClaim: retired, approveClaim: retired, addClaimMessage: retired, listClaimMessages: retired,
     listAllClaimMessages: retired, listMyRestaurants: retired, updateRestaurantProfile: retired,
     async getProfile(uid) {

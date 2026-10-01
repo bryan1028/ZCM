@@ -25,7 +25,7 @@ export default function About() {
       </p>
       <p><Link className="btn" href="/">Find food</Link> <Link className="btn ghost" href="/find">Find prices</Link> <Link className="btn ghost" href="/requests/new">Zummon a restaurant</Link></p>
       <h2 id="credits">Photo credits</h2>
-      <p className="meta">Homepage photos are openly licensed from Wikimedia Commons. Thank you to the photographers.</p>
+      <p className="meta">The photo tiles are openly licensed from Wikimedia Commons (credited below). The hero collage uses photos from Unsplash, free to use under the Unsplash License. Thank you to all the photographers.</p>
       <ul className="meta">
         {PINS.filter((p) => p.credit).map((p) => (
           <li key={p.key}>{p.dish}: <a href={p.credit!.url} rel="noopener noreferrer" target="_blank">{p.credit!.title}</a> by {p.credit!.author}, {p.credit!.license}</li>

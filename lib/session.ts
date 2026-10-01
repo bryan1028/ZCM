@@ -22,8 +22,15 @@ export const currentUser = cache(async (): Promise<SessionUser | null> => {
   if (!cookie) return null;
   try {
     const decoded = await adminAuth().verifySessionCookie(cookie);
-    const profile = await getStore().getProfile(decoded.uid);
-    if (!profile) return null;
+    const store = getStore();
+    let profile = await store.getProfile(decoded.uid);
+    if (!profile) {
+      // Signed in with Firebase but no profile row (accounts made before the move to Postgres): create a blank one.
+      // They pick a public username on their account page.
+      await store.saveProfile(decoded.uid, { email: decoded.email ?? "", diets: [], allergies: [], optIn: false });
+      profile = await store.getProfile(decoded.uid);
+      if (!profile) return null;
+    }
     const handle = profile.username || `user${decoded.uid.slice(0, 6).toLowerCase()}`;
     return { uid: decoded.uid, handle, email: profile.email || decoded.email || "", profile };
   } catch {
