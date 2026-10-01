@@ -5,6 +5,7 @@ import { dishEmoji } from "@/lib/dishes";
 import { ContactButtons } from "../../components";
 import { currentUser } from "@/lib/session";
 import { wantedKey } from "@/lib/wanted";
+import { ShareBar } from "../../share";
 import { pledgeCountry } from "@/lib/geo";
 import { wantRestaurantAction } from "../../request-actions";
 import { getStore } from "@/lib/store";
@@ -27,8 +28,9 @@ export async function generateMetadata({ params }: { params: P }): Promise<Metad
   };
 }
 
-export default async function RestaurantPage({ params }: { params: P }) {
+export default async function RestaurantPage({ params, searchParams }: { params: P; searchParams: Promise<{ pledged?: string; pledge?: string }> }) {
   const { id } = await params;
+  const sp = await searchParams;
   const r = await getStore().getRestaurant(id);
   if (!r || (r.status !== "active" && r.status !== "unclaimed")) notFound();
 
@@ -65,6 +67,13 @@ export default async function RestaurantPage({ params }: { params: P }) {
             </form>
           )}
         </div>
+      )}
+      {unclaimed && (
+        <>
+          {sp.pledged && <div className="notice pledge">🤝 Pledged! Thank you. Now tell people nearby so they pledge too.</div>}
+          {sp.pledge === "away" && <div className="notice pledge">Pledges are for restaurants where you are.</div>}
+          <ShareBar url={`${(process.env.NEXT_PUBLIC_SITE_URL ?? "https://zist.it.com").replace(/\/$/, "")}/r/${r.id}`} text={`I want ${r.name} on Zood so I can order from them directly. Pledge to order too:`} title="Get others to pledge" />
+        </>
       )}
       {unclaimed && (
         <div className="notice">

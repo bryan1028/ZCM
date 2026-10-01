@@ -102,3 +102,8 @@ Do not upgrade firebase-admin past 13.x on Netlify (ESM-only jose breaks functio
 
 ## Update: pledges are local
 - You can only pledge for restaurants in the country you're in (`pledgeCountry` in lib/geo.ts: request IP country, falling back to profile country; never stored; unknown = allowed). Enforced in `wantRestaurantAction`, and the UI shows "Pledges come from people in X" for other countries. Country level, not city level, and a VPN can bypass it.
+
+## Update: shareable pledge cards
+- `/pledge/[city]` (any city slug): gradient header with real pledge and restaurant counts, share bar (WhatsApp/X/Facebook/copy/native share, `app/share.tsx`), and the Wanted board. Nairobi is the launch city: homepage ribbon links to `/pledge/nairobi`; other cities work the same and are in the sitemap.
+- Link-preview images are generated per page (`app/pledge/[city]/opengraph-image.tsx`, `app/r/[id]/opengraph-image.tsx`, next/og, live data, no emoji because the default font lacks them).
+- After pledging, `?pledged=1` shows a thank-you plus a share bar on home, city and restaurant pages. Unclaimed restaurant pages always have a share bar.

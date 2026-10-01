@@ -9,6 +9,7 @@ import { DishCard, RestaurantCard } from "./components";
 import { PinStrip } from "./pins";
 import { WantedBoard } from "./wanted";
 import { CityInput } from "./cityinput";
+import { ShareBar } from "./share";
 import { wantedKey } from "@/lib/wanted";
 
 export const dynamic = "force-dynamic";
@@ -90,12 +91,18 @@ export default async function Zood({ searchParams }: { searchParams: SP }) {
           </form>
         </div>
       </section>
+      <Link className="launchribbon" href="/pledge/nairobi">🚀 Launching first in <span>Nairobi</span>: {cities.find((c) => c.citySlug === "nairobi")?.count ?? "hundreds of"} restaurants are waiting for your pledge →</Link>
 
       {isDemo() && <div className="notice">Running on demo data. Set <code>FIREBASE_SERVICE_ACCOUNT</code> to use the live database.</div>}
       {usingProfile && <p className="meta">Using your saved diet and allergies. Change them anytime on <Link href="/account">your account</Link>.</p>}
       <p className="meta">Allergen tags are whatever the restaurant told us. <b>"No allergens listed" is not "allergen-free"</b>, so with a serious allergy, always ask the restaurant first.</p>
 
-      {sp.pledged && <div className="notice pledge">🤝 Pledged! Thank you. Pledge for more, and tell a friend nearby.</div>}
+      {sp.pledged && (
+        <div className="notice pledge" style={{ display: "block" }}>
+          🤝 Pledged! Thank you. Tell a friend nearby so they pledge too.
+          <ShareBar url={`${(process.env.NEXT_PUBLIC_SITE_URL ?? "https://zist.it.com").replace(/\/$/, "")}/pledge/${citySlug ?? slugify(place.city ?? "nairobi")}`} text="I pledged to order from local restaurants on Zood, where you message them directly with no middleman. Pledge for yours:" title="Share" />
+        </div>
+      )}
       {sp.pledge === "away" && <div className="notice pledge">Pledges are for restaurants where you are. Search your own city to pledge for the ones you'd order from.</div>}
       {citySlug && !cityInfo && (
         <div className="notice pledge">
