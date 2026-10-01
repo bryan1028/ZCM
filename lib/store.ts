@@ -196,6 +196,8 @@ function createFirestoreStore(): Store {
     initializeApp({ credential: cert(parseServiceAccount(process.env.FIREBASE_SERVICE_ACCOUNT as string) as ServiceAccount) });
   }
   const db = getFirestore();
+  // Optional fields (itemId, brand, email, ...) are `undefined` when absent; Firestore rejects those unless told to drop them.
+  try { db.settings({ ignoreUndefinedProperties: true }); } catch { /* already configured (dev hot reload) */ }
   const col = db.collection("restaurants");
   const toR = (d: DocumentSnapshot): Restaurant => ({ ...(d.data() as Omit<Restaurant, "id">), id: d.id });
 

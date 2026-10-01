@@ -1,8 +1,8 @@
 [build]
   command = "npm run build"
-  publish = ".next"
 
 [build.environment]
   NODE_VERSION = "22"
-  # Netlify scans build output for strings that look like secrets; our public Firebase web key is not one.
-  SECRETS_SCAN_ENABLED = "false"
+  # Secret scanning stays ON so the build fails if ADMIN_PASSWORD or the Firebase key ever leak into shipped code.
+  # The public site URL is meant to appear in pages, so it is exempt.
+  SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_SITE_URL"
