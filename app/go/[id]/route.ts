@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStore } from "@/lib/store";
-import { shortRef } from "@/lib/util";
 import { currentUser } from "@/lib/session";
-import type { LeadSource } from "@/lib/types";
+import { shortRef } from "@/lib/util";
+import type { LeadChannel, LeadSource } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -11,24 +11,36 @@ const SOURCES: LeadSource[] = ["web", "chatgpt"];
 const DEDUPE_SECONDS = 60 * 60;
 
 /**
- * Click-to-chat redirect. Logging happens here on the server (not in the browser),
- * so counts can't be inflated by editing client code, and link previews/bots are skipped.
+ * Tracked contact link. ?mode=whatsapp (default) | call | website. Logging happens here on the server (not in the
+ * browser), so counts can't be inflated by editing client code, and link previews/bots are skipped.
  */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const store = getStore();
   const r = await store.getRestaurant(id);
-  if (!r || !r.whatsapp || (r.status !== "active" && r.status !== "unclaimed")) {
-    return NextResponse.redirect(new URL("/", req.url), 302);
-  }
+  const mode = req.nextUrl.searchParams.get("mode");
+  const channel: LeadChannel = mode === "call" ? "call" : mode === "website" ? "website" : "whatsapp";
+  const home = () => NextResponse.redirect(new URL("/", req.url), 302);
+  if (!r || (r.status !== "active" && r.status !== "unclaimed")) return home();
 
-  // One or several dishes: /go/<id>?item=a&item=b ("pick your meal", then message the restaurant once).
-  const picked = [...new Set(req.nextUrl.searchParams.getAll("item"))].slice(0, 12).map((id) => r.menu.find((m) => m.id === id)).filter((m): m is NonNullable<typeof m> => Boolean(m));
+  let target: string | undefined;
+  let text = "";
+  const picked = channel === "whatsapp"
+    ? [...new Set(req.nextUrl.searchParams.getAll("item"))].slice(0, 12).map((iid) => r.menu.find((m) => m.id === iid)).filter((m): m is NonNullable<typeof m> => Boolean(m))
+    : [];
+  if (channel === "whatsapp" && r.whatsapp) {
+    text = `Hi ${r.name}! I found you on Zood (ref REF).` + (picked.length === 1 ? ` I'd like the ${picked[0].name}.` : picked.length > 1 ? ` I'd like: ${picked.map((m) => m.name).join(", ")}.` : "");
+  } else if (channel === "call" && r.phone) {
+    target = `tel:+${r.phone}`;
+  } else if (channel === "website" && r.website && /^https?:\/\//i.test(r.website)) {
+    target = r.website;
+  }
+  if (!target && !(channel === "whatsapp" && r.whatsapp)) return home();
+
   const srcParam = req.nextUrl.searchParams.get("src") as LeadSource;
   const source: LeadSource = SOURCES.includes(srcParam) ? srcParam : "unknown";
-
   const visitor = req.cookies.get("zv")?.value ?? crypto.randomUUID();
-  const dedupeKey = `zl_${id}`;
+  const dedupeKey = `zl_${id}_${channel}`;
   const recent = req.cookies.get(dedupeKey)?.value;
   const isBot = BOT.test(req.headers.get("user-agent") ?? "");
   const ref = recent ?? shortRef();
@@ -37,18 +49,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!isBot && !recent) {
     try {
       await store.recordLead({
-        restaurantId: r.id,
-        restaurantName: r.name,
-        country: r.country,
-        city: r.city,
+        restaurantId: r.id, restaurantName: r.name, country: r.country, city: r.city,
         itemId: picked.length ? picked.map((m) => m.id).join(",").slice(0, 200) : undefined,
         itemName: picked.length ? picked.map((m) => m.name).join(", ").slice(0, 300) : undefined,
-        source,
-        ref,
-        visitor,
-        userId: user?.uid,
-        userHandle: user?.handle,
-        createdAt: new Date().toISOString(),
+        source, channel, ref, visitor, userId: user?.uid, userHandle: user?.handle, createdAt: new Date().toISOString(),
       });
     } catch (e) {
       // Never block the user from reaching the restaurant because logging failed.
@@ -56,9 +60,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     }
   }
 
-  const text = `Hi ${r.name}! I found you on Zood (ref ${ref}).` +
-    (picked.length === 1 ? ` I'd like the ${picked[0].name}.` : picked.length > 1 ? ` I'd like: ${picked.map((m) => m.name).join(", ")}.` : "");
-  const res = NextResponse.redirect(`https://wa.me/${r.whatsapp}?text=${encodeURIComponent(text)}`, 302);
+  const dest = target ?? `https://wa.me/${r.whatsapp}?text=${encodeURIComponent(text.replace("REF", ref))}`;
+  const res = NextResponse.redirect(dest, 302);
   res.headers.set("Cache-Control", "no-store");
   res.headers.set("X-Robots-Tag", "noindex, nofollow");
   res.cookies.set("zv", visitor, { httpOnly: true, sameSite: "lax", maxAge: 60 * 60 * 24 * 365, path: "/" });

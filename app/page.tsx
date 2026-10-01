@@ -30,14 +30,19 @@ export default async function Zood({ searchParams }: { searchParams: SP }) {
   const usingProfile = !submitted && Boolean(user && (diets.length || avoid.length));
 
   const store = getStore();
-  let dishes = await store.searchDishes({ q, diets, avoid, citySlug, country: scopeCountry, limit: 24 });
+  const scope = { citySlug, country: scopeCountry };
+  let [dishes, places] = await Promise.all([
+    store.searchDishes({ q, diets, avoid, ...scope, limit: 24 }),
+    store.searchRestaurants({ q, diet: diets, ...scope, limit: 12 }),
+  ]);
   let widened = false;
-  if (!dishes.length && (citySlug || scopeCountry)) { dishes = await store.searchDishes({ q, diets, avoid, limit: 24 }); widened = dishes.length > 0; }
-
+  // Only widen when there is truly nothing local: a city with restaurants (menus coming) is not "empty".
+  if (!dishes.length && !places.length && (citySlug || scopeCountry)) {
+    [dishes, places] = await Promise.all([store.searchDishes({ q, diets, avoid, limit: 24 }), store.searchRestaurants({ q, diet: diets, limit: 12 })]);
+    widened = dishes.length + places.length > 0;
+  }
   const shown = new Set(dishes.map((d) => d.restaurantId));
-  const restaurants = q || diets.length
-    ? (await store.searchRestaurants({ q, diet: diets, citySlug: widened ? undefined : citySlug, country: widened ? undefined : scopeCountry, limit: 9 })).filter((r) => !shown.has(r.id))
-    : [];
+  const restaurants = places.filter((r) => !shown.has(r.id));
   const cities = await store.listCities();
   const searching = Boolean(q || diets.length || avoid.length);
 
@@ -72,16 +77,24 @@ export default async function Zood({ searchParams }: { searchParams: SP }) {
 
       {widened && <div className="notice">Zood hasn't landed in <b>{where}</b> yet 🛬 Here's what's cooking elsewhere. <Link href="/requests/new">Zummon a place in {where}</Link> and be the reason it does.</div>}
 
-      <h2>{dishes.length ? (searching ? `${dishes.length} dish${dishes.length === 1 ? "" : "es"} to zood` : where && !widened ? `Cooking in ${where}` : "Cooking around the world") : "Zood came back empty-handed 🥲"}</h2>
-      {!dishes.length && (
-        <p className="meta">Nobody's cooking that here yet{where ? ` in ${where}` : ""}. Try a broader craving, or <Link href="/requests/new">zummon the restaurant that should be</Link>.</p>
+      {dishes.length > 0 && (
+        <>
+          <h2>{searching ? `${dishes.length} dish${dishes.length === 1 ? "" : "es"} to zood` : where && !widened ? `Cooking in ${where}` : "Cooking around the world"}</h2>
+          <div className="grid">{dishes.map((d) => <DishCard key={`${d.restaurantId}/${d.item.id}`} h={d} />)}</div>
+        </>
       )}
-      <div className="grid">{dishes.map((d) => <DishCard key={`${d.restaurantId}/${d.item.id}`} h={d} />)}</div>
+      {!dishes.length && !restaurants.length && (
+        <>
+          <h2>Zood came back empty-handed 🥲</h2>
+          <p className="meta">Nobody's cooking that here yet{where ? ` in ${where}` : ""}. Try a broader craving, or <Link href="/requests/new">zummon the restaurant that should be</Link>.</p>
+        </>
+      )}
+      {!dishes.length && restaurants.length > 0 && searching && <p className="meta">No menu has that dish yet, but these places might.</p>}
 
       {restaurants.length > 0 && (
         <>
-          <h2>Restaurants that suit you</h2>
-          <p className="meta">No menu to show yet, but they match what you asked for.</p>
+          <h2>{searching ? "Restaurants that suit you" : where && !widened ? `Restaurants in ${where}` : "Restaurants around the world"}</h2>
+          <p className="meta">Menus are landing soon. You can already reach them directly. Contact details come from public listings.</p>
           <div className="grid">{restaurants.map((r) => <RestaurantCard key={r.id} r={r} />)}</div>
         </>
       )}

@@ -47,11 +47,23 @@ export function RestaurantCard({ r, source = "web" }: { r: Restaurant; source?: 
         {r.cuisines.slice(0, 2).map((c) => <span key={c} className="tag gray">{c}</span>)}
         {r.status === "unclaimed" && <span className="tag warn">menu coming soon</span>}
       </div>
-      <div style={{ marginTop: "auto", display: "flex", gap: 8 }}>
-        <Link className="btn ghost" href={`/r/${r.id}`}>{r.menu.length ? "See the menu" : "Details"}</Link>
-        {r.whatsapp && <a className="btn wa" href={`/go/${r.id}?src=${source}`} rel="nofollow noopener" target="_blank">💬 Message</a>}
+      <div style={{ marginTop: "auto", display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <Link className="btn ghost sm" href={`/r/${r.id}`}>{r.menu.length ? "See the menu" : "Details"}</Link>
+        <ContactButtons r={r} source={source} compact />
       </div>
     </article>
+  );
+}
+
+/** Message (WhatsApp) when we have a WhatsApp number, otherwise Call; plus Website. All three are tracked links. */
+export function ContactButtons({ r, source = "web", compact = false }: { r: Pick<Restaurant, "id" | "whatsapp" | "phone" | "website">; source?: string; compact?: boolean }) {
+  const cls = compact ? " sm" : "";
+  return (
+    <>
+      {r.whatsapp && <a className={`btn wa${cls}`} href={`/go/${r.id}?src=${source}`} rel="nofollow noopener" target="_blank">💬 Message</a>}
+      {r.phone && <a className={`btn ghost${cls}`} href={`/go/${r.id}?mode=call&src=${source}`} rel="nofollow">📞 Call</a>}
+      {r.website && <a className={`btn ghost${cls}`} href={`/go/${r.id}?mode=website&src=${source}`} rel="nofollow noopener" target="_blank">🌐 Website</a>}
+    </>
   );
 }
 

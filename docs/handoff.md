@@ -16,22 +16,24 @@ No real users yet, so nothing needs to be preserved except the curated data belo
 - UI fixes (dish cards, price bars, whole-number prices) and Zood/Zind features from earlier are in the repo but the
   latest UI fixes are NOT deployed.
 
+## Also done since (untested against a live database; unit-tested locally)
+- `lib/places.ts` + `scripts/import-places-jsonl.ts` (+ `scripts/test-places.ts`): map extracted world restaurants to listings. WhatsApp is
+  only set when the extractor judged a WhatsApp-capable mobile; other numbers are `phone` only.
+- `/go/[id]?mode=call|website` tracked redirects, `Lead.channel`, Call/Website buttons, honest "contact details come from public
+  listings" note, local restaurants shown on Zood when a city has restaurants but no menus, MCP `callUrl`/`websiteUrl`.
+- `scripts/import-openprices.ts --out file.jsonl` stages prices without a database; `scripts/import-prices-jsonl.ts` loads them.
+
 ## Written but NOT yet run
 - `scripts/overture_extract.py` + `scripts/cities.json`: pulls restaurants/cafes for ~40 world cities from Overture Maps
   (S3 reachable through the proxy with `pip install pyarrow s3fs phonenumbers`; set AWS_CA_BUNDLE=/root/.ccr/ca-bundle.crt).
-  Output JSONL -> needs `scripts/import-places-jsonl.ts` (NOT written yet: map JSONL rows to `Restaurant` with
-  source "overture", status "unclaimed", sourceId = Overture id, whatsapp/phone/website/cuisines/diets/rank, then
-  `store.upsertImported`).
-- Open Prices has data in many countries (USD ~39k, EUR ~240k, GBP, CAD, INR, AUD ...). `scripts/import-openprices.ts
-  <CURRENCY> <pages> [--country XX]` already works with either backend; broaden it across countries.
+  Run: `python3 scripts/overture_extract.py --out data/overture-places.jsonl --per-city 150` (a few minutes; the user cancelled the
+  last two attempts, so confirm before running), then `npx tsx scripts/import-places-jsonl.ts data/overture-places.jsonl [--apply]`.
+- Open Prices coverage: USD ~39k, EUR ~240k, GBP, CAD, INR, AUD (KES = 0). Stage several with `--out`, then load.
 
-## Still to build
-1. `phone` / `website` support in the UI and `/go/[id]` (modes `call` and `website`, `Lead.channel`), and show local
-   restaurants (menus coming soon) on Zood when a city has restaurants but no dishes. Columns already exist in the schema.
-2. MCP tools: add `websiteUrl` / tracked `callUrl` for restaurants without WhatsApp; no raw phone numbers in output.
-3. Create the Supabase project, apply the migration, set `DATABASE_URL` (use the TRANSACTION POOLER string, port 6543) on
-   Netlify and in the shell, run the loaders, deploy, verify, then retire Firestore reads.
-
+## Still to do
+1. Create the Supabase project, apply `supabase/migrations/0001_init.sql`, set `DATABASE_URL` (TRANSACTION POOLER string, port 6543) on
+   Netlify and in the shell, run `scripts/load-legacy-data.ts --apply`, the places/prices loaders, deploy (draft first), verify, then
+   stop using Firestore for data. BLOCKER at the time of writing: `SUPABASE_ACCESS_TOKEN` was not present in the session environment.
 ## Supabase access
 The user adds `SUPABASE_ACCESS_TOKEN` (a Personal Access Token) in the cloud environment settings. Use the Management API
 (https://api.supabase.com/v1/...) to create the project and apply the migration (`POST /v1/projects/{ref}/database/query`).

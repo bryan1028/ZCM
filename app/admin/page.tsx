@@ -75,9 +75,9 @@ export default async function Admin() {
 
       <h2 style={{ marginTop: 28 }}>Recent leads</h2>
       <div className="table-scroll"><table>
-        <thead><tr><th>When</th><th>Restaurant</th><th>Item</th><th>Source</th><th>Ref</th></tr></thead>
+        <thead><tr><th>When</th><th>Restaurant</th><th>Item</th><th>Via</th><th>Source</th><th>Ref</th></tr></thead>
         <tbody>{leads.slice(0, 50).map((l, i) => (
-          <tr key={l.id ?? i}><td>{l.createdAt.replace("T", " ").slice(0, 16)}</td><td>{l.restaurantName}</td><td>{l.itemName ?? ""}</td><td>{l.source}</td><td>{l.ref}</td></tr>
+          <tr key={l.id ?? i}><td>{l.createdAt.replace("T", " ").slice(0, 16)}</td><td>{l.restaurantName}</td><td>{l.itemName ?? ""}</td><td>{l.channel ?? "whatsapp"}</td><td>{l.source}</td><td>{l.ref}</td></tr>
         ))}</tbody>
       </table></div>
 

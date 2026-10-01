@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { dishEmoji } from "@/lib/dishes";
+import { ContactButtons } from "../../components";
 import { getStore } from "@/lib/store";
 import { DIETS } from "@/lib/types";
 import { formatPrice, regionName } from "@/lib/util";
@@ -43,10 +44,12 @@ export default async function RestaurantPage({ params }: { params: P }) {
       {r.status === "unclaimed" && (
         <div className="notice">Is this your restaurant? <Link href={`/list?claim=${r.id}`}>Claim it</Link> to add your menu and get customer messages.</div>
       )}
-      {!r.whatsapp && <div className="notice">No WhatsApp number on file yet, so Zood can't message them for you.</div>}
+      <p style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><ContactButtons r={r} /></p>
+      {!r.whatsapp && !r.phone && !r.website && <div className="notice">We don't have a way to contact this restaurant yet.</div>}
+      {(r.phone || r.website) && r.source !== "owner" && r.source !== "import" && <p className="meta">Contact details come from public listings and may be out of date. {r.phone && !r.whatsapp ? "The number may not be on WhatsApp, so Zood offers Call." : ""}</p>}
 
       <h2>Pick your meal</h2>
-      {r.menu.length === 0 && <p className="meta">The menu hasn't landed yet. {r.whatsapp && <>You can still <a href={`/go/${r.id}?src=web`} rel="nofollow noopener" target="_blank">message them</a>.</>}</p>}
+      {r.menu.length === 0 && <p className="meta">The menu hasn't landed yet. Use the buttons above to ask them directly.</p>}
 
       {/* No JavaScript needed: tick dishes, press the button, and WhatsApp opens with everything you picked. */}
       <form action={`/go/${r.id}`} method="get" target="_blank">

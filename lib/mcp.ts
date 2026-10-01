@@ -18,13 +18,23 @@ export const SERVER_INSTRUCTIONS =
   "Zist has two parts: Zood finds dishes and restaurants that suit a diet and gives a link to message the restaurant on WhatsApp; Zind compares what an item costs at different stores. " +
   "Allergen data comes from restaurants and may be out of date: always remind people with a severe allergy to confirm with the restaurant, and never say a dish is safe or allergen-free. " +
   "Use city names only; never ask for a precise address or GPS location. Diet and allergy filters are used for the search only. " +
-  "To contact a restaurant, share the messageUrl link; do not invent phone numbers. Searches work in any city; coverage is uneven, so say so when nothing is found.";
+  "To contact a restaurant, share its messageUrl (WhatsApp), callUrl or websiteUrl link; do not invent phone numbers. Searches work in any city; coverage is uneven, so say so when nothing is found.";
 
 // Every tool only reads data. Contacting a restaurant is a link the user opens themselves.
 const READ_ONLY = { readOnlyHint: true, destructiveHint: false, openWorldHint: false, idempotentHint: true } as const;
 
 const city = z.string().trim().min(2).max(80).optional().describe("Optional city name, for example Lagos or Paris. Omit to search everywhere. Never a street address.");
 const country = z.string().trim().length(2).optional().describe("Optional 2-letter country code, for example GB.");
+
+/** Tracked contact links. The raw phone number is never returned; the link redirects and logs the click. */
+function contactLinks(r: { id: string; whatsapp: string | null; phone?: string | null; website?: string }) {
+  const base = `${SITE()}/go/${r.id}`;
+  return {
+    messageUrl: r.whatsapp ? `${base}?src=chatgpt` : null,
+    callUrl: r.phone ? `${base}?mode=call&src=chatgpt` : null,
+    websiteUrl: r.website ? `${base}?mode=website&src=chatgpt` : null,
+  };
+}
 
 function ok(structured: Record<string, unknown>, text: string) {
   return { structuredContent: structured, content: [{ type: "text" as const, text }] };
@@ -89,7 +99,7 @@ export function createZistServer(): McpServer {
           id: z.string(), name: z.string(), city: z.string(), address: z.string().optional(),
           cuisines: z.array(z.string()), diets: z.array(z.string()), hasMenu: z.boolean(),
           menuHighlights: z.array(z.object({ name: z.string(), price: z.number().optional(), currency: z.string().optional(), diets: z.array(z.string()), allergens: allergensField })),
-          pageUrl: z.string(), messageUrl: z.string().nullable(),
+          pageUrl: z.string(), messageUrl: z.string().nullable(), callUrl: z.string().nullable(), websiteUrl: z.string().nullable(),
         })),
         note: z.string(),
       },
@@ -100,10 +110,10 @@ export function createZistServer(): McpServer {
       const results = rs.map((r) => ({
         id: r.id, name: r.name, city: r.city, address: r.address, cuisines: r.cuisines, diets: r.diets, hasMenu: r.menu.length > 0,
         menuHighlights: r.menu.slice(0, 3).map((m) => ({ name: m.name, price: m.price, currency: m.currency, diets: m.diets, allergens: m.allergens })),
-        pageUrl: `${SITE()}/r/${r.id}`, messageUrl: r.whatsapp ? `${SITE()}/go/${r.id}?src=chatgpt` : null,
+        pageUrl: `${SITE()}/r/${r.id}`, ...contactLinks(r),
       }));
       const text = results.length
-        ? `Found ${results.length} restaurant${results.length === 1 ? "" : "s"}${c ? ` in ${c}` : ""}:\n` + results.map((r) => `- ${r.name}${r.address ? ` (${r.address})` : ""}${r.diets.length ? ` — ${r.diets.join(", ")}` : ""}${r.messageUrl ? ` — message: ${r.messageUrl}` : ""}`).join("\n") + `\n${ALLERGY_NOTE}`
+        ? `Found ${results.length} restaurant${results.length === 1 ? "" : "s"}${c ? ` in ${c}` : ""}:\n` + results.map((r) => `- ${r.name}${r.address ? ` (${r.address})` : ""}${r.diets.length ? ` — ${r.diets.join(", ")}` : ""}${r.messageUrl ? ` — message: ${r.messageUrl}` : r.callUrl ? ` — call: ${r.callUrl}` : r.websiteUrl ? ` — website: ${r.websiteUrl}` : ""}`).join("\n") + `\n${ALLERGY_NOTE}`
         : `No restaurants found${c ? ` in ${c}` : ""} for that search. Zood is growing city by city; people can zummon a place at ${SITE()}/requests/new.`;
       return ok({ results, note: ALLERGY_NOTE }, text);
     },
@@ -120,7 +130,7 @@ export function createZistServer(): McpServer {
         restaurant: z.object({
           id: z.string(), name: z.string(), city: z.string(), address: z.string().optional(), cuisines: z.array(z.string()), diets: z.array(z.string()),
           menu: z.array(z.object({ name: z.string(), description: z.string().optional(), price: z.number().optional(), currency: z.string().optional(), diets: z.array(z.string()), allergens: allergensField })),
-          pageUrl: z.string(), messageUrl: z.string().nullable(),
+          pageUrl: z.string(), messageUrl: z.string().nullable(), callUrl: z.string().nullable(), websiteUrl: z.string().nullable(),
         }).optional(),
         note: z.string(),
       },
@@ -132,10 +142,10 @@ export function createZistServer(): McpServer {
       const restaurant = {
         id: r.id, name: r.name, city: r.city, address: r.address, cuisines: r.cuisines, diets: r.diets,
         menu: r.menu.map((m) => ({ name: m.name, description: m.description, price: m.price, currency: m.currency, diets: m.diets, allergens: m.allergens })),
-        pageUrl: `${SITE()}/r/${r.id}`, messageUrl: r.whatsapp ? `${SITE()}/go/${r.id}?src=chatgpt` : null,
+        pageUrl: `${SITE()}/r/${r.id}`, ...contactLinks(r),
       };
       const text = `${r.name} (${r.city}). ` + (r.menu.length ? `${r.menu.length} menu item${r.menu.length === 1 ? "" : "s"}.` : "The menu has not been added yet.") +
-        (restaurant.messageUrl ? ` Message them: ${restaurant.messageUrl}` : " No WhatsApp number is listed yet.") + ` ${ALLERGY_NOTE}`;
+        (restaurant.messageUrl ? ` Message them: ${restaurant.messageUrl}` : restaurant.callUrl ? ` No WhatsApp number is listed; you can call: ${restaurant.callUrl}` : restaurant.websiteUrl ? ` No phone is listed; their website: ${restaurant.websiteUrl}` : " No contact details are listed yet.") + ` ${ALLERGY_NOTE}`;
       return ok({ found: true, restaurant, note: ALLERGY_NOTE }, text);
     },
   );

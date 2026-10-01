@@ -1,15 +1,17 @@
 /**
- * Import real shop prices from Open Prices (Open Food Facts). Needs FIREBASE_SERVICE_ACCOUNT unless --dry.
+ * Import real shop prices from Open Prices (Open Food Facts). Needs DATABASE_URL (or FIREBASE_SERVICE_ACCOUNT) unless --dry or --out.
  *
  *   npm run import:openprices -- USD 40            # 40 pages x 100 newest USD prices
  *   npm run import:openprices -- EUR 20 --country FR
  *   npm run import:openprices -- USD 3 --dry       # preview only, writes nothing
+ *   npm run import:openprices -- EUR 40 --country FR --out data/prices.jsonl   # stage to a file; load with import-prices-jsonl.ts
  *
  * IMPORTANT: Open Prices cannot filter by country, only by currency, so we filter by currency and optionally keep one country.
  * Coverage is mostly USD (US) and EUR (Europe). There is NO Kenyan data (KES has 0 prices), so Nairobi relies on community reports.
  * Source: https://prices.openfoodfacts.org (open data; keep the Open Food Facts credit in the footer and check their licence terms).
  */
-import { getStore } from "../lib/store";
+import { appendFileSync } from "node:fs";
+import { getStore, isDemo } from "../lib/store";
 import { productKey, tokenize } from "../lib/prices";
 import { slugify } from "../lib/util";
 import type { PricePoint } from "../lib/types";
@@ -18,8 +20,10 @@ const args = process.argv.slice(2);
 const [currency, pagesArg] = args.filter((a) => !a.startsWith("--"));
 const country = args.includes("--country") ? args[args.indexOf("--country") + 1]?.toUpperCase() : undefined;
 const dry = args.includes("--dry");
+// --out file.jsonl stages the prices in a file (no database needed); load them later with import-prices-jsonl.ts
+const outFile = args.includes("--out") ? args[args.indexOf("--out") + 1] : undefined;
 if (!currency || !/^[A-Za-z]{3}$/.test(currency)) { console.error("usage: import-openprices <CURRENCY> [pages] [--country XX] [--dry]"); process.exit(1); }
-if (!dry && !process.env.FIREBASE_SERVICE_ACCOUNT) { console.error("Set FIREBASE_SERVICE_ACCOUNT first (or use --dry)."); process.exit(1); }
+if (!dry && !outFile && isDemo()) { console.error("Set DATABASE_URL (Supabase) or FIREBASE_SERVICE_ACCOUNT first, or use --dry / --out file.jsonl."); process.exit(1); }
 const pages = Math.min(Number(pagesArg) || 5, 200);
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -58,6 +62,7 @@ async function main() {
   console.log(`${seen} fetched, ${out.length} usable. Top cities:`, JSON.stringify([...byCity.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8)));
   console.log("sample:", JSON.stringify(out.slice(0, 2).map((p) => ({ n: p.productName, b: p.brand, s: p.size, store: p.storeName, city: p.city, price: p.price, cur: p.currency, at: p.observedAt.slice(0, 10) }))));
   if (dry) return console.log("DRY RUN: nothing written.");
+  if (outFile) { appendFileSync(outFile, out.map((p) => JSON.stringify(p)).join("\n") + "\n"); return console.log(`staged ${out.length} prices -> ${outFile}`); }
   console.log(await getStore().upsertPrices(out));
 }
 main().catch((e) => { console.error(e); process.exit(1); });
