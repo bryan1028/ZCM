@@ -40,6 +40,7 @@ const ok = (m: string) => console.log("PASS", m);
   assert.equal((await s.searchRestaurants({ limit: 1 })).length, 1); ok("limit respected");
   const dishes = await s.searchDishes({ q: "chicken" }); assert.deepEqual(dishes.map((d) => d.item.name), ["Chicken Tikka"]); assert.equal((await s.searchDishes({ avoid: ["dairy"] })).length, 0); ok("dish search + allergen avoidance");
   assert.deepEqual((await s.listCities()).map((c) => `${c.city}:${c.count}`), ["Nairobi:1"]); ok("city list counts only active restaurants with menus");
+  assert.deepEqual((await s.listCities({ includeUnlisted: true })).map((c) => `${c.city}:${c.count}`), ["Nairobi:2", "Lagos:1", "Tokyo:1"]); ok("city list can include restaurants without menus (Wanted board)");
   const id = await s.createRestaurant(R({ name: "Mama Pizza", sourceId: "x", source: "owner", status: "pending", whatsapp: "254711111111" })); assert.ok(id.startsWith("own-"));
   assert.equal((await s.searchRestaurants({ q: "pizza" })).length, 0, "pending restaurants are not public"); ok("owner submissions stay hidden until approved");
   await s.setMenu("import-x".replace("import", "overture"), []); // no-op on missing id

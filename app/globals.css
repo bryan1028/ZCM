@@ -202,3 +202,4 @@ header.site { background: linear-gradient(90deg, #fff3ea, #ffd9c2); border-botto
 .bighero.zind.heroed { background: #0b2a1c url(/img/staples/aisle.jpg) center / cover; }
 .bighero.zind.heroed::before { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(135deg, rgba(11,122,75,.82), rgba(10,138,143,.8) 60%, rgba(27,111,181,.84)); }
 .bighero.zind .herotext .kicker { background: #b8f2cf; color: #05301c; }
+.notice.pledge { background: var(--peach-soft); border-color: var(--peach-deep); font-size: 15px; display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }

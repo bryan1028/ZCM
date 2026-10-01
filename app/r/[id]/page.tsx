@@ -55,11 +55,11 @@ export default async function RestaurantPage({ params }: { params: P }) {
       {unclaimed && (
         <div className="wanted">
           <h2 style={{ fontSize: 22 }}>Want {r.name} on Zood?</h2>
-          <p className="meta" style={{ marginTop: -4 }}>{signatures > 0 ? `${signatures} ${signatures === 1 ? "person has" : "people have"} signed.` : "Be the first to sign."} Every signature tells them people want to find them here, and gets them invited.</p>
-          {signed ? <span className="btn sign done">✓ You signed</span> : (
+          <p className="meta" style={{ marginTop: -4 }}>{signatures > 0 ? `${signatures} ${signatures === 1 ? "person has" : "people have"} pledged.` : "Be the first to pledge."} Pledge to order from them once they're here. Every pledge tells them people want to find them on Zood.</p>
+          {signed ? <span className="btn sign done">✓ You pledged</span> : (
             <form action={wantRestaurantAction}>
               <input type="hidden" name="id" value={r.id} /><input type="hidden" name="returnTo" value={`/r/${r.id}`} />
-              <button type="submit" className="sign">✍️ I want this on Zood</button>
+              <button type="submit" className="sign">🤝 Pledge to order</button>
             </form>
           )}
         </div>

@@ -6,6 +6,7 @@ import { getStore } from "@/lib/store";
 import { regionName, slugify } from "@/lib/util";
 import { PriceCard } from "../components";
 import { StapleStrip } from "../pins";
+import { CityInput } from "../cityinput";
 import { flag, groceryTicker } from "@/lib/ticker";
 
 export const metadata: Metadata = {
@@ -33,7 +34,7 @@ export default async function Zind({ searchParams }: { searchParams: SP }) {
   let widened = false;
   if (!comps.length && (citySlug || scopeCountry)) { comps = comparePrices(await store.searchPrices({ q, limit: 800 }), Date.now(), q, citySlug); widened = comps.length > 0; }
   comps = comps.slice(0, 24);
-  const ticker = await groceryTicker(store);
+  const [ticker, priceCities] = await Promise.all([groceryTicker(store), store.priceCities()]);
 
   return (
     <div className="theme-zind">
@@ -47,7 +48,7 @@ export default async function Zind({ searchParams }: { searchParams: SP }) {
         <form className="search" action="/find" method="get">
           <div className="row">
             <input type="text" name="q" placeholder="rice, milk, dettol, anything…" defaultValue={q} aria-label="What are you hunting for?" autoFocus={!submitted} />
-            <input type="text" name="city" placeholder="Where? any city on Earth" defaultValue={city} aria-label="City" />
+            <CityInput id="zind-cities" cities={priceCities} defaultValue={city} noun="prices" />
             <button type="submit" className="light">Zind it</button>
           </div>
           <div className="cities" aria-label="Try">

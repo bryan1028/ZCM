@@ -8,6 +8,7 @@ import { regionName, slugify } from "@/lib/util";
 import { DishCard, RestaurantCard } from "./components";
 import { PinStrip } from "./pins";
 import { WantedBoard } from "./wanted";
+import { CityInput } from "./cityinput";
 import { wantedKey } from "@/lib/wanted";
 
 export const dynamic = "force-dynamic";
@@ -46,10 +47,11 @@ export default async function Zood({ searchParams }: { searchParams: SP }) {
   const shown = new Set(dishes.map((d) => d.restaurantId));
   const restaurants = places.filter((r) => !shown.has(r.id));
   const [cities, unlisted, wantReqs] = await Promise.all([
-    store.listCities(),
+    store.listCities({ includeUnlisted: true }),
     store.searchRestaurants({ q, diet: diets, ...(widened ? {} : scope), includeUnlisted: true, limit: 36 }),
     store.listRequests({ kind: "restaurant", ...(citySlug && !widened ? { citySlug } : {}), limit: 300 }),
   ]);
+  const cityInfo = citySlug ? cities.find((c) => c.citySlug === citySlug) : undefined;
   const listedIds = new Set([...dishes.map((d) => d.restaurantId), ...places.map((r) => r.id)]);
   const wanted = unlisted.filter((r) => r.status === "unclaimed" && !listedIds.has(r.id)).slice(0, 9);
   const mine = user ? await store.supportedBy(user.uid, wanted.map(wantedKey)) : new Set<string>();
@@ -74,7 +76,7 @@ export default async function Zood({ searchParams }: { searchParams: SP }) {
           <form className="search" action="/" method="get">
             <div className="row">
               <input type="text" name="q" placeholder="pizza, egusi, chai, spicy noodles…" defaultValue={q} aria-label="What are you craving?" />
-              <input type="text" name="city" placeholder="Where? any city on Earth" defaultValue={city} aria-label="City" />
+              <CityInput id="zood-cities" cities={cities} defaultValue={city} noun="restaurants" />
               <button type="submit" className="light">Zood it</button>
             </div>
             <div className="chips" role="group" aria-label="I eat">
@@ -92,6 +94,18 @@ export default async function Zood({ searchParams }: { searchParams: SP }) {
       {usingProfile && <p className="meta">Using your saved diet and allergies. Change them anytime on <Link href="/account">your account</Link>.</p>}
       <p className="meta">Allergen tags are whatever the restaurant told us. <b>"No allergens listed" is not "allergen-free"</b>, so with a serious allergy, always ask the restaurant first.</p>
 
+      {citySlug && !cityInfo && (
+        <div className="notice pledge">
+          <b>We don't have any restaurants in {city} yet.</b> Be the one who changes that: add a restaurant you love there and it gets a public pledge page.{" "}
+          <Link className="btn sm" href={`/requests/new?city=${encodeURIComponent(city)}`}>➕ Add a restaurant in {city}</Link>
+        </div>
+      )}
+      {citySlug && cityInfo && (
+        <div className="notice pledge">
+          <b>{cityInfo.count} restaurant{cityInfo.count === 1 ? "" : "s"} in {cityInfo.city} {cityInfo.count === 1 ? "isn't" : "aren't"} on Zood yet.</b> Pledge to order from the ones you want and we'll invite them to join.{" "}
+          <Link className="btn sm" href="#wanted">🤝 See them &amp; pledge</Link>
+        </div>
+      )}
       {widened && <div className="notice">Zood hasn't landed in <b>{where}</b> yet 🛬 Here's what's cooking elsewhere. <Link href="/requests/new">Zummon a place in {where}</Link> and be the reason it does.</div>}
 
       {dishes.length > 0 && (
@@ -126,11 +140,11 @@ export default async function Zood({ searchParams }: { searchParams: SP }) {
         </p>
         <div className="steps">
           <div className="step"><span className="n">1</span><b>Find a restaurant near you</b>We've already mapped thousands of them from public data.</div>
-          <div className="step"><span className="n">2</span><b>Sign for it</b>Your signature tells them people want to find them on Zood.</div>
+          <div className="step"><span className="n">2</span><b>Pledge to order</b>Your pledge tells them people want to find them on Zood.</div>
           <div className="step"><span className="n">3</span><b>They join, you order</b>Restaurants get a free trial to put up their menu. You message them directly.</div>
         </div>
         <div className="ctas">
-          <Link className="btn" href="#wanted">✍️ Sign for a restaurant</Link>
+          <Link className="btn" href="#wanted">🤝 Pledge for a restaurant</Link>
           <Link className="btn ghost" href="/requests/new">➕ Add one that's missing</Link>
           <Link className="btn ghost" href="/list">🏪 I own a restaurant</Link>
         </div>

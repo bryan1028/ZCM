@@ -33,7 +33,10 @@ export interface Store {
   /** Dishes (menu items) matching the query, optionally within a country/city. */
   searchDishes(o: DishQuery & { country?: string; citySlug?: string; limit?: number }): Promise<DishHit[]>;
   /** Cities with listings. Reads ONE precomputed summary doc (see scripts/rebuild-cities.ts), never the restaurant list. */
-  listCities(): Promise<CitySummary[]>;
+  /** Cities with restaurants on Zood. `includeUnlisted` also counts restaurants without a menu yet (the Wanted board). */
+  listCities(o?: { includeUnlisted?: boolean }): Promise<CitySummary[]>;
+  /** Cities with at least one reported price (Zind). Postgres only. */
+  priceCities(): Promise<CitySummary[]>;
   setCities(list: CitySummary[]): Promise<void>;
   /** Rebuild the city summary by scanning public restaurants once (for scripts, not page views). */
   computeCities(): Promise<CitySummary[]>;
@@ -189,6 +192,7 @@ function createDemoStore(): Store {
   return {
     getProfile: needsDb, saveProfile: needsDb, claimUsername: needsDb, releaseUsername: needsDb, findEmailByUsername: needsDb,
     priceMedians: async () => [],
+    priceCities: async () => [],
     getClaim: needsDb, listClaimsByUser: needsDb, updateClaim: needsDb, approveClaim: needsDb, addClaimMessage: needsDb, listClaimMessages: needsDb,
     listAllClaimMessages: needsDb, listMyRestaurants: needsDb, updateRestaurantProfile: needsDb,
     upsertRequest: needsDb, supportRequest: needsDb, setRequestStatus: needsDb,
@@ -308,6 +312,7 @@ function createFirestoreStore(): Store {
   return {
     // Claims, owner accounts and the claim inbox live in Postgres only (Firestore is retired).
     priceMedians: async () => [],
+    priceCities: async () => [],
     getClaim: retired, listClaimsByUser: retired, updateClaim: retired, approveClaim: retired, addClaimMessage: retired, listClaimMessages: retired,
     listAllClaimMessages: retired, listMyRestaurants: retired, updateRestaurantProfile: retired,
     async getProfile(uid) {

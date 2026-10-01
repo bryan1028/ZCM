@@ -10,8 +10,8 @@ export function WantedBoard({ places, requests, mine, returnTo, where }: { place
   const byKey = new Map(requests.map((r) => [r.id, r]));
   return (
     <section className="wanted" id="wanted">
-      <h2>Sign for the restaurants you want on Zood{where ? ` in ${where}` : ""}</h2>
-      <p className="meta" style={{ marginTop: -6 }}>We found these on public maps. They don't have menus on Zood yet. Every signature tells them people want to find them here, and gets them invited.</p>
+      <h2>Pledge for the restaurants you want on Zood{where ? ` in ${where}` : ""}</h2>
+      <p className="meta" style={{ marginTop: -6 }}>We found these on public maps. They don't have menus on Zood yet. Pledge to order from them once they're here. Every pledge tells them people want to find them on Zood, and gets them invited.</p>
       <div className="grid">
         {places.map((r) => {
           const key = wantedKey(r);
@@ -24,14 +24,14 @@ export function WantedBoard({ places, requests, mine, returnTo, where }: { place
               <div className="meta">{[r.address, `${r.city}, ${regionName(r.country)}`].filter(Boolean).join(" · ")}</div>
               <div>{r.cuisines.slice(0, 3).map((c) => <span key={c} className="tag gray">{c}</span>)}</div>
               <div className="signline">
-                <span className="signcount">{n > 0 ? `✍️ ${n} ${n === 1 ? "signature" : "signatures"}` : "Be the first to sign"}</span>
+                <span className="signcount">{n > 0 ? `🤝 ${n} ${n === 1 ? "pledge" : "pledges"}` : "Be the first to pledge"}</span>
                 {signed ? (
-                  <span className="btn sm sign done">✓ You signed</span>
+                  <span className="btn sm sign done">✓ You pledged</span>
                 ) : (
                   <form action={wantRestaurantAction}>
                     <input type="hidden" name="id" value={r.id} />
                     <input type="hidden" name="returnTo" value={returnTo} />
-                    <button type="submit" className="sm sign">✍️ I want this on Zood</button>
+                    <button type="submit" className="sm sign">🤝 Pledge to order</button>
                   </form>
                 )}
               </div>

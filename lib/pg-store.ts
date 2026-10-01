@@ -93,8 +93,13 @@ export function createPgStore(db: Sql): Store {
       const r = await q(`select ${RESTAURANT_COLS} from restaurants${w.sql} limit 500`, w.params);
       return flattenDishes(r.rows.map(toRestaurant), o).slice(0, o.limit ?? 60);
     },
-    async listCities() {
-      const r = await q(`select country, city, city_slug, count(*)::int as n from restaurants where status = 'active' and jsonb_array_length(menu) > 0 group by country, city, city_slug order by n desc, city limit 300`);
+    async listCities(o) {
+      const cond = o?.includeUnlisted ? "status in ('active','unclaimed')" : "status = 'active' and jsonb_array_length(menu) > 0";
+      const r = await q(`select country, city, city_slug, count(*)::int as n from restaurants where ${cond} group by country, city, city_slug order by n desc, city limit 300`);
+      return r.rows.map((x: any): CitySummary => ({ country: x.country, city: x.city, citySlug: x.city_slug, count: x.n }));
+    },
+    async priceCities() {
+      const r = await q(`select country, city, city_slug, count(*)::int as n from prices where status = 'ok' group by country, city, city_slug order by n desc, city limit 300`);
       return r.rows.map((x: any): CitySummary => ({ country: x.country, city: x.city, citySlug: x.city_slug, count: x.n }));
     },
     async setCities() { /* computed live from an indexed GROUP BY */ },

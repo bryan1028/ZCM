@@ -95,3 +95,7 @@ Do not upgrade firebase-admin past 13.x on Netlify (ESM-only jose breaks functio
 ## Update: top strips and centred heroes
 - Zood: moving strip of place-labelled dishes (`PinStrip`) above a centred hero (Unsplash mosaic behind a brand gradient). Zind: moving strip of grocery photo cards with prices in 3 countries (`StapleStrip`, photos in `public/img/staples`) above a centred hero on a supermarket-aisle photo, then the price ticker.
 - Staples are in `lib/ticker.ts` (sugar was dropped for lack of a photo). To add one: add a photo to `public/img/staples` and an entry with `img`.
+
+## Update: city dropdown and pledges
+- "Where?" is a native `<datalist>` (`app/cityinput.tsx`): Zood lists every city with restaurants (`listCities({ includeUnlisted: true })`, 43 cities), Zind lists cities with prices (`priceCities()`).
+- Typing a city with no restaurants shows "Add a restaurant in X" (links to `/requests/new?city=X`); a city with restaurants shows "N restaurants in X aren't on Zood yet, pledge" and the Wanted board. "Sign"/"signature" wording is now "pledge".
