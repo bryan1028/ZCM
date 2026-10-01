@@ -5,8 +5,10 @@ import { ALLERGENS } from "@/lib/dishes";
 import { getStore, isDemo } from "@/lib/store";
 import { DIETS, type Diet } from "@/lib/types";
 import { regionName, slugify } from "@/lib/util";
-import { ZoodMark } from "./brand";
 import { DishCard, RestaurantCard } from "./components";
+import { PinBoard } from "./pins";
+import { WantedBoard } from "./wanted";
+import { wantedKey } from "@/lib/wanted";
 
 export const dynamic = "force-dynamic";
 
@@ -43,33 +45,40 @@ export default async function Zood({ searchParams }: { searchParams: SP }) {
   }
   const shown = new Set(dishes.map((d) => d.restaurantId));
   const restaurants = places.filter((r) => !shown.has(r.id));
-  const cities = await store.listCities();
+  const [cities, unlisted, wantReqs] = await Promise.all([
+    store.listCities(),
+    store.searchRestaurants({ q, diet: diets, ...(widened ? {} : scope), includeUnlisted: true, limit: 36 }),
+    store.listRequests({ kind: "restaurant", ...(citySlug && !widened ? { citySlug } : {}), limit: 300 }),
+  ]);
+  const listedIds = new Set([...dishes.map((d) => d.restaurantId), ...places.map((r) => r.id)]);
+  const wanted = unlisted.filter((r) => r.status === "unclaimed" && !listedIds.has(r.id)).slice(0, 9);
+  const mine = user ? await store.supportedBy(user.uid, wanted.map(wantedKey)) : new Set<string>();
+  const returnTo = `/?${new URLSearchParams({ ...(q ? { q } : {}), ...(city ? { city } : {}) }).toString()}#wanted`;
   const searching = Boolean(q || diets.length || avoid.length);
 
   return (
     <div className="theme-zood">
-      <section className="hero brandhero">
-        <ZoodMark size={72} />
-        <div>
-          <h1>Hungry? Zood it.</h1>
-          <p>Tell Zood what you're craving. It finds the dish, minds your diet, and slides into the restaurant's WhatsApp for you.</p>
-        </div>
+      <section className="bighero zood">
+        <span className="kicker">The Pinterest of restaurants</span>
+        <h1>Every dish. Every corner of the world. Straight from the kitchen.</h1>
+        <p>Pin your craving, find the restaurant, and message them directly. No middleman, no hidden markups.</p>
+        <form className="search" action="/" method="get">
+          <div className="row">
+            <input type="text" name="q" placeholder="pizza, egusi, chai, spicy noodles…" defaultValue={q} aria-label="What are you craving?" />
+            <input type="text" name="city" placeholder="Where? any city on Earth" defaultValue={city} aria-label="City" />
+            <button type="submit" className="light">Zood it</button>
+          </div>
+          <div className="chips" role="group" aria-label="I eat">
+            {DIETS.map((d) => <label key={d.id}><input type="checkbox" name="diet" value={d.id} defaultChecked={diets.includes(d.id)} /><span>{d.label}</span></label>)}
+          </div>
+          <div className="chips" role="group" aria-label="Skip dishes with">
+            <span className="meta" style={{ alignSelf: "center" }}>Skip anything with</span>
+            {ALLERGENS.map((a) => <label key={a}><input type="checkbox" name="avoid" value={a} defaultChecked={avoid.includes(a)} /><span>{a}</span></label>)}
+          </div>
+        </form>
       </section>
 
-      <form className="search" action="/" method="get">
-        <div className="row">
-          <input type="text" name="q" placeholder="spicy noodles, vegan tacos, something with paneer…" defaultValue={q} aria-label="What are you craving?" />
-          <input type="text" name="city" placeholder="Where? any city on Earth" defaultValue={city} aria-label="City" />
-          <button type="submit">Zood it</button>
-        </div>
-        <div className="chips" role="group" aria-label="I eat">
-          {DIETS.map((d) => <label key={d.id}><input type="checkbox" name="diet" value={d.id} defaultChecked={diets.includes(d.id)} /><span>{d.label}</span></label>)}
-        </div>
-        <div className="chips" role="group" aria-label="Skip dishes with">
-          <span className="meta" style={{ alignSelf: "center" }}>Skip anything with</span>
-          {ALLERGENS.map((a) => <label key={a}><input type="checkbox" name="avoid" value={a} defaultChecked={avoid.includes(a)} /><span>{a}</span></label>)}
-        </div>
-      </form>
+      <PinBoard />
 
       {isDemo() && <div className="notice">Running on demo data. Set <code>FIREBASE_SERVICE_ACCOUNT</code> to use the live database.</div>}
       {usingProfile && <p className="meta">Using your saved diet and allergies. Change them anytime on <Link href="/account">your account</Link>.</p>}
@@ -85,8 +94,8 @@ export default async function Zood({ searchParams }: { searchParams: SP }) {
       )}
       {!dishes.length && !restaurants.length && (
         <>
-          <h2>Zood came back empty-handed 🥲</h2>
-          <p className="meta">Nobody's cooking that here yet{where ? ` in ${where}` : ""}. Try a broader craving, or <Link href="/requests/new">zummon the restaurant that should be</Link>. Run a restaurant? <Link href="/list">Put it on Zood</Link> with a free trial.</p>
+          <h2>No menus here yet 🥲</h2>
+          <p className="meta">No restaurant{where ? ` in ${where}` : ""} has put a menu on Zood yet. That's the part you can change: sign for the ones you want below, or <Link href="/requests/new">add one that's missing</Link>. Run a restaurant? <Link href="/list">Put it on Zood</Link> with a free trial.</p>
         </>
       )}
       {!dishes.length && restaurants.length > 0 && searching && <p className="meta">No menu has that dish yet, but these places might.</p>}
@@ -94,10 +103,30 @@ export default async function Zood({ searchParams }: { searchParams: SP }) {
       {restaurants.length > 0 && (
         <>
           <h2>{searching ? "Restaurants that suit you" : where && !widened ? `Restaurants in ${where}` : "Restaurants around the world"}</h2>
-          <p className="meta">Menus are landing soon. You can already reach them directly. Contact details come from public listings.</p>
           <div className="grid">{restaurants.map((r) => <RestaurantCard key={r.id} r={r} />)}</div>
         </>
       )}
+
+      <WantedBoard places={wanted} requests={wantReqs} mine={mine} returnTo={returnTo} where={where} />
+
+      <section className="mission">
+        <h2>We're building the Pinterest of restaurants. Help us.</h2>
+        <p className="lead">
+          Zood was started by a foodie who got tired of scrolling, and of delivery apps squeezing the profits out of beloved restaurants.
+          We want an open world where you connect with restaurants directly, with no hidden markups, and they bring the food to you in a way that's sustainable, because their delivery people aren't just gig workers.
+          For that, restaurants need to be here. You can make that happen.
+        </p>
+        <div className="steps">
+          <div className="step"><span className="n">1</span><b>Find a restaurant near you</b>We've already mapped thousands of them from public data.</div>
+          <div className="step"><span className="n">2</span><b>Sign for it</b>Your signature tells them people want to find them on Zood.</div>
+          <div className="step"><span className="n">3</span><b>They join, you order</b>Restaurants get a free trial to put up their menu. You message them directly.</div>
+        </div>
+        <div className="ctas">
+          <Link className="btn" href="#wanted">✍️ Sign for a restaurant</Link>
+          <Link className="btn ghost" href="/requests/new">➕ Add one that's missing</Link>
+          <Link className="btn ghost" href="/list">🏪 I own a restaurant</Link>
+        </div>
+      </section>
 
       {cities.length > 0 && (
         <>

@@ -3,11 +3,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { dishEmoji } from "@/lib/dishes";
 import { ContactButtons } from "../../components";
+import { currentUser } from "@/lib/session";
+import { wantedKey } from "@/lib/wanted";
+import { wantRestaurantAction } from "../../request-actions";
 import { getStore } from "@/lib/store";
 import { DIETS } from "@/lib/types";
 import { formatPrice, regionName } from "@/lib/util";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 type P = Promise<{ id: string }>;
 const label = (id: string) => DIETS.find((d) => d.id === id)?.label ?? id;
 
@@ -34,6 +37,10 @@ export default async function RestaurantPage({ params }: { params: P }) {
     ...(r.lat != null && r.lng != null ? { geo: { "@type": "GeoCoordinates", latitude: r.lat, longitude: r.lng } } : {}),
   };
   const unclaimed = r.status === "unclaimed";
+  const [user, reqs] = unclaimed ? await Promise.all([currentUser(), getStore().listRequests({ kind: "restaurant", citySlug: r.citySlug, limit: 300 })]) : [null, []];
+  const wkey = wantedKey(r);
+  const signatures = reqs.find((x) => x.id === wkey)?.supportCount ?? 0;
+  const signed = user ? (await getStore().supportedBy(user.uid, [wkey])).has(wkey) : false;
   const canOrder = !unclaimed && Boolean(r.whatsapp) && r.menu.length > 0;
 
   return (
@@ -45,6 +52,18 @@ export default async function RestaurantPage({ params }: { params: P }) {
       <p>{r.diets.map((d) => <span key={d} className="tag">{label(d)}</span>)}{r.cuisines.map((c) => <span key={c} className="tag gray">{c}</span>)}</p>
       {!unclaimed && r.leadCount > 0 && <p className="meta">🔥 {r.leadCount} {r.leadCount === 1 ? "person has" : "people have"} reached out through Zood</p>}
 
+      {unclaimed && (
+        <div className="wanted">
+          <h2 style={{ fontSize: 22 }}>Want {r.name} on Zood?</h2>
+          <p className="meta" style={{ marginTop: -4 }}>{signatures > 0 ? `${signatures} ${signatures === 1 ? "person has" : "people have"} signed.` : "Be the first to sign."} Every signature tells them people want to find them here, and gets them invited.</p>
+          {signed ? <span className="btn sign done">✓ You signed</span> : (
+            <form action={wantRestaurantAction}>
+              <input type="hidden" name="id" value={r.id} /><input type="hidden" name="returnTo" value={`/r/${r.id}`} />
+              <button type="submit" className="sign">✍️ I want this on Zood</button>
+            </form>
+          )}
+        </div>
+      )}
       {unclaimed && (
         <div className="notice">
           <b>Is this your restaurant?</b> Zood is the tool that brings it straight to people looking for it, with no commission.{" "}

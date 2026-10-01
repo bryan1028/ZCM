@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { PINS } from "@/lib/pins";
 
 export const metadata: Metadata = { title: "About Zood and Zind", description: "Why we're building direct, transparent food and price discovery." };
 
@@ -23,6 +24,13 @@ export default function About() {
         and where. Zind collects prices from open data and from people like you, so anyone can see who's cheapest.
       </p>
       <p><Link className="btn" href="/">Find food</Link> <Link className="btn ghost" href="/find">Find prices</Link> <Link className="btn ghost" href="/requests/new">Zummon a restaurant</Link></p>
+      <h2 id="credits">Photo credits</h2>
+      <p className="meta">Homepage photos are openly licensed from Wikimedia Commons. Thank you to the photographers.</p>
+      <ul className="meta">
+        {PINS.filter((p) => p.credit).map((p) => (
+          <li key={p.key}>{p.dish}: <a href={p.credit!.url} rel="noopener noreferrer" target="_blank">{p.credit!.title}</a> by {p.credit!.author}, {p.credit!.license}</li>
+        ))}
+      </ul>
     </section>
   );
 }

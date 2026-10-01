@@ -16,6 +16,8 @@ export interface SearchOptions {
   diet?: Diet[];
   q?: string;
   limit?: number;
+  /** Also return listings that have no menu yet (the "Wanted" board). Postgres only. */
+  includeUnlisted?: boolean;
 }
 
 export interface CitySummary {

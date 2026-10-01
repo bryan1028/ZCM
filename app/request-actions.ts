@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { requireUser, safeNext } from "@/lib/session";
 import { getStore } from "@/lib/store";
 import { normalizeWhatsapp, slugify } from "@/lib/util";
+import { wantedKey } from "@/lib/wanted";
 
 const clean = (v: FormDataEntryValue | null, max = 200) => String(v ?? "").trim().slice(0, max);
 const MAX_REQUESTS_PER_DAY = 10;
@@ -50,4 +51,19 @@ export async function supportRequestAction(formData: FormData) {
   const user = await requireUser(back);
   await getStore().supportRequest(clean(formData.get("id"), 160), { uid: user.uid, handle: user.handle });
   redirect(back);
+}
+
+/** "I want this restaurant on Zood": signs the community request for an existing (unlisted) restaurant, merging with any zummon for it. */
+export async function wantRestaurantAction(formData: FormData) {
+  const back = safeNext(formData.get("returnTo"), "/");
+  const user = await requireUser(back);
+  const store = getStore();
+  const r = await store.getRestaurant(clean(formData.get("id"), 160));
+  if (!r || r.status !== "unclaimed") redirect(back);
+  await store.upsertRequest(
+    wantedKey(r),
+    { kind: "restaurant", name: r.name, country: r.country, city: r.city, citySlug: r.citySlug, whatsapp: null, createdBy: { uid: user.uid, handle: user.handle } },
+    { uid: user.uid, handle: user.handle },
+  );
+  redirect(`${back}${back.includes("?") ? "&" : "?"}signed=1`);
 }

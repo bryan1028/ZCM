@@ -77,3 +77,11 @@ Do not upgrade firebase-admin past 13.x on Netlify (ESM-only jose breaks functio
 - Approved owners edit profile + menu at `/account/restaurant` (one dish per line: `Name | price | description | diets | allergens`). Admin can do the same at `/admin/restaurant/[id]`.
 - Deleting an account scrubs the person from their claims and releases restaurant ownership.
 - Store methods for claims/owners are Postgres-only (Firestore/demo throw).
+
+## Update: pinboard homepage, signatures, mission (2026-10-01)
+- Zood home is "the Pinterest of restaurants": gradient hero, 7-photo pinboard (`lib/pins.ts`, photos in `public/img/pins`, Wikimedia Commons, credits on `/about#credits`), mission block, and a **Wanted board**.
+  Pinterest itself was NOT used: pins are other people's copyrighted photos and scraping breaks its terms. To add a photo: add a Pin with a Commons image and a `credit`.
+- Wanted board (`app/wanted.tsx`): existing unclaimed restaurants (from `searchRestaurants({ includeUnlisted: true })`) with "I want this on Zood" signatures.
+  A signature is a `requests` row keyed by `lib/wanted.ts` (same key as the zummon form), so counts merge with "Zummon a place". Unclaimed restaurant pages show the same button and the owner claim CTA.
+- Zind home is "the Wikipedia of prices": green gradient hero, price ticker, crowd-sourcing mission (add a price / see deals / join spotters).
+- Commons API is heavily rate-limited from the sandbox: use curl with a descriptive User-Agent and long sleeps.

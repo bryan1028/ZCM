@@ -72,7 +72,9 @@ export function createPgStore(db: Sql): Store {
   return {
     // ───────────── Zood ─────────────
     async searchRestaurants(o) {
-      const w = where(); w.add("status = 'active'"); w.add("jsonb_array_length(menu) > 0"); // no menu, no listing
+      const w = where();
+      if (o.includeUnlisted) w.add("status in ('active','unclaimed')");
+      else { w.add("status = 'active'"); w.add("jsonb_array_length(menu) > 0"); } // no menu, no listing
       if (o.country) w.add("country = ?", o.country);
       if (o.citySlug) w.add("city_slug = ?", o.citySlug);
       if (o.diet?.length) w.add("diets @> ?::text[]", o.diet);

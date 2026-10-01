@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { VisionStory } from "../vision";
 import { detectPlace } from "@/lib/geo";
-import { comparePrices } from "@/lib/prices";
+import { comparePrices, displayName } from "@/lib/prices";
 import { getStore } from "@/lib/store";
-import { regionName, slugify } from "@/lib/util";
-import { ZindMark } from "../brand";
+import { formatPrice, regionName, slugify } from "@/lib/util";
 import { PriceCard } from "../components";
 
 export const metadata: Metadata = {
@@ -36,24 +34,31 @@ export default async function Zind({ searchParams }: { searchParams: SP }) {
 
   return (
     <div className="theme-zind">
-      <section className="hero brandhero">
-        <ZindMark size={72} />
-        <div>
-          <h1>Zind it for less.</h1>
-          <p>Type any item. Zind sniffs out what it costs at every store it knows.</p>
-        </div>
+      <section className="bighero zind">
+        <span className="kicker">The Wikipedia of prices</span>
+        <h1>Someone is always at a store. Tell the world what it costs.</h1>
+        <p>Zind is an open, crowd-sourced price tracker. Search any item to see who's cheapest, then add the prices and deals you spot, so everyone can see what things really cost.</p>
+        <form className="search" action="/find" method="get">
+          <div className="row">
+            <input type="text" name="q" placeholder="rice, milk, dettol, anything…" defaultValue={q} aria-label="What are you hunting for?" autoFocus={!submitted} />
+            <input type="text" name="city" placeholder="Where? any city on Earth" defaultValue={city} aria-label="City" />
+            <button type="submit" className="light">Zind it</button>
+          </div>
+          <div className="cities" aria-label="Try">
+            {TRY.map((t) => <Link key={t} href={`/find?q=${encodeURIComponent(t)}${city ? `&city=${encodeURIComponent(city)}` : ""}`}>{t}</Link>)}
+          </div>
+        </form>
       </section>
 
-      <form className="search" action="/find" method="get">
-        <div className="row">
-          <input type="text" name="q" placeholder="rice, milk, dettol, anything…" defaultValue={q} aria-label="What are you hunting for?" autoFocus={!submitted} />
-          <input type="text" name="city" placeholder="Where? any city on Earth" defaultValue={city} aria-label="City" />
-          <button type="submit">Zind it</button>
+      {comps.length > 0 && (
+        <div className="ticker" aria-label="Latest prices">
+          <div className="track">
+            {[0, 1].map((k) => comps.slice(0, 12).map((c) => (
+              <span key={`${k}${c.productKey}${c.citySlug}`} aria-hidden={k === 1}>{displayName(c)} · {c.stores[0].storeName} <b className="up">{formatPrice(c.min, c.currency)}</b></span>
+            )))}
+          </div>
         </div>
-        <div className="cities" aria-label="Try">
-          {TRY.map((t) => <Link key={t} href={`/find?q=${encodeURIComponent(t)}${city ? `&city=${encodeURIComponent(city)}` : ""}`}>{t}</Link>)}
-        </div>
-      </form>
+      )}
 
       {sp.thanks === "1" && <div className="notice">Thanks, that sighting is live! 🎉</div>}
       {sp.thanks === "review" && <div className="notice">Thanks! That price looks unusual, so we'll double-check it before showing it.</div>}
@@ -64,7 +69,24 @@ export default async function Zind({ searchParams }: { searchParams: SP }) {
       <div className="grid">{comps.map((c) => <PriceCard key={`${c.productKey}|${c.citySlug}`} c={c} />)}</div>
       <p className="meta">Prices come from shoppers and from the open Open Prices dataset. Only the last 4 months are shown, and prices change, so check the shelf tag.</p>
       <p style={{ margin: "14px 0 48px" }}><Link className="btn" href="/find/report">➕ Add a price you saw</Link> <Link className="btn ghost" href="/deals">See deals</Link> <Link className="btn ghost" href="/">Hungry instead? Zood it</Link></p>
-      <VisionStory product="zind" />
+      <section className="mission">
+        <h2>Prices should be public. Help us keep them that way.</h2>
+        <p className="lead">
+          Think Wikipedia, but for what things cost. Our goal is price transparency, especially now that personalised, dynamic pricing is on the way: the best defence is a shared, open record of real shelf prices.
+          Zind is only as good as the people adding to it, and like the stock market it moves every day.
+          Later, our AI tools and human editors will compile those updates into daily prices and deals anyone can use.
+        </p>
+        <div className="steps">
+          <div className="step"><span className="n">1</span><b>Spot a price</b>You're at a store anyway. Notice the price of something.</div>
+          <div className="step"><span className="n">2</span><b>Add it in 10 seconds</b>Item, store, price. Spot an offer or a deal? Add that too.</div>
+          <div className="step"><span className="n">3</span><b>Everyone benefits</b>Your sighting shows up for shoppers in your city, today.</div>
+        </div>
+        <div className="ctas">
+          <Link className="btn" href="/find/report">➕ Add a price you saw</Link>
+          <Link className="btn ghost" href="/deals">🏷️ See deals &amp; offers</Link>
+          <Link className="btn ghost" href="/signup">Join the price spotters</Link>
+        </div>
+      </section>
     </div>
   );
 }
