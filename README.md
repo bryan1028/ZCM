@@ -73,7 +73,7 @@ place data beyond the place ID, so Places is not used for seeding.
 
 1. Netlify → **Add new site → Import an existing project → GitHub** → pick `bryan1028/ZCM`, branch `claude/blissful-rubin-a7wvq3` (or merge to your main branch first). `netlify.toml` already sets the build.
 2. Site configuration → **Environment variables**:
-   - `FIREBASE_SERVICE_ACCOUNT` — Firebase console → Project settings → Service accounts → Generate new private key; paste the whole JSON.
+   - `FIREBASE_SERVICE_ACCOUNT` — Firebase console → Project settings → Service accounts → Generate new private key; paste the whole JSON, or its base64 (`base64 -w0 key.json`; macOS: `base64 -i key.json | tr -d '\n'`) if the form rejects `{`.
    - `ADMIN_PASSWORD` — pick a long one; you sign in at `/admin/login`.
    - `NEXT_PUBLIC_SITE_URL` = `https://zist.it.com`
 3. Domain management → **Add a domain** → `zist.it.com`, then set the DNS records Netlify shows.

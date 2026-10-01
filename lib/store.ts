@@ -1,7 +1,7 @@
 import { readFileSync, appendFileSync, existsSync } from "node:fs";
 import path from "node:path";
 import { geohashForLocation } from "geofire-common";
-import { cert, getApps, initializeApp } from "firebase-admin/app";
+import { cert, getApps, initializeApp, type ServiceAccount } from "firebase-admin/app";
 import { FieldValue, getFirestore, type DocumentSnapshot, type Query } from "firebase-admin/firestore";
 import { tokenize } from "./prices";
 import type { Claim, Deal, Diet, Lead, MenuItem, PricePoint, Restaurant } from "./types";
@@ -193,7 +193,7 @@ function createDemoStore(): Store {
 
 function createFirestoreStore(): Store {
   if (!getApps().length) {
-    initializeApp({ credential: cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT as string)) });
+    initializeApp({ credential: cert(parseServiceAccount(process.env.FIREBASE_SERVICE_ACCOUNT as string) as ServiceAccount) });
   }
   const db = getFirestore();
   const col = db.collection("restaurants");
@@ -315,6 +315,12 @@ function createFirestoreStore(): Store {
       return snap.docs.map((d: DocumentSnapshot) => ({ ...(d.data() as Claim), id: d.id }));
     },
   };
+}
+
+/** Accepts the service-account JSON either as raw JSON or base64-encoded (some env-var forms reject "{" and quotes). */
+export function parseServiceAccount(raw: string): object {
+  const v = raw.trim();
+  return JSON.parse(v.startsWith("{") ? v : Buffer.from(v, "base64").toString("utf8"));
 }
 
 const g = globalThis as unknown as { __zistStore?: Store };
