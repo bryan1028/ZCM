@@ -24,7 +24,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
         <h1>Restaurants that match what you actually eat</h1>
         <p>Filter by diet and allergies, see real menus, and message the restaurant on WhatsApp in one tap.</p>
         <SearchForm defaults={{ q: sp.q, city: sp.city, diet: diets }} />
-        <p style={{ marginTop: 14 }} className="meta">Shopping instead? <Link href="/find">Compare grocery prices</Link> or see <Link href="/deals">deals</Link>.</p>
+        <p style={{ marginTop: 14 }} className="meta">Shopping instead? <Link href="/find">Compare grocery prices</Link> or see <Link href="/deals">deals</Link>. Missing a place? <Link href="/requests/new">Request it</Link>.</p>
       </section>
       {isDemo() && <div className="notice">Running on demo data. Set <code>FIREBASE_SERVICE_ACCOUNT</code> to use the live database.</div>}
       {searching ? (

@@ -1,10 +1,11 @@
 import { readFileSync, appendFileSync, existsSync } from "node:fs";
 import path from "node:path";
 import { geohashForLocation } from "geofire-common";
-import { cert, getApps, initializeApp, type ServiceAccount } from "firebase-admin/app";
-import { FieldValue, getFirestore, type DocumentSnapshot, type Query } from "firebase-admin/firestore";
+import { FieldValue, type DocumentSnapshot, type Query } from "firebase-admin/firestore";
+import { adminDb, parseServiceAccount } from "./firebase-admin";
 import { tokenize } from "./prices";
-import type { Claim, Deal, Diet, Lead, MenuItem, PricePoint, Restaurant } from "./types";
+import { DIETS } from "./types";
+import type { Claim, Deal, Diet, Lead, MenuItem, PlaceRequest, PricePoint, Profile, Restaurant } from "./types";
 
 export interface SearchOptions {
   country?: string;
@@ -43,6 +44,24 @@ export interface Store {
   setPriceStatus(id: string, status: PricePoint["status"]): Promise<void>;
   addDeal(d: Omit<Deal, "id">): Promise<void>;
   listDeals(o: { country?: string; citySlug?: string; includeAll?: boolean; limit?: number }): Promise<Deal[]>;
+
+  // Accounts
+  getProfile(uid: string): Promise<Profile | null>;
+  saveProfile(uid: string, patch: Partial<Omit<Profile, "uid" | "createdAt">> & { username?: string; email?: string }): Promise<void>;
+  /** Reserve a username for a user. False if someone else has it. */
+  claimUsername(username: string, uid: string, email: string): Promise<boolean>;
+  releaseUsername(username: string, uid: string): Promise<void>;
+  findEmailByUsername(username: string): Promise<string | null>;
+  listProfiles(limit: number): Promise<Profile[]>;
+
+  // Community requests ("please add this place")
+  /** Create the request, or add the user's support if it already exists. */
+  upsertRequest(id: string, base: Omit<PlaceRequest, "id" | "supportCount" | "status" | "createdAt">, user: { uid: string; handle: string }): Promise<{ created: boolean; supported: boolean }>;
+  supportRequest(id: string, user: { uid: string; handle: string }): Promise<"supported" | "already" | "missing">;
+  listRequests(o: { kind?: PlaceRequest["kind"]; country?: string; citySlug?: string; includeAll?: boolean; limit?: number }): Promise<PlaceRequest[]>;
+  setRequestStatus(id: string, status: PlaceRequest["status"]): Promise<void>;
+  requestsBy(uid: string): Promise<PlaceRequest[]>;
+  supportedBy(uid: string, ids: string[]): Promise<Set<string>>;
 }
 
 export interface PriceQuery {
@@ -123,7 +142,15 @@ function createDemoStore(): Store {
   prices.push(...readLines<PricePoint>(pricesFile));
   deals.push(...readLines<Deal>(dealsFile));
 
+  const needsDb = async (): Promise<never> => { throw new Error("Accounts and requests need Firestore. Set FIREBASE_SERVICE_ACCOUNT."); };
+
   return {
+    getProfile: needsDb, saveProfile: needsDb, claimUsername: needsDb, releaseUsername: needsDb, findEmailByUsername: needsDb,
+    upsertRequest: needsDb, supportRequest: needsDb, setRequestStatus: needsDb,
+    async listProfiles() { return []; },
+    async listRequests() { return []; },
+    async requestsBy() { return []; },
+    async supportedBy() { return new Set<string>(); },
     async searchPrices(o) {
       return prices.filter((p) => priceMatches(p, o)).slice(0, o.limit ?? 500);
     },
@@ -192,12 +219,7 @@ function createDemoStore(): Store {
 // ───────────────────────── Firestore ─────────────────────────
 
 function createFirestoreStore(): Store {
-  if (!getApps().length) {
-    initializeApp({ credential: cert(parseServiceAccount(process.env.FIREBASE_SERVICE_ACCOUNT as string) as ServiceAccount) });
-  }
-  const db = getFirestore();
-  // Optional fields (itemId, brand, email, ...) are `undefined` when absent; Firestore rejects those unless told to drop them.
-  try { db.settings({ ignoreUndefinedProperties: true }); } catch { /* already configured (dev hot reload) */ }
+  const db = adminDb();
   const col = db.collection("restaurants");
   const toR = (d: DocumentSnapshot): Restaurant => ({ ...(d.data() as Omit<Restaurant, "id">), id: d.id });
 
@@ -205,7 +227,106 @@ function createFirestoreStore(): Store {
   const deals = db.collection("deals_find");
   const withId = <T,>(d: DocumentSnapshot) => ({ ...(d.data() as object), id: d.id }) as T;
 
+  const profiles = db.collection("profiles");
+  const usernames = db.collection("usernames");
+  const requests = db.collection("requests");
+  const iso = (v: unknown): string => (v && typeof (v as { toDate?: unknown }).toDate === "function" ? (v as { toDate(): Date }).toDate().toISOString() : typeof v === "string" ? v : new Date(0).toISOString());
+  const toProfile = (d: DocumentSnapshot): Profile => {
+    const x = d.data() as Record<string, unknown>;
+    const [legacyCity, legacyCc] = String(x.location ?? "").split(",").map((t) => t.trim());
+    const list = (v: unknown) => (Array.isArray(v) ? v.map(String) : []);
+    return {
+      uid: d.id, username: String(x.username ?? "").toLowerCase(), email: String(x.email ?? ""),
+      diets: list(x.diets ?? x.diet).map((t) => t.toLowerCase().replace(/[- ]/g, "_")).filter((t): t is Diet => DIETS.some((y) => y.id === t)),
+      allergies: list(x.allergies), city: (x.city as string) || legacyCity || undefined, country: ((x.country as string) || legacyCc || "").toUpperCase() || undefined,
+      optIn: x.optIn === true, createdAt: iso(x.createdAt), updatedAt: iso(x.updatedAt),
+    };
+  };
+  const reqFrom = (d: DocumentSnapshot) => ({ ...(d.data() as object), id: d.id }) as PlaceRequest;
+
   return {
+    async getProfile(uid) {
+      const d = await profiles.doc(uid).get();
+      return d.exists ? toProfile(d) : null;
+    },
+    async saveProfile(uid, patch) {
+      const now = new Date().toISOString();
+      const ref = profiles.doc(uid);
+      const snap = await ref.get();
+      await ref.set({ ...patch, updatedAt: now, ...(snap.exists ? {} : { createdAt: now }) }, { merge: true });
+    },
+    async claimUsername(username, uid, email) {
+      const ref = usernames.doc(username);
+      return db.runTransaction(async (tx: FirebaseFirestore.Transaction) => {
+        const d = await tx.get(ref);
+        if (d.exists && d.data()?.uid !== uid) return false;
+        tx.set(ref, { uid, email });
+        return true;
+      });
+    },
+    async releaseUsername(username, uid) {
+      const ref = usernames.doc(username);
+      const d = await ref.get();
+      if (d.exists && d.data()?.uid === uid) await ref.delete();
+    },
+    async findEmailByUsername(username) {
+      const d = await usernames.doc(username).get();
+      return d.exists ? String(d.data()?.email ?? "") || null : null;
+    },
+    async listProfiles(limit) {
+      return (await profiles.limit(limit).get()).docs.map(toProfile);
+    },
+    async upsertRequest(id, base, user) {
+      const ref = requests.doc(id);
+      const sup = ref.collection("supporters").doc(user.uid);
+      return db.runTransaction(async (tx: FirebaseFirestore.Transaction) => {
+        const [d, s] = await Promise.all([tx.get(ref), tx.get(sup)]);
+        const now = new Date().toISOString();
+        if (!d.exists) {
+          tx.set(ref, { ...base, supportCount: 1, status: "open", createdAt: now });
+          tx.set(sup, { handle: user.handle, at: now });
+          return { created: true, supported: true };
+        }
+        if (s.exists) return { created: false, supported: false };
+        tx.update(ref, { supportCount: FieldValue.increment(1) });
+        tx.set(sup, { handle: user.handle, at: now });
+        return { created: false, supported: true };
+      });
+    },
+    async supportRequest(id, user) {
+      const ref = requests.doc(id);
+      const sup = ref.collection("supporters").doc(user.uid);
+      return db.runTransaction(async (tx: FirebaseFirestore.Transaction) => {
+        const [d, s] = await Promise.all([tx.get(ref), tx.get(sup)]);
+        if (!d.exists || d.data()?.status === "hidden") return "missing" as const;
+        if (s.exists) return "already" as const;
+        tx.update(ref, { supportCount: FieldValue.increment(1) });
+        tx.set(sup, { handle: user.handle, at: new Date().toISOString() });
+        return "supported" as const;
+      });
+    },
+    async listRequests(o) {
+      let q: Query = requests;
+      if (!o.includeAll) q = q.where("status", "==", "open");
+      if (o.kind) q = q.where("kind", "==", o.kind);
+      if (o.country) q = q.where("country", "==", o.country);
+      if (o.citySlug) q = q.where("citySlug", "==", o.citySlug);
+      const snap = await q.limit(500).get();
+      return snap.docs.map(reqFrom).sort((a, b) => b.supportCount - a.supportCount || b.createdAt.localeCompare(a.createdAt)).slice(0, o.limit ?? 100);
+    },
+    async setRequestStatus(id, status) {
+      await requests.doc(id).update({ status });
+    },
+    async requestsBy(uid) {
+      const snap = await requests.where("createdBy.uid", "==", uid).limit(100).get();
+      return snap.docs.map(reqFrom);
+    },
+    async supportedBy(uid, ids) {
+      if (!ids.length) return new Set<string>();
+      const refs = ids.map((id) => requests.doc(id).collection("supporters").doc(uid));
+      const docs = await db.getAll(...refs);
+      return new Set(ids.filter((_, i) => docs[i].exists));
+    },
     async searchPrices(o) {
       let q: Query = prices;
       if (!o.includeAll) q = q.where("status", "==", "ok");
@@ -319,11 +440,7 @@ function createFirestoreStore(): Store {
   };
 }
 
-/** Accepts the service-account JSON either as raw JSON or base64-encoded (some env-var forms reject "{" and quotes). */
-export function parseServiceAccount(raw: string): object {
-  const v = raw.trim();
-  return JSON.parse(v.startsWith("{") ? v : Buffer.from(v, "base64").toString("utf8"));
-}
+export { parseServiceAccount };
 
 const g = globalThis as unknown as { __zistStore?: Store };
 export function getStore(): Store {

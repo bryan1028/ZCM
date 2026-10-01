@@ -1,46 +1,69 @@
-// Snapshot of the rules currently documented for project zist-de662 (copied from the legacy index.html).
-// The Next.js site uses the Admin SDK and bypasses these rules. Do not deploy a different file
-// until the legacy app and Zist Find are retired, or they will lose access.
+// LIVE rules for project zist-de662 (ruleset 3c23bc81-2e4a-4911-97ab-862dadd819d7, published 2026-10-01).
+// Tightened from ruleset f86fd377-f85d-4681-b3ca-ffd824201f47: profiles own-only, usernames/leads server-only, restaurants admin-write.
+// The Next.js site uses the Admin SDK and bypasses rules. Zist Find (items, deals) is unchanged.
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /items/{itemId} {                                           // Zist Find
+
+    // ── Zist Find ────────────────────────────────────────
+    match /items/{itemId} {
       allow read: if true;                                            // anyone can search
       allow write: if request.auth != null &&
         request.auth.token.email in ['sirwinstonchurchill254@gmail.com'];   // admin only
     }
+
+    match /deals/{dealId} {
+      allow read: if true;                                            // anyone can browse deals
+      allow write: if request.auth != null &&
+        request.auth.token.email in ['sirwinstonchurchill254@gmail.com'];   // admin only
+    }
+
+    // ── Zist (main app) ──────────────────────────────────
+    // Own profile only. (Was: any signed-in user could read everyone's email and allergies.)
     match /profiles/{uid} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == uid;
+      allow read, write: if request.auth != null && request.auth.uid == uid;
     }
+
+    // Maps a lowercased username -> {uid, email}, so people can log in
+    // with either their username or their email. Must be publicly
+    // readable, because the app has to resolve "username -> email"
+    // BEFORE the person is signed in.
+    // Maps username -> {uid, email}. SERVER ONLY: the site resolves usernames on the server.
+    // (Was: publicly readable, which let anyone list every user's email.)
     match /usernames/{username} {
-      allow read: if true;                                            // must resolve username -> email pre-login
-      allow create: if request.auth != null &&
-        request.auth.uid == request.resource.data.uid;
-      allow update, delete: if request.auth != null &&
-        request.auth.uid == resource.data.uid;
+      allow read, write: if false;
     }
+
     match /contacts/{docId} {
       allow read, delete: if request.auth != null &&
         request.auth.uid == resource.data.userId;
       allow create: if request.auth != null &&
         request.auth.uid == request.resource.data.userId;
     }
+
     match /restaurants/{docId} {
       allow read: if true;                                            // public feed
-      allow write: if request.auth != null &&
-        request.auth.token.email in ['sirwinstonchurchill254@gmail.com'];   // admin only
+
+      // Creates go through the server (Admin SDK). Only the admin account may write from a client.
+      allow create: if request.auth != null &&
+        request.auth.token.email in ['sirwinstonchurchill254@gmail.com'];
+
+      // Only the admin can edit an existing listing (including flipping
+      // it live) or delete one.
+      allow update, delete: if request.auth != null &&
+        request.auth.token.email in ['sirwinstonchurchill254@gmail.com'];
     }
+
     match /offers/{offerId} {
       allow read: if true;                                            // public — anyone can browse offers
       allow write: if request.auth != null &&
         request.auth.token.email in ['sirwinstonchurchill254@gmail.com'];   // admin only
     }
+
     match /leads/{docId} {
-      allow create: if request.auth != null;                          // any signed-in user can order
+      allow create: if false;                                         // leads are logged by the server only (can't be forged)
       allow read: if request.auth != null &&
         request.auth.token.email in ['sirwinstonchurchill254@gmail.com'];   // only admin reads the log
     }
   }
 }
- 

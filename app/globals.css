@@ -49,12 +49,21 @@ th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--bor
 .table-scroll { overflow-x: auto; }
 footer.site { border-top: 1px solid var(--border); padding: 24px 0 48px; color: var(--ink-muted); font-size: 13px; }
 label.f { display: grid; gap: 4px; font-size: 14px; font-weight: 500; } form.stack { display: grid; gap: 14px; max-width: 520px; }
-@media (max-width: 520px) { nav a:nth-child(n+3) { display: none; } }
+
 .bar-row { display: grid; grid-template-columns: 96px 1fr 84px; gap: 8px; align-items: center; font-size: 14px; }
 .bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bar-track { background: #f1ebe0; border-radius: 8px; overflow: hidden; }
 .bar { background: #cdbfa8; color: var(--ink); padding: 4px 8px; font-weight: 600; font-size: 13px; white-space: nowrap; border-radius: 8px; }
 .bar.cheapest { background: var(--sage); color: #fff; }
-.bar-age { text-align: right; font-size: 12px; }
+.bar-age { text-align: right; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 420px) { .bar-row { grid-template-columns: 70px 1fr; } .bar-age { display: none; } }
 form.inline { display: inline; } form.inline button { padding: 4px 10px; font-size: 12px; }
+.auth-slot { display: inline-flex; align-items: center; gap: 10px; margin-left: 16px; min-width: 40px; }
+.auth-link { font-size: 14px; font-weight: 600; text-decoration: none; color: var(--fire-dim); }
+button.linklike { background: none; color: var(--ink-muted); padding: 0; font-weight: 400; font-size: 13px; text-decoration: underline; }
+button.linklike:hover { background: none; color: var(--ink); }
+.req-row { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; }
+.count { text-align: center; min-width: 52px; } .count b { display: block; font-size: 22px; font-family: "Playfair Display", serif; }
+.sig { color: var(--fire-dim); font-weight: 600; }
+.checkline { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; } .checkline input { margin-top: 4px; }
+@media (max-width: 520px) { nav a:nth-child(n+3) { display: inline; } nav a { margin-left: 10px; } .auth-slot { margin-left: 10px; } }

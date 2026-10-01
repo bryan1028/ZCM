@@ -80,5 +80,16 @@ place data beyond the place ID, so Places is not used for seeding.
 4. Once: `firebase deploy --only firestore:indexes` (needed for the filtered queries).
 5. Check after deploy: `/` loads, `/admin` redirects to `/admin/login`, tapping Message on a restaurant creates a row in `leads`.
 
-`firestore.rules` is a snapshot of the current shared rules (this app uses the Admin SDK, which bypasses them).
-Don't deploy different rules until the legacy app and Zist Find are retired.
+`firestore.rules` is the **live** ruleset (this app uses the Admin SDK, which bypasses rules). It was tightened on 2026-10-01 because
+sign-up is open: `profiles` are readable only by their owner, `usernames` (which hold emails) and `leads` are server-only, and
+`restaurants` are admin-write. Zist Find's `items`/`deals` are unchanged. To roll back, republish ruleset
+`f86fd377-f85d-4681-b3ca-ffd824201f47` (Firebase console -> Firestore -> Rules -> history). Rolling back re-opens the email/profile exposure.
+
+## Accounts & community requests
+
+- `/signup`, `/login`, `/account`, `/reset`: server-side auth against Firebase (username or email; password never reaches the browser). Session = 14-day httpOnly cookie.
+- `/requests`: anyone signed in can request a restaurant or store; it carries their `@username` signature; others back it with one tap.
+  Same place twice = one request with more backers. Requests for places already listed redirect to the listing.
+- Price reports and "Message" clicks are attributed to the signed-in user when there is one.
+- Marketing consent: the opt-in box is **unticked by default**. `/admin/export?type=users` only ever exports opted-in emails.
+- Admin `/admin`: accounts, opt-ins, requests, backings, and CSV exports (the proof-of-concept numbers for restaurants and investors).

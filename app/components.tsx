@@ -56,7 +56,7 @@ export function PriceCard({ c }: { c: PriceComparison }) {
           <div key={s.storeName} className="bar-row">
             <div className="bar-label">{s.storeName}</div>
             <div className="bar-track"><div className={s.isCheapest ? "bar cheapest" : "bar"} style={{ width: `${Math.max(18, (s.price / c.max) * 100)}%` }}>{formatPrice(s.price, c.currency)}</div></div>
-            <div className="meta bar-age">{agoLabel(s.observedAt)}{s.source === "openprices" ? " · Open Prices" : ""}</div>
+            <div className="meta bar-age">{agoLabel(s.observedAt)}{s.source === "openprices" ? " · Open Prices" : s.by ? ` · @${s.by}` : ""}</div>
           </div>
         ))}
       </div>

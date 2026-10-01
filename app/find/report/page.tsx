@@ -1,14 +1,28 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { currentUser } from "@/lib/session";
 import { reportPrice } from "../../actions";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = { title: "Report a price" };
 
 export default async function Report({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { error } = await searchParams;
+  const user = await currentUser();
+  if (!user) {
+    return (
+      <section className="hero">
+        <h1>Report a price</h1>
+        <p>Sign in so your report carries your signature and others can trust it.</p>
+        <p><Link className="btn" href="/login?next=/find/report">Sign in</Link> <Link className="btn ghost" href="/signup?next=/find/report">Create account</Link></p>
+      </section>
+    );
+  }
   return (
     <section className="hero">
       <h1>Report a price</h1>
-      <p>Saw a price at a store? Add it so others can compare. Takes 20 seconds.</p>
+      <p>Saw a price at a store? Add it so others can compare. It will be signed <span className="sig">@{user.handle}</span>.</p>
       {error === "limit" && <div className="notice">You've reached today's limit. Please come back tomorrow.</div>}
       {error === "1" && <div className="notice">Please fill every required field with a valid price, 2-letter country code and 3-letter currency.</div>}
       <form className="stack" action={reportPrice}>

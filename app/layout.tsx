@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
+import { AuthNav } from "./auth-nav";
 
 const site = process.env.NEXT_PUBLIC_SITE_URL ?? "https://zist.it.com";
 
@@ -27,6 +28,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/">Food</Link>
               <Link href="/find">Prices</Link>
               <Link href="/deals">Deals</Link>
+              <Link href="/requests">Requests</Link>
+              <AuthNav />
               <Link href="/list">List your restaurant</Link>
             </nav>
           </div>

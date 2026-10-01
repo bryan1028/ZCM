@@ -69,7 +69,7 @@ export function comparePrices(points: PricePoint[], now = Date.now()): PriceComp
     const first = stores[0];
     out.push({
       productKey: key, productName: first.productName, brand: first.brand, size: first.size, currency,
-      stores: stores.map((s) => ({ storeName: s.storeName, price: s.price, observedAt: s.observedAt, source: s.source, isCheapest: s.price === min })),
+      stores: stores.map((s) => ({ storeName: s.storeName, price: s.price, observedAt: s.observedAt, source: s.source, isCheapest: s.price === min, by: s.reporterHandle })),
       min, max, savingsPct: stores.length > 1 && max > 0 ? Math.round(((max - min) / max) * 100) : 0,
     });
   }

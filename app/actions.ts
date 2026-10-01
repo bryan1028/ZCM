@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getStore } from "@/lib/store";
 import { ADMIN_COOKIE, adminToken, passwordMatches, requireAdmin } from "@/lib/auth";
+import { requireUser } from "@/lib/session";
 import { normalizeWhatsapp, slugify } from "@/lib/util";
 import type { Diet } from "@/lib/types";
 import { DIETS } from "@/lib/types";
@@ -56,6 +57,7 @@ const MAX_REPORTS_PER_DAY = 20;
 /** Anyone can report a shelf price. Guarded by: honeypot, sanity bounds, per-visitor daily cap, outlier flagging. */
 export async function reportPrice(formData: FormData) {
   if (clean(formData.get("website"))) redirect("/find");
+  const user = await requireUser("/find/report");
 
   const jar = await cookies();
   const used = Number(jar.get("zr")?.value ?? 0);
@@ -86,7 +88,7 @@ export async function reportPrice(formData: FormData) {
   await store.addPrice({
     productKey: key, productName, brand, size, barcode, storeName, country, city, citySlug, price, currency,
     tokens: tokenize(productName, brand), source: "crowd", status: flagged ? "flagged" : "ok",
-    observedAt: now, createdAt: now, reporter,
+    observedAt: now, createdAt: now, reporter: user.uid, reporterHandle: user.handle,
   });
 
   jar.set("zr", String(used + 1), { httpOnly: true, sameSite: "lax", maxAge: 86400, path: "/" });
@@ -129,4 +131,12 @@ export async function adminLogin(formData: FormData) {
     httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: 60 * 60 * 24 * 7, path: "/",
   });
   redirect("/admin");
+}
+
+export async function setRequestStatusAction(formData: FormData) {
+  await requireAdmin();
+  const status = clean(formData.get("status"), 10);
+  if (!["open", "listed", "hidden"].includes(status)) return;
+  await getStore().setRequestStatus(clean(formData.get("id"), 160), status as "open" | "listed" | "hidden");
+  revalidatePath("/admin");
 }

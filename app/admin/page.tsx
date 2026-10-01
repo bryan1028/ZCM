@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getStore } from "@/lib/store";
 import { regionName } from "@/lib/util";
-import { addDeal, setPriceStatus } from "../actions";
+import { addDeal, setPriceStatus, setRequestStatusAction } from "../actions";
 import { requireAdmin } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Admin", robots: { index: false } };
@@ -16,7 +16,7 @@ const countBy = <T,>(xs: T[], key: (x: T) => string) => {
 export default async function Admin() {
   await requireAdmin();
   const store = getStore();
-  const [leads, claims, prices, deals] = await Promise.all([store.listLeads(1000), store.listClaims(50), store.listPrices(60), store.listDeals({ includeAll: true, limit: 30 })]);
+  const [leads, claims, prices, deals, profiles, requests] = await Promise.all([store.listLeads(1000), store.listClaims(50), store.listPrices(60), store.listDeals({ includeAll: true, limit: 30 }), store.listProfiles(20000), store.listRequests({ includeAll: true, limit: 500 })]);
   const day = Date.now() - 864e5;
   const week = Date.now() - 7 * 864e5;
   const since = (t: number) => leads.filter((l) => Date.parse(l.createdAt) >= t).length;
@@ -34,7 +34,34 @@ export default async function Admin() {
         <div className="stat"><b>{leads.filter((l) => l.source === "chatgpt").length}</b>from ChatGPT</div>
       </div>
 
-      <h2>By restaurant</h2>
+      <h2 style={{ marginTop: 28 }}>Demand (your proof of concept)</h2>
+      <div className="stats">
+        <div className="stat"><b>{profiles.length}</b>accounts</div>
+        <div className="stat"><b>{profiles.filter((p) => p.optIn).length}</b>opted in to email</div>
+        <div className="stat"><b>{requests.length}</b>places requested</div>
+        <div className="stat"><b>{requests.reduce((n, r) => n + r.supportCount, 0)}</b>total backings</div>
+      </div>
+      <p><a className="btn ghost" href="/admin/export?type=users">Download opted-in emails (CSV)</a> <a className="btn ghost" href="/admin/export?type=requests">Download requests (CSV)</a></p>
+      <h3>Accounts by city</h3>
+      <div className="table-scroll"><table>
+        <thead><tr><th>City</th><th>Accounts</th><th>Opted in</th></tr></thead>
+        <tbody>{[...profiles.reduce((m, p) => { const k = `${p.city || "(none)"}, ${p.country || "?"}`; const e = m.get(k) ?? { n: 0, o: 0 }; e.n++; if (p.optIn) e.o++; return m.set(k, e); }, new Map<string, { n: number; o: number }>())].sort((a, b) => b[1].n - a[1].n).slice(0, 15).map(([k, v]) => <tr key={k}><td>{k}</td><td>{v.n}</td><td>{v.o}</td></tr>)}</tbody>
+      </table></div>
+      <h3 style={{ marginTop: 20 }}>Most-wanted places</h3>
+      <div className="table-scroll"><table>
+        <thead><tr><th>Backers</th><th>Place</th><th>Type</th><th>By</th><th>Status</th><th></th></tr></thead>
+        <tbody>{requests.slice(0, 40).map((r) => (
+          <tr key={r.id}>
+            <td>{r.supportCount}</td><td>{r.name} — {r.city}, {r.country}</td><td>{r.kind}</td><td>@{r.createdBy.handle}</td><td>{r.status}</td>
+            <td>
+              <form className="inline" action={setRequestStatusAction}><input type="hidden" name="id" value={r.id} /><input type="hidden" name="status" value={r.status === "hidden" ? "open" : "hidden"} /><button type="submit">{r.status === "hidden" ? "Unhide" : "Hide"}</button></form>{" "}
+              {r.status !== "listed" && <form className="inline" action={setRequestStatusAction}><input type="hidden" name="id" value={r.id} /><input type="hidden" name="status" value="listed" /><button type="submit">Mark listed</button></form>}
+            </td>
+          </tr>
+        ))}</tbody>
+      </table></div>
+
+      <h2 style={{ marginTop: 28 }}>By restaurant</h2>
       <div className="table-scroll"><table>
         <thead><tr><th>Restaurant</th><th>Leads</th></tr></thead>
         <tbody>{countBy(leads, (l) => `${l.restaurantName} — ${l.city}, ${regionName(l.country)}`).slice(0, 30).map(([k, n]) => <tr key={k}><td>{k}</td><td>{n}</td></tr>)}</tbody>

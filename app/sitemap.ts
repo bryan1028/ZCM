@@ -10,6 +10,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: site },
     { url: `${site}/find` },
     { url: `${site}/deals` },
+    { url: `${site}/requests` },
     ...cities.map((c) => ({ url: `${site}/c/${c.country.toLowerCase()}/${c.citySlug}` })),
   ];
 }

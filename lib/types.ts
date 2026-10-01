@@ -71,6 +71,9 @@ export interface Lead {
   ref: string;
   /** Anonymous visitor id (cookie), used to de-duplicate repeat taps. */
   visitor: string;
+  /** Set when the visitor was signed in. */
+  userId?: string;
+  userHandle?: string;
   createdAt: string;
 }
 
@@ -119,6 +122,8 @@ export interface PricePoint {
   createdAt: string;
   /** Anonymous reporter id, used for rate limiting and spotting abuse. */
   reporter?: string;
+  /** Public signature of the signed-in reporter. */
+  reporterHandle?: string;
   sourceId?: string;
 }
 
@@ -147,9 +152,52 @@ export interface PriceComparison {
   brand?: string;
   size?: string;
   currency: string;
-  stores: { storeName: string; price: number; observedAt: string; source: PriceSource; isCheapest: boolean }[];
+  stores: { storeName: string; price: number; observedAt: string; source: PriceSource; isCheapest: boolean; by?: string }[];
   min: number;
   max: number;
   /** % saved by buying at the cheapest store vs the most expensive; 0 if only one store */
   savingsPct: number;
+}
+
+// ───────────── Accounts & community requests ─────────────
+
+export interface Profile {
+  uid: string;
+  /** Public signature, lower-case: 3-20 chars [a-z0-9_] */
+  username: string;
+  email: string;
+  diets: Diet[];
+  allergies: string[];
+  city?: string;
+  country?: string;
+  /** Explicit consent to be emailed when Zist launches in their area. Never default to true. */
+  optIn: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type RequestKind = "restaurant" | "store";
+
+/** "Please add this place." Signed by its creator; other users add their support. */
+export interface PlaceRequest {
+  id: string;
+  kind: RequestKind;
+  name: string;
+  country: string;
+  city: string;
+  citySlug: string;
+  note?: string;
+  whatsapp?: string | null;
+  website?: string;
+  createdBy: { uid: string; handle: string };
+  supportCount: number;
+  status: "open" | "listed" | "hidden";
+  createdAt: string;
+}
+
+export interface SessionUser {
+  uid: string;
+  handle: string;
+  email: string;
+  profile: Profile;
 }

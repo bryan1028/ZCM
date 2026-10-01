@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStore } from "@/lib/store";
 import { shortRef } from "@/lib/util";
+import { currentUser } from "@/lib/session";
 import type { LeadSource } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +32,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const recent = req.cookies.get(dedupeKey)?.value;
   const isBot = BOT.test(req.headers.get("user-agent") ?? "");
   const ref = recent ?? shortRef();
+  const user = await currentUser();
 
   if (!isBot && !recent) {
     try {
@@ -44,6 +46,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         source,
         ref,
         visitor,
+        userId: user?.uid,
+        userHandle: user?.handle,
         createdAt: new Date().toISOString(),
       });
     } catch (e) {
