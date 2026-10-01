@@ -85,6 +85,13 @@ sign-up is open: `profiles` are readable only by their owner, `usernames` (which
 `restaurants` are admin-write. Zist Find's `items`/`deals` are unchanged. To roll back, republish ruleset
 `f86fd377-f85d-4681-b3ca-ffd824201f47` (Firebase console -> Firestore -> Rules -> history). Rolling back re-opens the email/profile exposure.
 
+> **Do not upgrade `firebase-admin` past 13.x on Netlify.** v14 depends on an ES-module-only `jose` that Netlify's function runtime
+> cannot `require()`, which crashed every page with `ERR_REQUIRE_ESM`. It works locally, so only a deploy shows it.
+
+### Deploying from a sandbox/CLI
+`netlify build --offline`, then `netlify deploy --prod --no-build --dir .netlify/static --skip-functions-cache`
+(publish dir must be `.netlify/static`; set `NODE_USE_ENV_PROXY=1` behind a proxy). Netlify's own build from the repo needs no flags.
+
 ## Accounts & community requests
 
 - `/signup`, `/login`, `/account`, `/reset`: server-side auth against Firebase (username or email; password never reaches the browser). Session = 14-day httpOnly cookie.
