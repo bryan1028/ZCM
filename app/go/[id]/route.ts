@@ -29,7 +29,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     ? [...new Set(req.nextUrl.searchParams.getAll("item"))].slice(0, 12).map((iid) => r.menu.find((m) => m.id === iid)).filter((m): m is NonNullable<typeof m> => Boolean(m))
     : [];
   if (channel === "whatsapp" && r.whatsapp) {
-    text = `Hi ${r.name}! I found you on Zood (ref REF).` + (picked.length === 1 ? ` I'd like the ${picked[0].name}.` : picked.length > 1 ? ` I'd like: ${picked.map((m) => m.name).join(", ")}.` : "");
+    // We can't run orders yet, so a WhatsApp tap is an explicit order request: counted as a lead, signed with the
+    // person's @handle when they're signed in, and phrased so the restaurant knows exactly what is being asked.
+    const ask = picked.length === 1 ? `I'd like to order the ${picked[0].name}.` : picked.length > 1 ? `I'd like to order: ${picked.map((m) => m.name).join(", ")}.` : "I'd like to order from you.";
+    text = `Hi ${r.name}! ${ask} (via Zood, ref REF)`;
   } else if (channel === "call" && r.phone) {
     target = `tel:+${r.phone}`;
   } else if (channel === "website" && r.website && /^https?:\/\//i.test(r.website)) {
@@ -60,7 +63,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     }
   }
 
-  const dest = target ?? `https://wa.me/${r.whatsapp}?text=${encodeURIComponent(text.replace("REF", ref))}`;
+  const signed = user ? `${text.replace("REF", ref)}\n— @${user.handle} on Zood` : text.replace("REF", ref);
+  const dest = target ?? `https://wa.me/${r.whatsapp}?text=${encodeURIComponent(signed)}`;
   const res = NextResponse.redirect(dest, 302);
   res.headers.set("Cache-Control", "no-store");
   res.headers.set("X-Robots-Tag", "noindex, nofollow");

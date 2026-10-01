@@ -46,6 +46,7 @@ export function RestaurantCard({ r, source = "web" }: { r: Restaurant; source?: 
         {r.diets.map((d) => <span key={d} className="tag">{dietLabel(d)}</span>)}
         {r.cuisines.slice(0, 2).map((c) => <span key={c} className="tag gray">{c}</span>)}
         {r.status === "unclaimed" && <span className="tag warn">menu coming soon</span>}
+        {r.leadCount > 0 && <span className="tag">🔥 {r.leadCount} reached out</span>}
       </div>
       <div style={{ marginTop: "auto", display: "flex", gap: 8, flexWrap: "wrap" }}>
         <Link className="btn ghost sm" href={`/r/${r.id}`}>{r.menu.length ? "See the menu" : "Details"}</Link>

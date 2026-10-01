@@ -40,6 +40,7 @@ export default async function RestaurantPage({ params }: { params: P }) {
       <h1>{r.name}</h1>
       <div className="meta">{[r.address, `${r.city}, ${regionName(r.country)}`].filter(Boolean).join(" · ")}</div>
       <p>{r.diets.map((d) => <span key={d} className="tag">{label(d)}</span>)}{r.cuisines.map((c) => <span key={c} className="tag gray">{c}</span>)}</p>
+      {r.leadCount > 0 && <p className="meta">🔥 {r.leadCount} {r.leadCount === 1 ? "person has" : "people have"} reached out through Zood</p>}
 
       {r.status === "unclaimed" && (
         <div className="notice">Is this your restaurant? <Link href={`/list?claim=${r.id}`}>Claim it</Link> to add your menu and get customer messages.</div>
