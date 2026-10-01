@@ -91,7 +91,6 @@ export default async function Zood({ searchParams }: { searchParams: SP }) {
           </form>
         </div>
       </section>
-      <Link className="launchribbon" href="/pledge/nairobi">🚀 Launching first in <span>Nairobi</span>: {cities.find((c) => c.citySlug === "nairobi")?.count ?? "hundreds of"} restaurants are waiting for your pledge →</Link>
 
       {isDemo() && <div className="notice">Running on demo data. Set <code>FIREBASE_SERVICE_ACCOUNT</code> to use the live database.</div>}
       {usingProfile && <p className="meta">Using your saved diet and allergies. Change them anytime on <Link href="/account">your account</Link>.</p>}

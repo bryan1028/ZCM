@@ -211,5 +211,3 @@ header.site { background: linear-gradient(90deg, #fff3ea, #ffd9c2); border-botto
 .cityhero .bignum { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin: 14px 0; }
 .cityhero .bignum div { background: rgba(255,255,255,.18); border-radius: 16px; padding: 10px 18px; font-size: 14px; } .cityhero .bignum b { display: block; font-size: 30px; font-family: "Playfair Display", Georgia, serif; }
 .cityhero .sharebar { justify-content: center; } .cityhero .sharebar button.btn.ghost, .cityhero .sharebar a.btn.ghost { color: #fff; border-color: rgba(255,255,255,.5); }
-.launchribbon { display: block; text-align: center; background: #111; color: #fff; border-radius: 14px; padding: 10px 14px; text-decoration: none; font-weight: 600; margin-top: 14px; }
-.launchribbon span { color: var(--peach); }

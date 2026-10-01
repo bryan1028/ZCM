@@ -48,7 +48,7 @@ export default async function PledgeCity({ params, searchParams }: { params: P; 
   return (
     <section className="theme-zood" style={{ paddingBottom: 48 }}>
       <div className="cityhero">
-        <span className="kicker" style={{ background: "var(--peach)", color: "#4a1a00", borderRadius: 999, padding: "4px 12px", fontWeight: 700, fontSize: 13 }}>{slug === "nairobi" ? "LAUNCHING FIRST IN NAIROBI" : "PLEDGE FOR YOUR CITY"}</span>
+        <span className="kicker" style={{ background: "var(--peach)", color: "#4a1a00", borderRadius: 999, padding: "4px 12px", fontWeight: 700, fontSize: 13 }}>PLEDGE FOR YOUR CITY</span>
         <h1>{name}{info ? `, ${regionName(info.country)}` : ""}</h1>
         <p style={{ margin: 0, opacity: .95 }}>{info ? `${info.count} restaurants are waiting to be on Zood. Your pledge tells them people want to order from them directly.` : "We don't have restaurants here yet. Be the first to add one."}</p>
         <div className="bignum">
