@@ -1,11 +1,7 @@
-/** Google reCAPTCHA v2 checkbox. Renders nothing until RECAPTCHA_SITE_KEY is set. */
-export function Captcha() {
+import CaptchaClient from "./captcha-client";
+
+/** Google reCAPTCHA v3 (invisible). Renders nothing until RECAPTCHA_SITE_KEY is set. The key must be a v3 key. */
+export function Captcha({ action = "signup" }: { action?: string }) {
   const key = process.env.RECAPTCHA_SITE_KEY;
-  if (!key) return null;
-  return (
-    <>
-      <script src="https://www.google.com/recaptcha/api.js" async defer />
-      <div className="g-recaptcha" data-sitekey={key} />
-    </>
-  );
+  return key ? <CaptchaClient siteKey={key} action={action} /> : null;
 }

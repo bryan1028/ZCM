@@ -12,7 +12,7 @@ const ERRORS: Record<string, string> = {
   username: "Usernames are 3-20 letters, numbers or underscores.", taken: "That username is taken. Try another.",
   email: "That email doesn't look right.", exists: "An account with that email already exists. Try signing in.",
   password: "Use a password of at least 8 characters.", failed: "Something went wrong. Please try again.",
-  unavailable: "Accounts aren't available on this server yet.", captcha: "Please tick the \"I'm not a robot\" box and try again.",
+  unavailable: "Accounts aren't available on this server yet.", captcha: "We couldn't confirm you're human. Wait a second and try again.",
 };
 
 export default async function SignUp({ searchParams }: { searchParams: Promise<{ error?: string; next?: string }> }) {
