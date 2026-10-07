@@ -1,0 +1,41 @@
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+
+async function requestToJoin(formData: FormData) {
+  "use server";
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+  const { error } = await supabase.from("memberships").insert({
+    community_id: String(formData.get("community_id")),
+    user_id: user.id,
+    unit: String(formData.get("unit")).trim(),
+    proof_note: String(formData.get("proof_note") ?? "").trim() || null,
+  });
+  redirect(error ? `/join?error=${encodeURIComponent(error.message)}` : "/");
+}
+
+export default async function Join({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+  const { error } = await searchParams;
+  const supabase = await createClient();
+  const { data: communities } = await supabase.from("communities").select("id, name").order("name");
+  return (
+    <>
+      <h1>Join your community</h1>
+      <p className="muted">An admin from your community will confirm you live there before you can see listings.</p>
+      <form action={requestToJoin} className="card">
+        <label>Community
+          <select name="community_id" required>
+            {(communities ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </label>
+        <label>House / apartment number<input name="unit" required placeholder="e.g. Block C, Flat 4" /></label>
+        <label>Anything that helps us verify you (optional)
+          <textarea name="proof_note" rows={3} placeholder="e.g. tenant since 2023; neighbour Mr Otieno (C3) can vouch" />
+        </label>
+        <button>Request access</button>
+        {error && <p className="muted">{error.includes("duplicate") ? "You've already requested this community." : error}</p>}
+      </form>
+    </>
+  );
+}
