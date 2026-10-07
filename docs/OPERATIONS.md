@@ -44,3 +44,11 @@ Anything secret (Supabase access token, Resend key, Netlify token) lives only in
 - **Terms and Privacy pages are plain-language drafts.** Have a lawyer familiar with Kenya's Data Protection Act review them before launch, and set `NEXT_PUBLIC_SUPPORT_EMAIL` for a contact address.
 - Business accounts are self-declared today (anyone can pick "Business"). Decide whether admins should approve them.
 - Reviews are open to any resident; decide whether to require a completed order.
+
+## Planned paid features (Business Pro) — not built yet
+Decision: these are deliberately held back to be sold to business accounts later. Gate each behind a new flag on `plan_limits`
+(like `can_see_analytics`) so the free tier stays as it is.
+- **Storefront page** per business (`/c/<slug>/s/<seller>`): all of a business's items on one page, grouped by category/menu section.
+- **Opening hours** shown on the storefront and on listings (and "open now" status).
+- **Product/menu management** extras: sections, bulk entry, ordering of items.
+Out of scope until there is demand: multi-item cart/checkout.
