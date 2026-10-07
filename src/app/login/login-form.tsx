@@ -81,7 +81,7 @@ export default function LoginForm({ next, initialError, initialEmail, initialSte
         <input type="hidden" name="intent" value="send" />
         <input type="hidden" name="next" value={state.next} />
         <label>Your name<input name="name" placeholder="Jane Wanjiku" defaultValue={state.name} autoComplete="name" /></label>
-        <label>Email<input name="email" type="email" required defaultValue={state.email} autoComplete="email" /></label>
+        <label>Email<input name="email" type="email" required defaultValue={state.email} autoComplete="email" placeholder="you@example.com" /></label>
         <Submit idle="Email me a sign-in code" busy="Sending code…" />
         <p className="muted small" style={{ margin: 0 }}>We&apos;ll email you a 6-digit code. It takes a few seconds.</p>
       </form>

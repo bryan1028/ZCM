@@ -85,7 +85,7 @@ export default async function Orders({ params, searchParams }: { params: Promise
             <Link href={`/c/${slug}/l/${l?.id}`} style={{ fontWeight: 650, color: "var(--ink)" }}>{l?.title ?? "Listing"}</Link>
             <div className="muted small">{r.quantity} × · {total} · {asSeller ? "buyer" : "seller"} @{other}</div>
           </div>
-          <span className={`badge ${TONE[r.status] ?? ""}`}>{LABEL[r.status]}</span>
+          <span className={`badge ${TONE[r.status] ?? ""}`}>{asSeller && r.status === "requested" ? "New request" : asSeller && r.status === "accepted" ? "Awaiting payment" : asSeller && r.status === "paid" ? "Check payment" : LABEL[r.status]}</span>
         </div>
 
         {step !== undefined && (
