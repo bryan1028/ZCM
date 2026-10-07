@@ -35,6 +35,7 @@ async function save(formData: FormData) {
     description: String(formData.get("description") ?? "").trim() || null,
     price_cents: price ? Math.round(Number(price) * 100) : null,
     price_unit: String(formData.get("price_unit")),
+    stock: formData.get("stock") ? Number(formData.get("stock")) : null,
   });
   if (error) redirect(`/c/${slug}/sell?error=${encodeURIComponent(error.message)}`);
   redirect(`/c/${slug}/${formData.get("kind") === "service" ? "services" : "products"}`);
@@ -76,6 +77,7 @@ export default async function Sell({ params, searchParams }: { params: Promise<{
         <label>Price type
           <select name="price_unit">{Object.keys(PRICE_UNITS).map((u) => <option key={u} value={u}>{u.replace("_", " ")}</option>)}</select>
         </label>
+        <label>Stock (products only, optional)<input name="stock" type="number" min="0" step="1" /></label>
         <button>Publish</button>
         {error && <p className="muted">{error}</p>}
       </form>
