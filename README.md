@@ -29,6 +29,13 @@ To remove ZCM from a shared project: `supabase/teardown.sql` (destroys ZCM data 
 - For auto-deploys on every push, connect the GitHub repo under Netlify → Site configuration → Build & deploy → Continuous deployment.
 - Supabase Auth → URL Configuration must list `<site>/auth/callback`.
 
+## Keeping the free Supabase project awake
+Supabase pauses free projects after ~7 days without activity. `netlify/functions/keepalive.mjs` is a Netlify **scheduled function**
+(daily) that makes a harmless database call (an invite-code lookup that returns nothing), so the project never goes idle.
+It uses only the public URL + anon key. Check it under Netlify → Logs → Functions → keepalive. If the site is ever moved off
+Netlify, recreate it elsewhere (e.g. a GitHub Actions cron on the default branch). Also note: a project paused for 90+ days can
+no longer be restored from the dashboard, so don't ignore a pause email.
+
 ## How it scales to more communities
 - Every community-owned row has `community_id`; RLS only exposes rows to **verified members of that community**.
 - A new estate = one `insert into communities`. Routes are `/c/<slug>/…`; no code change.
