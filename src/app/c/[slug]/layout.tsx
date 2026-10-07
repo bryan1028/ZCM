@@ -36,6 +36,7 @@ export default async function CommunityLayout({ children, params }: { children: 
         </span>
       </div>
       <nav className="tabs">
+        <Link href={`/c/${slug}`}>Feed</Link>
         {Object.entries(KINDS).map(([k, v]) => <Link key={k} href={`/c/${slug}/${k}`}>{v.label}</Link>)}
       </nav>
       {children}

@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { randomUUID } from "node:crypto";
 import { createClient } from "@/lib/supabase/server";
 import { CATEGORIES, PRICE_UNITS } from "@/lib/catalog";
+import VideoUpload from "@/components/video-upload";
 import { extFor, MAX_UPLOAD_BYTES, signedUrls } from "@/lib/images";
 
 async function ctx(slug: string, id: string) {
@@ -67,6 +68,29 @@ async function removePhoto(formData: FormData) {
   redirect(here);
 }
 
+async function attachVideo(slug: string, id: string, path: string): Promise<{ error?: string }> {
+  "use server";
+  const { supabase, user } = await ctx(slug, id);
+  // the path must sit in this user's own folder for this listing's community
+  const { data: l } = await supabase.from("listings").select("community_id, video_urls").eq("id", id).single();
+  if (!l || !path.startsWith(`${l.community_id}/${user.id}/`)) return { error: "Invalid upload" };
+  const { error } = await supabase.from("listings").update({ video_urls: [...l.video_urls, path] }).eq("id", id);
+  return error ? { error: error.message } : {};
+}
+
+async function removeVideo(formData: FormData) {
+  "use server";
+  const slug = String(formData.get("slug")), id = String(formData.get("id"));
+  const { supabase, here } = await ctx(slug, id);
+  const path = String(formData.get("path"));
+  const { data: l } = await supabase.from("listings").select("video_urls").eq("id", id).single();
+  if (l) {
+    await supabase.from("listings").update({ video_urls: l.video_urls.filter((p: string) => p !== path) }).eq("id", id);
+    await supabase.storage.from("listing-videos").remove([path]);
+  }
+  redirect(here);
+}
+
 export default async function Edit({ params, searchParams }: {
   params: Promise<{ slug: string; id: string }>; searchParams: Promise<{ error?: string; saved?: string; new?: string }>;
 }) {
@@ -74,9 +98,10 @@ export default async function Edit({ params, searchParams }: {
   const { error, saved, new: isNew } = await searchParams;
   const { supabase, user } = await ctx(slug, id);
   const { data: l } = await supabase.from("listings")
-    .select("id, kind, title, description, category, price_cents, price_unit, stock, image_urls, sellers!inner(user_id)").eq("id", id).maybeSingle();
+    .select("id, kind, community_id, title, description, category, price_cents, price_unit, stock, image_urls, video_urls, sellers!inner(user_id)").eq("id", id).maybeSingle();
   if (!l || (l.sellers as unknown as { user_id: string }).user_id !== user.id) notFound();
   const urls = await signedUrls(supabase, "listing-images", l.image_urls);
+  const vids = await signedUrls(supabase, "listing-videos", l.video_urls);
 
   return (
     <>
@@ -104,6 +129,19 @@ export default async function Edit({ params, searchParams }: {
           <button>Upload</button>
         </form>
         <p className="muted">JPEG, PNG or WebP, up to 5 MB. Free accounts can add a few photos per listing.</p>
+      </div>
+
+      <div className="card">
+        <strong>Video ({l.video_urls.length})</strong>
+        {l.video_urls.map((path: string) => (
+          <form action={removeVideo} key={path} style={{ margin: "8px 0" }}>
+            <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} /><input type="hidden" name="path" value={path} />
+            {vids.get(path) && <video src={vids.get(path)} controls preload="metadata" playsInline style={{ width: "100%", maxHeight: 260, borderRadius: 8 }} />}
+            <button className="secondary">Remove video</button>
+          </form>
+        ))}
+        <VideoUpload communityId={l.community_id} userId={user.id} attach={attachVideo.bind(null, slug, id)} />
+        <p className="muted">MP4, WebM or MOV, up to 20 MB — a ~30 second clip works well. Free accounts can add 1 video per listing.</p>
       </div>
 
       <form action={saveDetails} className="card">

@@ -7,7 +7,7 @@ Two tabs: **Services** (gardeners, cleaners…) and **Products** (cookies…). S
 Stack (all free tiers): Next.js 15 · Supabase (Postgres + Auth + RLS) · Vercel.
 
 ## Setup
-1. Create a Supabase project. In the SQL editor run `supabase/migrations/0001_init.sql`, `0002_trust_and_moderation.sql`, `0003_usernames_and_chat.sql`, `0004_photos_and_reservations.sql`, `0005_notifications_and_expiry.sql`, then `supabase/seed.sql`.
+1. Create a Supabase project. In the SQL editor run `supabase/migrations/0001_init.sql`, `0002_trust_and_moderation.sql`, `0003_usernames_and_chat.sql`, `0004_photos_and_reservations.sql`, `0005_notifications_and_expiry.sql`, `0006_launch_limits.sql`, `0007_growth.sql`, then `supabase/seed.sql`.
 2. Supabase → Auth → URL Configuration: set Site URL and add `<site>/auth/callback` as a redirect URL.
 3. `cp .env.example .env.local` and fill in the URL + anon key (never put the service-role key in the app).
 4. `npm install && npm run dev`.
@@ -65,6 +65,16 @@ reported to admins. Make sure **Realtime** is enabled for the `messages` table (
   `update sellers set plan = 'pro' where id = '<seller id>';`
 
 Payments are **proof only** by design — the app never handles money.
+
+## Growth features (0006–0007)
+- **Launch limits** (0006): generous free caps; Pro-only features stay off. Edit `plan_limits` to change.
+- **Invite links**: `/invite/<code>` (public landing) → sign in → pre-filled join. Every resident gets a copy with `?ref=<username>`
+  ("Invite on WhatsApp" on the feed); the referrer is shown to admins as a vouch if they're a verified member. Applicants are still
+  verified by an admin. Codes live in an admin-only table; admins can rotate them.
+- **Feed + announcements**: community home shows admin announcements (pin/unpin) and recently added listings across both tabs.
+- **Videos**: up to 1 per listing on free (3 on Pro), MP4/WebM/MOV ≤ 20 MB, uploaded directly to a private bucket.
+  Supabase free tier caps each upload at 50 MB and total storage at 1 GB — watch storage as you grow.
+- **New estates**: `select create_community('slug','Name','City','admin@email')` — see `docs/NEW_COMMUNITY.md`.
 
 ## Mapping to the architecture doc
 Doc MVP: services & products, search, in-app messaging (WhatsApp link kept as an option). Phase 2: reservations + payment proof.

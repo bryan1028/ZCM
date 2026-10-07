@@ -14,7 +14,7 @@ export default async function Home() {
     .order("created_at");
 
   const verified = (memberships ?? []).filter((m) => m.status === "verified");
-  if (verified.length === 1) redirect(`/c/${(verified[0].communities as unknown as { slug: string }).slug}/services`);
+  if (verified.length === 1) redirect(`/c/${(verified[0].communities as unknown as { slug: string }).slug}`);
 
   return (
     <>
@@ -24,7 +24,7 @@ export default async function Home() {
         return (
           <div className="card row" key={c.slug}>
             <strong>{c.name}</strong>
-            {m.status === "verified" ? <Link href={`/c/${c.slug}/services`}>Open</Link> : <span className="badge">{m.status}</span>}
+            {m.status === "verified" ? <Link href={`/c/${c.slug}`}>Open</Link> : <span className="badge">{m.status}</span>}
           </div>
         );
       })}

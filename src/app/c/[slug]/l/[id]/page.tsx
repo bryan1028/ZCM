@@ -76,7 +76,7 @@ export default async function ListingPage({ params, searchParams }: {
 
   const { data: l } = await supabase
     .from("listings")
-    .select("id, kind, community_id, title, description, category, price_cents, price_unit, stock, available, image_urls, sellers(user_id, display_name, business_name, account_type, whatsapp), communities(currency)")
+    .select("id, kind, community_id, title, description, category, price_cents, price_unit, stock, available, image_urls, video_urls, sellers(user_id, display_name, business_name, account_type, whatsapp), communities(currency)")
     .eq("id", id).maybeSingle();
   if (!l) notFound();
   const s = l.sellers as unknown as { user_id: string; display_name: string; business_name: string | null; account_type: string; whatsapp: string | null };
@@ -91,6 +91,7 @@ export default async function ListingPage({ params, searchParams }: {
   ]);
   const names = await usernamesFor(supabase, l.community_id, [s.user_id, ...(reviews ?? []).map((r) => r.reviewer_id)]);
   const photos = await signedUrls(supabase, "listing-images", l.image_urls);
+  const videos = await signedUrls(supabase, "listing-videos", l.video_urls);
   const myReview = (reviews ?? []).find((r) => r.reviewer_id === user.id);
 
   return (
@@ -109,6 +110,9 @@ export default async function ListingPage({ params, searchParams }: {
             ))}
           </div>
         )}
+        {l.video_urls.map((path: string) => videos.get(path) && (
+          <video key={path} src={videos.get(path)} controls preload="metadata" playsInline style={{ width: "100%", maxHeight: 360, borderRadius: 8, marginBottom: 8 }} />
+        ))}
         <p>{l.description}</p>
         <p className="muted">
           {l.category} · {s.business_name ?? s.display_name} (@{names.get(s.user_id) ?? "neighbour"}) {s.account_type === "business" && <span className="badge">Business</span>}

@@ -1,5 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { pushSoon } from "@/lib/push";
+import { headers } from "next/headers";
+import { siteUrl } from "@/lib/nav";
 import { createClient } from "@/lib/supabase/server";
 
 async function review(formData: FormData) {
@@ -13,6 +15,33 @@ async function review(formData: FormData) {
   await supabase.from("memberships")
     .update({ status, reviewed_by: user.id, reviewed_at: new Date().toISOString() })
     .eq("id", String(formData.get("id")));
+  redirect(String(formData.get("back")));
+}
+
+async function postAnnouncement(formData: FormData) {
+  "use server";
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase.from("announcements").insert({
+    community_id: String(formData.get("community_id")), author_id: user.id,
+    title: String(formData.get("title")).trim(), body: String(formData.get("body") ?? "").trim() || null,
+    pinned: formData.get("pinned") === "on",
+  });
+  redirect(String(formData.get("back")));
+}
+
+async function deleteAnnouncement(formData: FormData) {
+  "use server";
+  const supabase = await createClient();
+  await supabase.from("announcements").delete().eq("id", String(formData.get("id")));
+  redirect(String(formData.get("back")));
+}
+
+async function rotateInvite(formData: FormData) {
+  "use server";
+  const supabase = await createClient();
+  await supabase.rpc("rotate_invite_code", { cid: String(formData.get("community_id")) });
   redirect(String(formData.get("back")));
 }
 
@@ -52,12 +81,16 @@ export default async function Admin({ params }: { params: Promise<{ slug: string
 
   const { data: members } = await supabase
     .from("memberships")
-    .select("id, status, role, shadowbanned, unit, proof_note, created_at, profiles:user_id(full_name, username)")
+    .select("id, status, role, shadowbanned, invited_by_username, unit, proof_note, created_at, profiles:user_id(full_name, username)")
     .eq("community_id", community.id).order("created_at", { ascending: false });
   // `profiles` isn't directly related to memberships in PostgREST's eyes; fall back gracefully.
   const { data: reports } = await supabase
     .from("reports").select("id, target_type, target_id, reason, created_at")
     .eq("community_id", community.id).eq("status", "open").order("created_at");
+  const { data: code } = await supabase.rpc("get_invite_code", { cid: community.id });
+  const { data: announcements } = await supabase.from("announcements").select("id, title, pinned, created_at")
+    .eq("community_id", community.id).order("created_at", { ascending: false }).limit(10);
+  const inviteLink = code ? `${siteUrl((await headers()).get("host"))}/invite/${code}` : null;
   const pending = (members ?? []).filter((m) => m.status === "pending");
   const rest = (members ?? []).filter((m) => m.status !== "pending");
 
@@ -68,6 +101,7 @@ export default async function Admin({ params }: { params: Promise<{ slug: string
         <span className="badge">{m.shadowbanned ? "shadowbanned" : m.status}</span>
       </div>
       {m.proof_note && <p className="muted">{m.proof_note}</p>}
+      {m.invited_by_username && <p className="muted">✓ Invited by verified resident @{m.invited_by_username}</p>}
       <form action={review} style={{ display: "flex", gap: 8 }}>
         <input type="hidden" name="id" value={m.id} />
         <input type="hidden" name="back" value={`/c/${slug}/admin`} />
@@ -89,6 +123,31 @@ export default async function Admin({ params }: { params: Promise<{ slug: string
 
   return (
     <>
+      <h2>Invite link</h2>
+      <div className="card">
+        <p className="muted">Anyone with this link can <em>apply</em>; you still verify each person. Residents get their own copy with their username on it.</p>
+        <input readOnly value={inviteLink ?? ""} style={{ width: "100%" }} />
+        <form action={rotateInvite} style={{ marginTop: 8 }}>
+          <input type="hidden" name="community_id" value={community.id} /><input type="hidden" name="back" value={`/c/${slug}/admin`} />
+          <button className="secondary">Make a new link (old one stops working)</button>
+        </form>
+      </div>
+
+      <h2>Announcements</h2>
+      <form action={postAnnouncement} className="card">
+        <input type="hidden" name="community_id" value={community.id} /><input type="hidden" name="back" value={`/c/${slug}/admin`} />
+        <label>Title<input name="title" required minLength={3} maxLength={120} /></label>
+        <label>Message<textarea name="body" rows={3} maxLength={2000} /></label>
+        <label style={{ display: "flex", gap: 8, alignItems: "center" }}><input type="checkbox" name="pinned" style={{ width: "auto" }} /> Pin to top</label>
+        <button>Post to the feed</button>
+      </form>
+      {(announcements ?? []).map((a) => (
+        <form action={deleteAnnouncement} className="card row" key={a.id} style={{ display: "flex" }}>
+          <input type="hidden" name="id" value={a.id} /><input type="hidden" name="back" value={`/c/${slug}/admin`} />
+          <span>{a.pinned ? "📌 " : ""}{a.title}</span><button className="secondary">Delete</button>
+        </form>
+      ))}
+
       <h2>Open reports ({(reports ?? []).length})</h2>
       {(reports ?? []).map((r) => (
         <div className="card" key={r.id}>

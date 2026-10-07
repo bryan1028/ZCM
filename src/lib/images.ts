@@ -15,3 +15,6 @@ export async function signedUrls(supabase: SupabaseClient, bucket: string, paths
   for (const d of data ?? []) if (d.signedUrl && d.path) out.set(d.path, d.signedUrl);
   return out;
 }
+
+export const MAX_VIDEO_BYTES = 20 * 1024 * 1024;
+export const VIDEO_EXT: Record<string, string> = { "video/mp4": "mp4", "video/webm": "webm", "video/quicktime": "mov" };

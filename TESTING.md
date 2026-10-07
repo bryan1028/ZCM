@@ -16,3 +16,7 @@ Call them **Admin** (you) and **Neighbour** (a friend / second email).
 11. **Expiry**: reserve something and, in the SQL editor, `update reservations set expires_at = now() - interval '1 hour'; select expire_reservations();` → status becomes "Expired", both notified.
 12. **Plans**: as Admin make yourself a business seller, then `update sellers set plan='pro' where user_id = '<your id>'` → Dashboard unlocks and "Feature 7 days" appears.
 13. **Security spot-check**: sign in as a third user who has NOT been verified → every community page redirects; direct API reads of `listings`/`messages` return nothing.
+14. **Invite flow**: as Admin copy the invite link from Admin; open it in a private window → "You're invited" → Sign in → Join form shows only that community. Apply; Admin's queue shows "Invited by …" if the link had your username.
+15. **Feed**: Admin posts a pinned announcement → it shows at the top of the community home. New listings appear under "Recently added".
+16. **Video**: edit a listing → upload a short MP4 (<20 MB); it plays on the listing page and the feed card shows "▶ video". A second video on a free plan is refused.
+17. **Rotate**: Admin → "Make a new link"; the old invite link now says "isn't valid any more".

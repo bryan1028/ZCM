@@ -106,7 +106,7 @@ begin
       perform public.notify(a.user_id, new.community_id, 'membership', 'New resident to verify', 'Unit ' || new.unit, '/c/' || slug || '/admin', true);
     end loop;
   elsif tg_op = 'UPDATE' and new.status = 'verified' and old.status <> 'verified' then
-    perform public.notify(new.user_id, new.community_id, 'membership', 'You''re verified 🎉', 'Welcome to the community', '/c/' || slug || '/services');
+    perform public.notify(new.user_id, new.community_id, 'membership', 'You''re verified 🎉', 'Welcome to the community', '/c/' || slug);
   end if;
   return new;
 end $$;
