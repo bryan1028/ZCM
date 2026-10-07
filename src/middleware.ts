@@ -20,11 +20,11 @@ export async function middleware(request: NextRequest) {
     },
   );
   const { data } = await supabase.auth.getUser();
-  const open = ["/login", "/auth", "/api/push", "/invite"].some((p) => request.nextUrl.pathname.startsWith(p));
+  const open = ["/login", "/api/push", "/invite", "/terms", "/privacy"].some((p) => request.nextUrl.pathname.startsWith(p));
   if (!data.user && !open) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
   return response;
 }
 
-export const config = { matcher: ["/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|icon-.*\\.png).*)"] };
+export const config = { matcher: ["/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|robots.txt|icon-.*\\.png).*)"] };

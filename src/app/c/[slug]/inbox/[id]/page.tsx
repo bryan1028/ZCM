@@ -4,6 +4,8 @@ import { pushSoon } from "@/lib/push";
 import { createClient } from "@/lib/supabase/server";
 import { usernamesFor } from "@/lib/usernames";
 import Live from "./live";
+import { getCommunity } from "@/lib/community";
+import { fmtTime, fmtWeekday } from "@/lib/time";
 import ScrollEnd from "./scroll-end";
 import { ChevronLeftIcon, SendIcon } from "@/components/icons";
 
@@ -55,8 +57,9 @@ export default async function Chat({ params, searchParams }: {
   const title = (conv.listings as unknown as { title: string } | null)?.title;
 
   const handle = names.get(other) ?? "neighbour";
-  const dayLabel = (iso: string) => new Date(iso).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
-  const timeLabel = (iso: string) => new Date(iso).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  const tz = (await getCommunity(slug))?.timezone ?? "Africa/Nairobi";
+  const dayLabel = (iso: string) => fmtWeekday(iso, tz);
+  const timeLabel = (iso: string) => fmtTime(iso, tz);
 
   return (
     <div className="page-narrow" style={{ maxWidth: 640 }}>

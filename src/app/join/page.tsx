@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { pushSoon } from "@/lib/push";
+import Link from "next/link";
 import Page from "@/components/page";
 
 async function requestToJoin(formData: FormData) {
@@ -8,6 +9,7 @@ async function requestToJoin(formData: FormData) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+  if (formData.get("agree") !== "on") redirect(`/join?error=${encodeURIComponent("Please accept the Terms and Privacy Policy")}`);
   const { error } = await supabase.from("memberships").insert({
     community_id: String(formData.get("community_id")),
     user_id: user.id,
@@ -51,6 +53,10 @@ export default async function Join({ searchParams }: { searchParams: Promise<{ e
         <label>House / apartment number<input name="unit" required placeholder="e.g. Block C, Flat 4" /></label>
         <label>Anything that helps us verify you <span className="hint">(optional)</span>
           <textarea name="proof_note" rows={3} placeholder="e.g. tenant since 2023; neighbour Mr Otieno (C3) can vouch" />
+        </label>
+        <label style={{ display: "flex", gap: 10, alignItems: "flex-start", fontWeight: 400 }}>
+          <input type="checkbox" name="agree" required style={{ marginTop: 2 }} />
+          <span>I live here and agree to the <Link href="/terms">Terms</Link> and <Link href="/privacy">Privacy Policy</Link>.</span>
         </label>
         <button>Request access</button>
       </form>

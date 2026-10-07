@@ -1,6 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import { pushSoon } from "@/lib/push";
 import { headers } from "next/headers";
+import { getCommunity } from "@/lib/community";
+import { fmtDay } from "@/lib/time";
 import CopyButton from "@/components/copy-button";
 import Empty from "@/components/empty";
 import { siteUrl } from "@/lib/nav";
@@ -47,6 +49,16 @@ async function rotateInvite(formData: FormData) {
   redirect(String(formData.get("back")));
 }
 
+async function setRole(formData: FormData) {
+  "use server";
+  const supabase = await createClient();
+  const back = String(formData.get("back"));
+  // RLS limits this to admins; the database also refuses to leave a community without an admin.
+  const { error } = await supabase.from("memberships").update({ role: String(formData.get("role")) === "admin" ? "admin" : "resident" })
+    .eq("id", String(formData.get("id")));
+  redirect(error ? `${back}?error=${encodeURIComponent(error.message)}` : back);
+}
+
 async function shadowban(formData: FormData) {
   "use server";
   const supabase = await createClient();
@@ -73,10 +85,11 @@ async function resolveReport(formData: FormData) {
   redirect(String(formData.get("back")));
 }
 
-export default async function Admin({ params }: { params: Promise<{ slug: string }> }) {
+export default async function Admin({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ error?: string }> }) {
   const { slug } = await params;
+  const { error } = await searchParams;
   const supabase = await createClient();
-  const { data: community } = await supabase.from("communities").select("id").eq("slug", slug).single();
+  const community = await getCommunity(slug);
   if (!community) notFound();
   const { data: { user } } = await supabase.auth.getUser();
   const { data: me } = await supabase.from("memberships").select("role").eq("community_id", community.id).eq("user_id", user!.id).maybeSingle();
@@ -84,7 +97,7 @@ export default async function Admin({ params }: { params: Promise<{ slug: string
 
   const { data: members } = await supabase
     .from("memberships")
-    .select("id, status, role, shadowbanned, invited_by_username, unit, proof_note, created_at, profiles:user_id(full_name, username)")
+    .select("id, user_id, status, role, shadowbanned, invited_by_username, unit, proof_note, created_at, profiles:user_id(full_name, username)")
     .eq("community_id", community.id).order("created_at", { ascending: false });
   const { data: reports } = await supabase
     .from("reports").select("id, target_type, target_id, reason, created_at")
@@ -109,7 +122,7 @@ export default async function Admin({ params }: { params: Promise<{ slug: string
           <span className="avatar avatar-lg" aria-hidden>{(p?.username ?? p?.full_name ?? "?").slice(0, 1)}</span>
           <div className="grow">
             <div style={{ fontWeight: 700 }}>{p?.full_name ?? "Unnamed"} <span className="muted" style={{ fontWeight: 400 }}>@{p?.username ?? "?"}</span></div>
-            <div className="muted small">Unit <b style={{ color: "var(--ink)" }}>{m.unit}</b> · applied {new Date(m.created_at).toLocaleDateString(undefined, { day: "numeric", month: "short" })}</div>
+            <div className="muted small">Unit <b style={{ color: "var(--ink)" }}>{m.unit}</b> · applied {fmtDay(m.created_at, community.timezone)}</div>
           </div>
         </div>
         {m.proof_note && <div className="alert info">“{m.proof_note}”</div>}
@@ -147,6 +160,14 @@ export default async function Admin({ params }: { params: Promise<{ slug: string
             {m.status !== "verified" && <button className="sm" name="status" value="verified">Verify</button>}
             {m.status === "verified" && m.role !== "admin" && <button className="danger sm" name="status" value="suspended">Ban</button>}
           </form>
+          {m.status === "verified" && m.user_id !== user!.id && (
+            <form action={setRole} className="inline-form">
+              <input type="hidden" name="id" value={m.id} /><input type="hidden" name="back" value={back} />
+              {m.role === "admin"
+                ? <button className="secondary sm" name="role" value="resident">Remove admin</button>
+                : <button className="secondary sm" name="role" value="admin">Make admin</button>}
+            </form>
+          )}
           {m.status === "verified" && m.role !== "admin" && (
             <form action={shadowban} className="inline-form">
               <input type="hidden" name="id" value={m.id} /><input type="hidden" name="back" value={back} />
@@ -161,9 +182,10 @@ export default async function Admin({ params }: { params: Promise<{ slug: string
   return (
     <>
       <div className="page-head"><div><h1>Admin</h1><p className="muted">Keep your community safe and growing</p></div></div>
+      {error && <div className="alert error" role="alert" style={{ marginBottom: 12 }}>{error}</div>}
 
       <div className="stats" style={{ marginBottom: 8 }}>
-        <div className="stat"><b style={{ color: pending.length ? "var(--accent)" : undefined }}>{pending.length}</b><span>Awaiting verification</span></div>
+        <div className="stat"><b style={{ color: pending.length ? "var(--accent-ink)" : undefined }}>{pending.length}</b><span>Awaiting verification</span></div>
         <div className="stat"><b>{verifiedCount}</b><span>Verified residents</span></div>
         <div className="stat"><b style={{ color: (reports ?? []).length ? "var(--danger)" : undefined }}>{(reports ?? []).length}</b><span>Open reports</span></div>
         <div className="stat"><b>{(announcements ?? []).length}</b><span>Announcements</span></div>

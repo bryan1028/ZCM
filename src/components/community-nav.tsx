@@ -48,6 +48,7 @@ export default function CommunityNav(p: Props) {
                 <Link href={`${base}/mine`}><span className="row gap-sm" style={{ justifyContent: "flex-start" }}><ListIcon size={18} />My listings</span></Link>
                 <Link href={`${base}/orders`}><span className="row gap-sm" style={{ justifyContent: "flex-start" }}><ReceiptIcon size={18} />Orders</span>{p.openOrders > 0 && <span className="badge danger">{p.openOrders}</span>}</Link>
                 <Link href={`${base}/dashboard`}><span className="row gap-sm" style={{ justifyContent: "flex-start" }}><ChartIcon size={18} />Dashboard</span></Link>
+                <Link href="/account"><span className="row gap-sm" style={{ justifyContent: "flex-start" }}><ShieldIcon size={18} />Account & privacy</span></Link>
                 {p.isAdmin && <Link href={`${base}/admin`}><span className="row gap-sm" style={{ justifyContent: "flex-start" }}><ShieldIcon size={18} />Admin</span></Link>}
                 <div className="menu-sep" />
                 <form action={p.signOut} style={{ display: "block" }}>

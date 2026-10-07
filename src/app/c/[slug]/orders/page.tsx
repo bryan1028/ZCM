@@ -4,8 +4,11 @@ import { randomUUID } from "node:crypto";
 import { pushSoon } from "@/lib/push";
 import { createClient } from "@/lib/supabase/server";
 import { formatPrice, type PRICE_UNITS } from "@/lib/catalog";
+import ImageInput from "@/components/image-input";
 import { extFor, MAX_UPLOAD_BYTES, signedUrls } from "@/lib/images";
 import Empty from "@/components/empty";
+import { getCommunity } from "@/lib/community";
+import { fmtDateTime } from "@/lib/time";
 import { usernamesFor } from "@/lib/usernames";
 
 async function act(formData: FormData) {
@@ -46,7 +49,7 @@ export default async function Orders({ params, searchParams }: { params: Promise
   const { error, tab } = await searchParams;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const { data: community } = await supabase.from("communities").select("id, currency").eq("slug", slug).single();
+  const community = await getCommunity(slug);
   if (!community || !user) notFound();
   const back = `/c/${slug}/orders`;
 
@@ -121,11 +124,11 @@ export default async function Orders({ params, searchParams }: { params: Promise
             <b>Send proof of payment</b>
             <span className="muted small">Pay the seller (e.g. M-Pesa), then upload a screenshot. The app never handles your money.</span>
             <label>Payment reference <span className="hint">(optional)</span><input name="reference" maxLength={100} placeholder="e.g. M-Pesa code" /></label>
-            <input type="file" name="proof" accept="image/jpeg,image/png,image/webp" required />
+            <ImageInput name="proof" required />
             <button>Send proof</button>
           </form>
         )}
-        {open && r.expires_at && <p className="muted small" style={{ margin: 0 }}>Expires {new Date(r.expires_at).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</p>}
+        {open && r.expires_at && <p className="muted small" style={{ margin: 0 }}>Expires {fmtDateTime(r.expires_at, community.timezone)}</p>}
       </div>
     );
   };

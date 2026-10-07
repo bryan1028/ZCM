@@ -2,13 +2,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Empty from "@/components/empty";
+import { getCommunity } from "@/lib/community";
+import { fmtDay, fmtTime, isToday } from "@/lib/time";
 import { usernamesFor } from "@/lib/usernames";
 
 export default async function Inbox({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const { data: community } = await supabase.from("communities").select("id").eq("slug", slug).single();
+  const community = await getCommunity(slug);
   if (!community || !user) notFound();
 
   const { data: convs } = await supabase
@@ -28,10 +30,8 @@ export default async function Inbox({ params }: { params: Promise<{ slug: string
   (recent ?? []).forEach((m) => { if (!lastBy.has(m.conversation_id)) lastBy.set(m.conversation_id, m); });
   const names = await usernamesFor(supabase, community.id, (convs ?? []).flatMap((c) => [c.initiator_id, c.recipient_id]));
 
-  const when = (iso: string) => {
-    const d = new Date(iso), now = new Date();
-    return d.toDateString() === now.toDateString() ? d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }) : d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
-  };
+  const when = (iso: string) => (isToday(iso, community.timezone) ? fmtTime(iso, community.timezone) : fmtDay(iso, community.timezone));
+
   return (
     <>
       <div className="page-head"><div><h1>Inbox</h1><p className="muted">Chats with your neighbours</p></div></div>

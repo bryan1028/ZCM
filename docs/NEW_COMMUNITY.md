@@ -30,4 +30,5 @@ No code changes or redeploys. About 15 minutes of your time, plus the admin's.
 
 ## Settings per community
 - Currency: `update communities set currency = 'KES' where slug = '...';`
+- Timezone (dates are shown in it): `update communities set timezone = 'Africa/Nairobi' where slug = '...';` (any IANA name)
 - Rotate a leaked invite link from the admin page; the old link stops working immediately.

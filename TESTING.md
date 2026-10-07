@@ -20,3 +20,6 @@ Call them **Admin** (you) and **Neighbour** (a friend / second email).
 15. **Feed**: Admin posts a pinned announcement → it shows at the top of the community home. New listings appear under "Recently added".
 16. **Video**: edit a listing → upload a short MP4 (<20 MB); it plays on the listing page and the feed card shows "▶ video". A second video on a free plan is refused.
 17. **Rotate**: Admin → "Make a new link"; the old invite link now says "isn't valid any more".
+18. **Account**: avatar menu → Account & privacy. Download your data (JSON opens), then, with a spare test account, delete it: you land on the login page with a confirmation, and its listings/photos are gone.
+19. **Admins**: Admin → Residents → expand a verified neighbour → Make admin. Try to remove the last remaining admin: it must be refused with a clear message.
+20. **Legal**: /terms and /privacy load while signed out; the join form needs the agreement ticked.

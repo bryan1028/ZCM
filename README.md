@@ -4,15 +4,17 @@ A closed, resident-only marketplace per estate. Starter community: **Kijani Ridg
 Two tabs: **Services** (gardeners, cleaners…) and **Products** (cookies…). Sellers are
 **individual** or **business**; business accounts carry the features we can monetise later.
 
-Stack (all free tiers): Next.js 15 · Supabase (Postgres + Auth + RLS) · Vercel.
+Stack (all free tiers): Next.js 15 · Supabase (Postgres + Auth + RLS + Storage) · Netlify · Resend (sign-in emails).
+See `docs/OPERATIONS.md` for limits, backups and the runbook.
 
 ## Setup
 ZCM keeps **everything in its own Postgres schema, `zcm`**, so it can share a Supabase project with other apps without touching their tables
 (and can be lifted into its own project later with `pg_dump --schema=zcm`). Storage buckets are prefixed `zcm-`.
 
-1. In Supabase run the files in `supabase/migrations/` in order (`0000` … `0008`), then `supabase/seed.sql`.
+1. In Supabase run the files in `supabase/migrations/` in order (`0000` … `0009`), then `supabase/seed.sql`.
 2. **Settings → API → Exposed schemas**: add `zcm` (keep the existing ones). Without this the app gets "schema must be one of…" errors.
-3. **Authentication → URL Configuration**: add `<your site>/auth/callback` to Redirect URLs.
+3. **Authentication → URL Configuration**: set the Site URL to your site. Sign-in is by 6-digit emailed code, so no redirect URLs are needed.
+   Also edit the *Magic Link* and *Confirm signup* email templates to show `{{ .Token }}` (code only, no link).
 4. **Authentication → SMTP**: the built-in mailer allows only ~2 emails/hour, which blocks sign-ups. Add a free SMTP provider
    (e.g. Resend or Brevo) before inviting residents.
 5. `cp .env.example .env.local`, fill in the URL + anon key (never put the service-role key in the browser), then `npm install && npm run dev`.
@@ -27,7 +29,6 @@ To remove ZCM from a shared project: `supabase/teardown.sql` (destroys ZCM data 
 - Deploy from a terminal: `npx netlify-cli deploy --prod` (with `NETLIFY_AUTH_TOKEN` set and the folder linked via `netlify link`).
   In restricted networks set `NODE_USE_ENV_PROXY=1` so Node's `fetch` honours the proxy.
 - For auto-deploys on every push, connect the GitHub repo under Netlify → Site configuration → Build & deploy → Continuous deployment.
-- Supabase Auth → URL Configuration must list `<site>/auth/callback`.
 
 ## Keeping the free Supabase project awake
 Supabase pauses free projects after ~7 days without activity. `netlify/functions/keepalive.mjs` is a Netlify **scheduled function**
@@ -38,13 +39,25 @@ awake, add one more entry to `targets` in the function. Check it under Netlify �
 Netlify, recreate it elsewhere (e.g. a GitHub Actions cron on the default branch). Also note: a project paused for 90+ days can
 no longer be restored from the dashboard, so don't ignore a pause email.
 
+## Tests
+`scripts/test-db.sh` builds a throw-away Postgres from the migrations and runs ~110 assertions in `supabase/tests/` (who can see what,
+verification, plans and limits, reservations, chat, shadowbanning, invites, account deletion, and the hardening rules). CI runs it on every push
+together with the type-check and build. Run it locally with `PGHOST=localhost PGUSER=postgres scripts/test-db.sh`.
+
+## Security and privacy notes
+- Everything is protected by row-level security in Postgres; the web app is not trusted. Only the functions the app needs are callable through the
+  API (`0009_hardening.sql`); internal/trigger functions are private. Shadowban status can't be probed.
+- Security headers (no framing, strict referrer policy, no camera/mic/geolocation) and `noindex` keep the closed community out of search engines.
+- Residents can download their data and delete their account (`/account`); Terms and Privacy pages are drafts that need legal review.
+- Photos are shrunk in the browser before upload to save mobile data. Dates are shown in the community's own timezone (`communities.timezone`).
+
 ## How it scales to more communities
 - Every community-owned row has `community_id`; RLS only exposes rows to **verified members of that community**.
-- A new estate = one `insert into communities`. Routes are `/c/<slug>/…`; no code change.
+- A new estate = one `select create_community(...)` call. Routes are `/c/<slug>/…`; no code change.
 - One person can belong to several communities. Each community has its own admin(s) who verify residents.
 
 ## Resident verification
-Sign in (email magic link) → request to join with unit number + a note → status `pending` → a community admin
+Sign in (6-digit code emailed to you) → request to join with unit number + a note → status `pending` → a community admin
 verifies at `/c/<slug>/admin`. Only `verified` memberships can read anything. Users cannot verify themselves (RLS).
 
 ## Monetisation hooks (already in the schema)

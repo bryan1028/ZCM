@@ -28,6 +28,7 @@ async function save(formData: FormData) {
   }
 
   const price = String(formData.get("price") ?? "").trim();
+  if (price && !(Number(price) >= 0)) redirect(`/c/${slug}/sell?error=${encodeURIComponent("Price must be a number, zero or more")}`);
   const kind = formData.get("kind") === "service" ? "service" : "product";
   const category = String(formData.get(`category_${kind}`) ?? "");     // each kind has its own category list
   if (!CATEGORIES[kind].includes(category)) redirect(`/c/${slug}/sell?error=${encodeURIComponent("Please choose a category")}`);

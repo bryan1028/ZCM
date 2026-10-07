@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { CATEGORIES, PRICE_UNITS } from "@/lib/catalog";
 import { ChevronLeftIcon } from "@/components/icons";
 import VideoUpload from "@/components/video-upload";
+import ImageInput from "@/components/image-input";
 import { extFor, MAX_UPLOAD_BYTES, signedUrls } from "@/lib/images";
 
 async function ctx(slug: string, id: string) {
@@ -21,6 +22,7 @@ async function saveDetails(formData: FormData) {
   const { supabase, here } = await ctx(slug, id);
   const price = String(formData.get("price") ?? "").trim();
   const stock = String(formData.get("stock") ?? "").trim();
+  if ((price && !(Number(price) >= 0)) || (stock && !(Number(stock) >= 0))) return fail(here, "Price and stock must be numbers, zero or more");
   const { error } = await supabase.from("listings").update({
     title: String(formData.get("title")).trim(),
     description: String(formData.get("description") ?? "").trim() || null,
@@ -131,10 +133,10 @@ export default async function Edit({ params, searchParams }: {
         )}
         <form action={addPhoto} className="stack">
           <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} />
-          <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" required />
+          <ImageInput name="photo" required />
           <button>Upload photo</button>
         </form>
-        <p className="muted small" style={{ margin: 0 }}>JPEG, PNG or WebP, up to 5 MB each.</p>
+        <p className="muted small" style={{ margin: 0 }}>JPEG, PNG or WebP. Big photos are shrunk automatically to save data.</p>
       </section>
 
       <section className="card stack" style={{ marginBottom: 14 }}>

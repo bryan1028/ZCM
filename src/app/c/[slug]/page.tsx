@@ -3,6 +3,8 @@ import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { signedUrls } from "@/lib/images";
 import { siteUrl } from "@/lib/nav";
+import { getCommunity } from "@/lib/community";
+import { fmtDay } from "@/lib/time";
 import ListingCard, { type CardListing } from "@/components/listing-card";
 import Empty from "@/components/empty";
 
@@ -11,7 +13,7 @@ export default async function Feed({ params }: { params: Promise<{ slug: string 
   const { slug } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const { data: community } = await supabase.from("communities").select("id, name").eq("slug", slug).single();
+  const community = await getCommunity(slug);
 
   const [{ data: announcements }, { data: listings }, { data: code }, { data: me }] = await Promise.all([
     supabase.from("announcements").select("id, title, body, pinned, created_at").eq("community_id", community!.id)
@@ -53,7 +55,7 @@ export default async function Feed({ params }: { params: Promise<{ slug: string 
             <div className={`card ${a.pinned ? "accent" : ""}`} key={a.id}>
               <div className="row row-start">
                 <strong>{a.pinned ? "📌 " : "📣 "}{a.title}</strong>
-                <span className="muted small nowrap">{new Date(a.created_at).toLocaleDateString(undefined, { day: "numeric", month: "short" })}</span>
+                <span className="muted small nowrap">{fmtDay(a.created_at, community!.timezone)}</span>
               </div>
               {a.body && <p style={{ whiteSpace: "pre-wrap", margin: "6px 0 0" }}>{a.body}</p>}
             </div>

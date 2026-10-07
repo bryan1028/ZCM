@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import CommunityNav from "@/components/community-nav";
+import { getCommunity } from "@/lib/community";
 
 async function signOut() {
   "use server";
@@ -18,7 +19,7 @@ export default async function CommunityLayout({ children, params }: { children: 
   if (!user) redirect("/login");
   const { data: me } = await supabase.from("profiles").select("username").eq("id", user.id).maybeSingle();
   if (!me?.username) redirect(`/welcome?next=/c/${slug}`);
-  const { data: community } = await supabase.from("communities").select("id, name").eq("slug", slug).maybeSingle();
+  const community = await getCommunity(slug);
   if (!community) notFound();
   const { data: m } = await supabase
     .from("memberships").select("status, role").eq("community_id", community.id).eq("user_id", user.id).maybeSingle();

@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Empty from "@/components/empty";
+import { getCommunity } from "@/lib/community";
+import { fmtDay } from "@/lib/time";
 import EnablePush from "@/components/enable-push";
 
 async function markAllRead(formData: FormData) {
@@ -21,7 +23,7 @@ async function saveSubscription(sub: { endpoint: string; p256dh: string; auth: s
 export default async function Notifications({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const supabase = await createClient();
-  const { data: community } = await supabase.from("communities").select("id").eq("slug", slug).single();
+  const community = await getCommunity(slug);
   const { data: items } = await supabase.from("notifications").select("id, type, title, body, url, read_at, created_at")
     .eq("community_id", community!.id).order("created_at", { ascending: false }).limit(50);
 
@@ -30,7 +32,7 @@ export default async function Notifications({ params }: { params: Promise<{ slug
     const mins = Math.max(1, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
     if (mins < 60) return `${mins}m`;
     if (mins < 1440) return `${Math.round(mins / 60)}h`;
-    return new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short" });
+    return fmtDay(iso, community!.timezone);
   };
   const unread = (items ?? []).filter((n) => !n.read_at).length;
 
