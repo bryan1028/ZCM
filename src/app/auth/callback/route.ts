@@ -13,5 +13,5 @@ export async function GET(request: NextRequest) {
       return res;
     }
   }
-  return NextResponse.redirect(new URL("/login?error=Link%20expired%2C%20try%20again", request.url));
+  return NextResponse.redirect(new URL("/login?error=That%20link%20didn%27t%20work.%20Enter%20your%20email%20to%20get%20a%20new%206-digit%20code.", request.url));
 }
