@@ -1,12 +1,26 @@
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
-export const metadata = { title: "Zist Community Marketplace", description: "A closed marketplace for your estate" };
+export const metadata: Metadata = {
+  title: { default: "Zist Community Marketplace", template: "%s · Zist" },
+  description: "A closed marketplace for your estate: trusted services and local goods from verified neighbours.",
+  applicationName: "Zist",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f6f5f0" },
+    { media: "(prefers-color-scheme: dark)", color: "#0e1511" },
+  ],
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <head><meta name="theme-color" content="#2f7d4f" /><meta name="viewport" content="width=device-width, initial-scale=1" /></head>
-      <body><main>{children}</main></body>
+      <body>{children}</body>
     </html>
   );
 }

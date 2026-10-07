@@ -4,6 +4,8 @@ import { pushSoon } from "@/lib/push";
 import { createClient } from "@/lib/supabase/server";
 import { usernamesFor } from "@/lib/usernames";
 import Live from "./live";
+import ScrollEnd from "./scroll-end";
+import { ChevronLeftIcon, SendIcon } from "@/components/icons";
 
 async function send(formData: FormData) {
   "use server";
@@ -52,43 +54,58 @@ export default async function Chat({ params, searchParams }: {
   const names = await usernamesFor(supabase, conv.community_id, [other]);
   const title = (conv.listings as unknown as { title: string } | null)?.title;
 
+  const handle = names.get(other) ?? "neighbour";
+  const dayLabel = (iso: string) => new Date(iso).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+  const timeLabel = (iso: string) => new Date(iso).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+
   return (
-    <>
+    <div className="page-narrow" style={{ maxWidth: 640 }}>
       <Live conversationId={id} />
-      <p><Link href={`/c/${slug}/inbox`}>← Inbox</Link></p>
-      <div className="row">
-        <h2 style={{ margin: 0 }}>@{names.get(other) ?? "neighbour"}</h2>
-        {conv.listing_id && title && <Link href={`/c/${slug}/l/${conv.listing_id}`}>{title}</Link>}
+      <p style={{ margin: "0 0 10px" }}><Link href={`/c/${slug}/inbox`} className="row gap-sm" style={{ justifyContent: "flex-start", display: "inline-flex" }}><ChevronLeftIcon size={18} />Inbox</Link></p>
+      <div className="card flat row" style={{ justifyContent: "flex-start" }}>
+        <span className="avatar avatar-lg" aria-hidden>{handle.slice(0, 1)}</span>
+        <div className="grow">
+          <div style={{ fontWeight: 700 }}>@{handle}</div>
+          {conv.listing_id && title && <Link href={`/c/${slug}/l/${conv.listing_id}`} className="muted small clamp-2">re: {title}</Link>}
+        </div>
       </div>
-      <div style={{ display: "grid", gap: 6, margin: "12px 0" }}>
-        {(messages ?? []).length === 0 && <p className="muted">Say hello 👋</p>}
-        {(messages ?? []).map((m) => {
+
+      <div className="thread">
+        {(messages ?? []).length === 0 && <p className="muted center" style={{ padding: "24px 0" }}>Say hello 👋</p>}
+        {(messages ?? []).map((m, i) => {
           const mine = m.sender_id === user.id;
+          const prev = (messages ?? [])[i - 1];
+          const newDay = !prev || dayLabel(prev.created_at) !== dayLabel(m.created_at);
           return (
-            <div key={m.id} style={{
-              justifySelf: mine ? "end" : "start", maxWidth: "80%", padding: "8px 12px", borderRadius: 14,
-              background: mine ? "var(--accent)" : "var(--card)", color: mine ? "#fff" : "inherit", border: "1px solid var(--line)",
-              whiteSpace: "pre-wrap", overflowWrap: "anywhere",
-            }}>{m.body}</div>
+            <div key={m.id} style={{ display: "grid" }}>
+              {newDay && <div className="muted small center" style={{ margin: "10px 0 4px" }}>{dayLabel(m.created_at)}</div>}
+              <div className={`bubble ${mine ? "mine" : "theirs"}`}>{m.body}</div>
+              <div className="muted small" style={{ justifySelf: mine ? "end" : "start", fontSize: 11, margin: "1px 6px 4px" }}>{timeLabel(m.created_at)}</div>
+            </div>
           );
         })}
+        <ScrollEnd key={(messages ?? []).length} />
       </div>
-      <form action={send} style={{ gridTemplateColumns: "1fr auto" }}>
-        <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} />
-        <input name="body" required maxLength={2000} placeholder="Type a message" autoComplete="off" />
-        <button>Send</button>
-      </form>
-      {error && <p className="muted">{error}</p>}
-      <details style={{ marginTop: 16 }}>
-        <summary className="muted">Report @{names.get(other) ?? "this user"}</summary>
-        <form action={reportUser}>
+
+      <div className="composer">
+        {error && <div className="alert error" role="alert" style={{ marginBottom: 8 }}>{error}</div>}
+        <form action={send}>
+          <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} />
+          <input name="body" required maxLength={2000} placeholder="Write a message…" autoComplete="off" aria-label="Message" />
+          <button aria-label="Send"><SendIcon size={18} /></button>
+        </form>
+      </div>
+
+      <details style={{ marginTop: 14 }}>
+        <summary className="muted small" style={{ cursor: "pointer" }}>Report @{handle}</summary>
+        <form action={reportUser} className="stack" style={{ marginTop: 8 }}>
           <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} />
           <input type="hidden" name="target_id" value={other} />
           <label>What happened?<textarea name="reason" rows={2} required minLength={3} /></label>
-          <button className="secondary">Send report</button>
+          <button className="secondary sm" style={{ justifySelf: "start" }}>Send report</button>
         </form>
       </details>
-      {reported && <p className="muted">Thanks — an admin will take a look.</p>}
-    </>
+      {reported && <div className="alert ok" style={{ marginTop: 12 }}>Thanks, an admin will take a look.</div>}
+    </div>
   );
 }

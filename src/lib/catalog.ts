@@ -21,3 +21,8 @@ export function formatPrice(cents: number | null, unit: keyof typeof PRICE_UNITS
   if (cents == null || unit === "negotiable") return "Negotiable";
   return `${currency} ${(cents / 100).toLocaleString()} ${PRICE_UNITS[unit]}`.trim();
 }
+
+export const CATEGORY_EMOJI: Record<string, string> = {
+  Gardening: "🌿", Cleaning: "🧼", Laundry: "🧺", Childcare: "🧸", Repairs: "🔧", Tutoring: "📚", Transport: "🚗",
+  "Baked goods": "🍪", "Food & drink": "🍲", Produce: "🥕", Crafts: "🧶", Clothing: "👕", "Second-hand": "♻️", Other: "✨",
+};

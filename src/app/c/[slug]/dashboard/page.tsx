@@ -31,31 +31,29 @@ export default async function Dashboard({ params }: { params: Promise<{ slug: st
     .reduce((sum, o) => sum + (o.unit_price_cents ?? 0) * o.quantity, 0);
 
   const header = (
-    <div className="row"><h2>Dashboard</h2><span className="badge">{seller.account_type} · {seller.plan}</span></div>
+    <div className="page-head"><div><h1>Dashboard</h1><p className="muted">How your listings are doing</p></div><span className="badge">{seller.account_type} · {seller.plan}</span></div>
   );
   const tile = (label: string, value: string | number) => (
-    <div className="card" style={{ flex: 1, minWidth: 120, textAlign: "center" }}>
-      <div style={{ fontSize: 26, fontWeight: 700 }}>{value}</div><div className="muted">{label}</div>
-    </div>
+    <div className="stat" key={label}><b>{value}</b><span>{label}</span></div>
   );
 
   if (!full) {
     return (
       <>
         {header}
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {tile(`views (${DAYS}d)`, totalViews)}{tile("requests", requests)}
+        <div className="stats" style={{ marginBottom: 14 }}>
+          {tile(`Views (${DAYS} days)`, totalViews)}{tile("Requests", requests)}
         </div>
-        <div className="card">
-          <strong>Unlock the full dashboard with Business Pro</strong>
-          <ul className="muted">
+        <div className="card accent stack">
+          <strong>🔒 Unlock the full dashboard with Business Pro</strong>
+          <ul className="muted" style={{ margin: 0, paddingLeft: 18 }}>
             <li>Daily views chart and unique neighbours reached</li>
             <li>Request → paid → completed funnel and conversion</li>
             <li>Top listings and sales recorded</li>
             <li>Feature your listings at the top of the feed</li>
             <li>Unlimited listings and more photos</li>
           </ul>
-          <p className="muted">Ask your community admin to upgrade your account.</p>
+          <p className="muted small" style={{ margin: 0 }}>Ask your community admin to upgrade your account.</p>
         </div>
       </>
     );
@@ -81,13 +79,13 @@ export default async function Dashboard({ params }: { params: Promise<{ slug: st
   return (
     <>
       {header}
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        {tile(`views (${DAYS}d)`, totalViews)}{tile("neighbours reached", uniqueViewers)}
-        {tile("completed orders", completed)}{tile("sales recorded (KES)", (revenue / 100).toLocaleString())}
-        {tile("rating", rating ? `★ ${rating.avg_rating} (${rating.review_count})` : "—")}
+      <div className="stats" style={{ marginBottom: 14 }}>
+        {tile(`Views (${DAYS} days)`, totalViews)}{tile("Neighbours reached", uniqueViewers)}
+        {tile("Completed orders", completed)}{tile("Sales recorded (KES)", (revenue / 100).toLocaleString())}
+        {tile("Rating", rating ? `★ ${rating.avg_rating} (${rating.review_count})` : "—")}
       </div>
 
-      <div className="card">
+      <div className="card" style={{ marginBottom: 14 }}>
         <strong>Views per day</strong>
         <svg viewBox={`0 0 ${DAYS * 10} 80`} width="100%" role="img" aria-label="Views per day over the last 30 days" style={{ marginTop: 8 }}>
           {series.map(([day, n], i) => (
@@ -99,14 +97,12 @@ export default async function Dashboard({ params }: { params: Promise<{ slug: st
         <div className="row muted"><span>{series[0][0]}</span><span>peak {max}/day</span><span>{series[series.length - 1][0]}</span></div>
       </div>
 
-      <div className="card">
+      <div className="card" style={{ marginBottom: 14 }}>
         <strong>From interest to sale</strong>
         {funnel.map(([label, n]) => (
           <div key={label} style={{ marginTop: 8 }}>
             <div className="row"><span>{label}</span><strong>{n}</strong></div>
-            <div style={{ background: "var(--line)", borderRadius: 4, height: 8 }}>
-              <div style={{ background: "var(--accent)", width: `${requests ? (n / requests) * 100 : 0}%`, height: 8, borderRadius: 4 }} />
-            </div>
+            <div className="bar"><i style={{ width: `${requests ? (n / requests) * 100 : 0}%` }} /></div>
           </div>
         ))}
         {totalViews > 0 && <p className="muted">{((requests / totalViews) * 100).toFixed(1)}% of views turned into a request.</p>}

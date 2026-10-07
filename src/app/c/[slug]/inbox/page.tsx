@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import Empty from "@/components/empty";
 import { usernamesFor } from "@/lib/usernames";
 
 export default async function Inbox({ params }: { params: Promise<{ slug: string }> }) {
@@ -19,27 +20,43 @@ export default async function Inbox({ params }: { params: Promise<{ slug: string
     : { data: [] };
   const unreadBy = new Map<string, number>();
   (unread ?? []).forEach((m) => unreadBy.set(m.conversation_id, (unreadBy.get(m.conversation_id) ?? 0) + 1));
+  // newest message per conversation, for the preview line
+  const { data: recent } = ids.length
+    ? await supabase.from("messages").select("conversation_id, sender_id, body, created_at").in("conversation_id", ids).order("created_at", { ascending: false }).limit(200)
+    : { data: [] };
+  const lastBy = new Map<string, { sender_id: string; body: string; created_at: string }>();
+  (recent ?? []).forEach((m) => { if (!lastBy.has(m.conversation_id)) lastBy.set(m.conversation_id, m); });
   const names = await usernamesFor(supabase, community.id, (convs ?? []).flatMap((c) => [c.initiator_id, c.recipient_id]));
 
+  const when = (iso: string) => {
+    const d = new Date(iso), now = new Date();
+    return d.toDateString() === now.toDateString() ? d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }) : d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+  };
   return (
     <>
-      <h2>Inbox</h2>
-      {(convs ?? []).length === 0 && <div className="card">No chats yet. Open a listing and tap “Message”.</div>}
-      {(convs ?? []).map((c) => {
-        const other = c.initiator_id === user.id ? c.recipient_id : c.initiator_id;
-        const n = unreadBy.get(c.id);
-        return (
-          <Link key={c.id} href={`/c/${slug}/inbox/${c.id}`} style={{ textDecoration: "none", color: "inherit" }}>
-            <div className="card row">
-              <div>
-                <strong>@{names.get(other) ?? "neighbour"}</strong>
-                <div className="muted">{(c.listings as unknown as { title: string } | null)?.title ?? "Listing removed"}</div>
+      <div className="page-head"><div><h1>Inbox</h1><p className="muted">Chats with your neighbours</p></div></div>
+      {(convs ?? []).length === 0 && <Empty emoji="💬" title="No chats yet" href={`/c/${slug}/services`} cta="Browse listings">Open a listing and tap “Message” to start a conversation.</Empty>}
+      <div className="list">
+        {(convs ?? []).map((c) => {
+          const other = c.initiator_id === user.id ? c.recipient_id : c.initiator_id;
+          const handle = names.get(other) ?? "neighbour";
+          const n = unreadBy.get(c.id);
+          const last = lastBy.get(c.id);
+          return (
+            <Link key={c.id} href={`/c/${slug}/inbox/${c.id}`} className={`item ${n ? "unread" : ""}`}>
+              <span className="avatar avatar-lg" aria-hidden>{handle.slice(0, 1)}</span>
+              <div className="grow">
+                <div className="row"><span className="title">@{handle}</span>{last && <span className="muted small">{when(last.created_at)}</span>}</div>
+                <div className="muted small clamp-2" style={{ fontWeight: n ? 650 : 400, color: n ? "var(--ink)" : undefined }}>
+                  {last ? `${last.sender_id === user.id ? "You: " : ""}${last.body}` : "No messages yet"}
+                </div>
+                <div className="muted small">re: {(c.listings as unknown as { title: string } | null)?.title ?? "listing removed"}</div>
               </div>
-              {n ? <span className="badge">{n} new</span> : null}
-            </div>
-          </Link>
-        );
-      })}
+              {n ? <span className="badge danger">{n}</span> : null}
+            </Link>
+          );
+        })}
+      </div>
     </>
   );
 }

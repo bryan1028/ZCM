@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { randomUUID } from "node:crypto";
 import { createClient } from "@/lib/supabase/server";
 import { CATEGORIES, PRICE_UNITS } from "@/lib/catalog";
+import { ChevronLeftIcon } from "@/components/icons";
 import VideoUpload from "@/components/video-upload";
 import { extFor, MAX_UPLOAD_BYTES, signedUrls } from "@/lib/images";
 
@@ -104,62 +105,71 @@ export default async function Edit({ params, searchParams }: {
   const vids = await signedUrls(supabase, "zcm-listing-videos", l.video_urls);
 
   return (
-    <>
-      <p><Link href={`/c/${slug}/mine`}>← My listings</Link></p>
-      <h2>{isNew ? "Listing published — add photos" : "Edit listing"}</h2>
-      {error && <p className="card">{error}</p>}
-      {saved && <p className="muted">Saved.</p>}
+    <div className="page-narrow">
+      <p style={{ margin: "0 0 10px" }}><Link href={`/c/${slug}/mine`} className="row gap-sm" style={{ justifyContent: "flex-start", display: "inline-flex" }}><ChevronLeftIcon size={18} />My listings</Link></p>
+      <div className="page-head"><div>
+        <h1>{isNew ? "Published! Add some photos" : "Edit listing"}</h1>
+        <p className="muted">{isNew ? "Listings with photos get far more attention." : l.title}</p>
+      </div></div>
+      {error && <div className="alert error" role="alert" style={{ marginBottom: 12 }}>{error}</div>}
+      {saved && <div className="alert ok" role="status" style={{ marginBottom: 12 }}>Changes saved.</div>}
 
-      <div className="card">
-        <strong>Photos ({l.image_urls.length})</strong>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "8px 0" }}>
-          {l.image_urls.map((path: string) => (
-            <form action={removePhoto} key={path} style={{ position: "relative" }}>
-              <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} />
-              <input type="hidden" name="path" value={path} />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              {urls.get(path) && <img src={urls.get(path)} alt="" style={{ height: 110, borderRadius: 8, display: "block" }} />}
-              <button className="secondary" style={{ position: "absolute", top: 4, right: 4, padding: "2px 8px" }} aria-label="Remove photo">✕</button>
-            </form>
-          ))}
-        </div>
-        <form action={addPhoto} style={{ gridTemplateColumns: "1fr auto" }}>
+      <section className="card stack" style={{ marginBottom: 14 }}>
+        <div className="row"><h3 style={{ margin: 0 }}>Photos</h3><span className="muted small">{l.image_urls.length} added</span></div>
+        {l.image_urls.length > 0 && (
+          <div className="photo-grid">
+            {l.image_urls.map((path: string) => (
+              <form action={removePhoto} key={path} className="photo">
+                <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} />
+                <input type="hidden" name="path" value={path} />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                {urls.get(path) && <img src={urls.get(path)} alt="" />}
+                <button aria-label="Remove photo" title="Remove">✕</button>
+              </form>
+            ))}
+          </div>
+        )}
+        <form action={addPhoto} className="stack">
           <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} />
           <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" required />
-          <button>Upload</button>
+          <button>Upload photo</button>
         </form>
-        <p className="muted">JPEG, PNG or WebP, up to 5 MB. Free accounts can add a few photos per listing.</p>
-      </div>
+        <p className="muted small" style={{ margin: 0 }}>JPEG, PNG or WebP, up to 5 MB each.</p>
+      </section>
 
-      <div className="card">
-        <strong>Video ({l.video_urls.length})</strong>
+      <section className="card stack" style={{ marginBottom: 14 }}>
+        <div className="row"><h3 style={{ margin: 0 }}>Video</h3><span className="muted small">{l.video_urls.length} added</span></div>
         {l.video_urls.map((path: string) => (
-          <form action={removeVideo} key={path} style={{ margin: "8px 0" }}>
+          <form action={removeVideo} key={path} className="stack">
             <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} /><input type="hidden" name="path" value={path} />
-            {vids.get(path) && <video src={vids.get(path)} controls preload="metadata" playsInline style={{ width: "100%", maxHeight: 260, borderRadius: 8 }} />}
-            <button className="secondary">Remove video</button>
+            {vids.get(path) && <video src={vids.get(path)} controls preload="metadata" playsInline style={{ width: "100%", maxHeight: 280, borderRadius: 12 }} />}
+            <button className="danger sm" style={{ justifySelf: "start" }}>Remove video</button>
           </form>
         ))}
         <VideoUpload communityId={l.community_id} userId={user.id} attach={attachVideo.bind(null, slug, id)} />
-        <p className="muted">MP4, WebM or MOV, up to 20 MB — a ~30 second clip works well. Free accounts can add 1 video per listing.</p>
-      </div>
+        <p className="muted small" style={{ margin: 0 }}>MP4, WebM or MOV, up to 20 MB. A ~30 second clip works well.</p>
+      </section>
 
-      <form action={saveDetails} className="card">
+      <form action={saveDetails} className="card stack">
+        <h3 style={{ margin: 0 }}>Details</h3>
         <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} />
         <label>Title<input name="title" defaultValue={l.title} required minLength={3} maxLength={120} /></label>
-        <label>Description<textarea name="description" rows={3} defaultValue={l.description ?? ""} /></label>
+        <label>Description<textarea name="description" rows={4} defaultValue={l.description ?? ""} /></label>
         <label>Category
           <select name="category" defaultValue={l.category}>
             {[...new Set([...CATEGORIES[l.kind as "service" | "product"], l.category])].map((c) => <option key={c}>{c}</option>)}
           </select>
         </label>
-        <label>Price (KES)<input name="price" type="number" min="0" defaultValue={l.price_cents != null ? l.price_cents / 100 : ""} /></label>
-        <label>Price type
-          <select name="price_unit" defaultValue={l.price_unit}>{Object.keys(PRICE_UNITS).map((u) => <option key={u} value={u}>{u.replace("_", " ")}</option>)}</select>
-        </label>
-        <label>Stock (optional)<input name="stock" type="number" min="0" defaultValue={l.stock ?? ""} /></label>
+        <div className="row" style={{ alignItems: "flex-end" }}>
+          <label className="grow">Price (KES)<input name="price" type="number" inputMode="numeric" min="0" defaultValue={l.price_cents != null ? l.price_cents / 100 : ""} /></label>
+          <label className="grow">Price type
+            <select name="price_unit" defaultValue={l.price_unit}>{Object.keys(PRICE_UNITS).map((u) => <option key={u} value={u}>{u.replace("_", " ")}</option>)}</select>
+          </label>
+        </div>
+        <label>Stock <span className="hint">(optional)</span><input name="stock" type="number" inputMode="numeric" min="0" defaultValue={l.stock ?? ""} /></label>
         <button>Save changes</button>
       </form>
-    </>
+      <p style={{ textAlign: "center", marginTop: 14 }}><Link href={`/c/${slug}/l/${id}`} className="muted">View listing →</Link></p>
+    </div>
   );
 }

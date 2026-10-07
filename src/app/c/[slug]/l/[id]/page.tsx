@@ -1,8 +1,10 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { pushSoon } from "@/lib/push";
 import { createClient } from "@/lib/supabase/server";
-import { formatPrice, PRICE_UNITS } from "@/lib/catalog";
+import { CATEGORY_EMOJI, formatPrice, PRICE_UNITS } from "@/lib/catalog";
+import { ChatIcon, ChevronLeftIcon } from "@/components/icons";
 import { signedUrls } from "@/lib/images";
 import { usernamesFor } from "@/lib/usernames";
 
@@ -94,101 +96,149 @@ export default async function ListingPage({ params, searchParams }: {
   const videos = await signedUrls(supabase, "zcm-listing-videos", l.video_urls);
   const myReview = (reviews ?? []).find((r) => r.reviewer_id === user.id);
 
+  const sellerName = s.business_name ?? s.display_name;
+  const sellerHandle = names.get(s.user_id) ?? "neighbour";
+  const avg = (reviews ?? []).length ? (reviews ?? []).reduce((n, r) => n + r.rating, 0) / (reviews ?? []).length : null;
+  const listPath = `/c/${slug}/${l.kind === "service" ? "services" : "products"}`;
+  const verb = l.kind === "service" ? "Book" : "Reserve";
+
   return (
     <>
-      <p><Link href={`/c/${slug}/${l.kind === "service" ? "services" : "products"}`}>← Back</Link></p>
-      <article className="card">
-        <div className="row">
-          <h2 style={{ margin: 0 }}>{l.title}</h2>
-          <strong>{formatPrice(l.price_cents, l.price_unit as keyof typeof PRICE_UNITS, currency)}</strong>
-        </div>
-        {l.image_urls.length > 0 && (
-          <div style={{ display: "flex", gap: 8, overflowX: "auto", marginBottom: 8 }}>
-            {l.image_urls.map((path: string) => photos.get(path) && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img key={path} src={photos.get(path)} alt={l.title} style={{ height: 220, borderRadius: 8 }} />
-            ))}
-          </div>
-        )}
-        {l.video_urls.map((path: string) => videos.get(path) && (
-          <video key={path} src={videos.get(path)} controls preload="metadata" playsInline style={{ width: "100%", maxHeight: 360, borderRadius: 8, marginBottom: 8 }} />
-        ))}
-        <p>{l.description}</p>
-        <p className="muted">
-          {l.category} · {s.business_name ?? s.display_name} (@{names.get(s.user_id) ?? "neighbour"}) {s.account_type === "business" && <span className="badge">Business</span>}
-          {l.stock != null && <> · {l.stock} in stock</>} {!l.available && <span className="badge">Unavailable</span>}
-        </p>
-        {!mine && (
-          <form action={startChat} style={{ marginBottom: 8 }}>
-            <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} />
-            <button>Message @{names.get(s.user_id) ?? "seller"}</button>
-          </form>
-        )}
-        {!mine && l.available && (
-          <form action={reserve} style={{ margin: "8px 0", gridTemplateColumns: "80px 1fr auto" }}>
-            <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} />
-            <input name="qty" type="number" min="1" defaultValue="1" aria-label="Quantity" />
-            <input name="note" placeholder="Note (pickup time, flat no.)" maxLength={500} />
-            <button>{l.kind === "service" ? "Book" : "Reserve"}</button>
-          </form>
-        )}
-        {mine && <p><Link href={`/c/${slug}/l/${id}/edit`}>Edit listing & photos</Link></p>}
-        {s.whatsapp && <a href={`https://wa.me/${s.whatsapp.replace(/\D/g, "")}`}>Message on WhatsApp</a>}
-        {mine && (
-          <form action={toggleAvailable} style={{ marginTop: 12 }}>
-            <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} />
-            <p className="muted">👁 {views?.views ?? 0} views · {views?.unique_viewers ?? 0} neighbours</p>
-            <button className="secondary" name="available" value={String(!l.available)}>
-              Mark as {l.available ? "unavailable" : "available"}
-            </button>
-          </form>
-        )}
-      </article>
+      <p style={{ margin: "0 0 10px" }}>
+        <Link href={listPath} className="row gap-sm" style={{ justifyContent: "flex-start", display: "inline-flex" }}><ChevronLeftIcon size={18} />Back to {l.kind === "service" ? "services" : "products"}</Link>
+      </p>
 
-      <h3>Reviews</h3>
-      {(reviews ?? []).length === 0 && <p className="muted">No reviews yet.</p>}
-      {(reviews ?? []).map((r) => (
-        <div className="card" key={r.id}>
-          <div className="row"><strong>{"★".repeat(r.rating)}{"☆".repeat(5 - r.rating)}</strong>
-            <span className="muted">@{names.get(r.reviewer_id) ?? "neighbour"}</span></div>
-          {r.comment && <p>{r.comment}</p>}
-          {r.reviewer_id !== user.id && (
-            <details><summary className="muted">Report review</summary>
-              <ReportForm slug={slug} id={id} type="review" target={r.id} />
-            </details>
+      <div className="detail-grid">
+        <div className="stack">
+          {l.image_urls.length > 0 || l.video_urls.length > 0 ? (
+            <div className="gallery" aria-label="Photos and video">
+              {l.image_urls.map((path: string) => photos.get(path) && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img key={path} src={photos.get(path)} alt={l.title} />
+              ))}
+              {l.video_urls.map((path: string) => videos.get(path) && (
+                <video key={path} src={videos.get(path)} controls preload="metadata" playsInline />
+              ))}
+            </div>
+          ) : (
+            <div className="listing-media" style={{ borderRadius: "var(--radius)" }}><div className="listing-ph" style={{ fontSize: 64 }} aria-hidden>{CATEGORY_EMOJI[l.category] ?? "✨"}</div></div>
           )}
         </div>
-      ))}
+
+        <div className="stack">
+          <div>
+            <div className="row gap-sm wrap" style={{ justifyContent: "flex-start", marginBottom: 8 }}>
+              <span className="badge">{l.kind === "service" ? "Service" : "Product"} · {l.category}</span>
+              {s.account_type === "business" && <span className="badge brand">Business</span>}
+              {!l.available && <span className="badge danger">Unavailable</span>}
+              {l.stock != null && l.stock <= 3 && l.stock > 0 && <span className="badge accent">Only {l.stock} left</span>}
+            </div>
+            <h1>{l.title}</h1>
+            <div className="price-big" style={{ marginTop: 6 }}>{formatPrice(l.price_cents, l.price_unit as keyof typeof PRICE_UNITS, currency)}</div>
+          </div>
+
+          <div className="card flat row" style={{ justifyContent: "flex-start" }}>
+            <span className="avatar avatar-lg" aria-hidden>{sellerName.slice(0, 1)}</span>
+            <div className="grow">
+              <div style={{ fontWeight: 650 }}>{sellerName}</div>
+              <div className="muted small">@{sellerHandle}{avg != null && <> · <span className="stars">★ {avg.toFixed(1)}</span> ({reviews?.length})</>}</div>
+            </div>
+          </div>
+
+          {l.description && <p style={{ whiteSpace: "pre-wrap", margin: 0 }}>{l.description}</p>}
+          {l.stock != null && <p className="muted small" style={{ margin: 0 }}>{l.stock} in stock</p>}
+
+          {mine ? (
+            <div className="card stack">
+              <div className="row">
+                <div><b>This is your listing</b><div className="muted small">👁 {views?.views ?? 0} views · {views?.unique_viewers ?? 0} neighbours</div></div>
+                <Link href={`/c/${slug}/l/${id}/edit`} className="btn sm">Edit</Link>
+              </div>
+              <form action={toggleAvailable}>
+                <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} />
+                <button className="secondary" name="available" value={String(!l.available)}>Mark as {l.available ? "unavailable" : "available"}</button>
+              </form>
+            </div>
+          ) : (
+            <div className="sticky-cta">
+              <div className="cta-bar">
+                {l.available && (
+                  <form action={reserve} style={{ gridTemplateColumns: "76px 1fr", gap: 8 }}>
+                    <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} />
+                    <input name="qty" type="number" min="1" defaultValue="1" aria-label="Quantity" />
+                    <input name="note" placeholder="Note: pickup time, flat no." maxLength={500} aria-label="Note to seller" />
+                    <button style={{ gridColumn: "1 / -1" }}>{verb} {l.kind === "service" ? "this service" : "now"}</button>
+                  </form>
+                )}
+                <form action={startChat}>
+                  <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} />
+                  <button className="secondary"><ChatIcon size={18} />Message @{sellerHandle}</button>
+                </form>
+                {s.whatsapp && <a className="muted small center" href={`https://wa.me/${s.whatsapp.replace(/\D/g, "")}`}>or reach out on WhatsApp</a>}
+                {error && <div className="alert error" role="alert">{error}</div>}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <h2 style={{ marginTop: 28 }}>Reviews {avg != null && <span className="stars" style={{ fontSize: 16 }}>★ {avg.toFixed(1)} <span className="muted">({reviews?.length})</span></span>}</h2>
+      {(reviews ?? []).length === 0 && <p className="muted">No reviews yet{!mine ? ". Be the first once you've dealt with this seller." : "."}</p>}
+      <div className="list">
+        {(reviews ?? []).map((r) => {
+          const who = names.get(r.reviewer_id) ?? "neighbour";
+          return (
+            <div className="card flat" key={r.id}>
+              <div className="row" style={{ justifyContent: "flex-start", alignItems: "flex-start" }}>
+                <span className="avatar" aria-hidden>{who.slice(0, 1)}</span>
+                <div className="grow">
+                  <div className="row"><b>@{who}</b><span className="stars" aria-label={`${r.rating} out of 5`}>{"★".repeat(r.rating)}<span style={{ color: "var(--line)" }}>{"★".repeat(5 - r.rating)}</span></span></div>
+                  {r.comment && <p style={{ margin: "4px 0 0" }}>{r.comment}</p>}
+                  {r.reviewer_id !== user.id && (
+                    <details style={{ marginTop: 6 }}><summary className="muted small" style={{ cursor: "pointer" }}>Report review</summary>
+                      <ReportForm slug={slug} id={id} type="review" target={r.id} />
+                    </details>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
 
       {!mine && (
-        <form action={addReview} className="card">
+        <form action={addReview} className="card stack" style={{ marginTop: 14 }}>
           <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} />
           <strong>{myReview ? "Update your review" : "Leave a review"}</strong>
-          <label>Rating
-            <select name="rating" defaultValue={myReview?.rating ?? 5}>{[5, 4, 3, 2, 1].map((n) => <option key={n}>{n}</option>)}</select>
-          </label>
-          <label>Comment<textarea name="comment" rows={2} defaultValue={myReview?.comment ?? ""} /></label>
+          <div className="star-input" role="radiogroup" aria-label="Rating">
+            {[5, 4, 3, 2, 1].map((n) => (
+              <Fragment key={n}>
+                <input type="radio" name="rating" id={`r${n}`} value={n} defaultChecked={(myReview?.rating ?? 5) === n} />
+                <label htmlFor={`r${n}`} title={`${n} star${n > 1 ? "s" : ""}`}>★</label>
+              </Fragment>
+            ))}
+          </div>
+          <label>Comment <span className="hint">(optional)</span><textarea name="comment" rows={2} defaultValue={myReview?.comment ?? ""} placeholder="How was it?" /></label>
           <button>Save review</button>
-          {error && <p className="muted">{error}</p>}
         </form>
       )}
       {!mine && (
-        <details><summary className="muted">Report this listing</summary>
+        <details style={{ marginTop: 14 }}><summary className="muted small" style={{ cursor: "pointer" }}>Report this listing</summary>
           <ReportForm slug={slug} id={id} type="listing" target={id} />
         </details>
       )}
-      {reported && <p className="muted">Thanks — an admin will take a look.</p>}
+      {reported && <div className="alert ok" style={{ marginTop: 12 }}>Thanks, an admin will take a look.</div>}
     </>
   );
 }
 
 function ReportForm({ slug, id, type, target }: { slug: string; id: string; type: string; target: string }) {
   return (
-    <form action={report}>
+    <form action={report} className="stack" style={{ marginTop: 8 }}>
       <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} />
       <input type="hidden" name="target_type" value={type} /><input type="hidden" name="target_id" value={target} />
       <label>What&apos;s wrong?<textarea name="reason" rows={2} required minLength={3} /></label>
-      <button className="secondary">Send report</button>
+      <button className="secondary sm">Send report</button>
     </form>
   );
 }

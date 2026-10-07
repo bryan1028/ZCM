@@ -1,8 +1,10 @@
+import Link from "next/link";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { signedUrls } from "@/lib/images";
 import { siteUrl } from "@/lib/nav";
 import ListingCard, { type CardListing } from "@/components/listing-card";
+import Empty from "@/components/empty";
 
 // Community home: announcements from admins, an invite prompt, and what's new.
 export default async function Feed({ params }: { params: Promise<{ slug: string }> }) {
@@ -29,29 +31,57 @@ export default async function Feed({ params }: { params: Promise<{ slug: string 
 
   return (
     <>
-      {(announcements ?? []).map((a) => (
-        <div className="card" key={a.id} style={{ borderLeft: "4px solid var(--accent)" }}>
-          <strong>{a.pinned ? "📌 " : "📣 "}{a.title}</strong>
-          {a.body && <p style={{ whiteSpace: "pre-wrap" }}>{a.body}</p>}
-          <span className="muted">{new Date(a.created_at).toLocaleDateString()}</span>
+      <div className="page-head">
+        <div>
+          <h1>Hi @{me?.username} 👋</h1>
+          <p className="muted">What&apos;s happening in {community!.name}</p>
         </div>
-      ))}
+      </div>
 
-      {link && (
-        <div className="card row" style={{ alignItems: "center" }}>
-          <span>Know a neighbour who&apos;d love this? <span className="muted">They&apos;ll still be verified by an admin.</span></span>
-          <a href={`https://wa.me/?text=${encodeURIComponent(`Join the ${community!.name} community marketplace: ${link}`)}`}>
-            <button type="button">Invite on WhatsApp</button>
-          </a>
+      <div className="listing-grid" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))", marginBottom: 14 }}>
+        <Link href={`/c/${slug}/services`} className="card" style={{ color: "inherit" }}>
+          <div style={{ fontSize: 28 }} aria-hidden>🛠️</div><b>Services</b><div className="muted small">Gardeners, cleaners, repairs</div>
+        </Link>
+        <Link href={`/c/${slug}/products`} className="card" style={{ color: "inherit" }}>
+          <div style={{ fontSize: 28 }} aria-hidden>🛍️</div><b>Products</b><div className="muted small">Baked goods, produce, crafts</div>
+        </Link>
+      </div>
+
+      {(announcements ?? []).length > 0 && (
+        <div className="stack" style={{ marginBottom: 14 }}>
+          {(announcements ?? []).map((a) => (
+            <div className={`card ${a.pinned ? "accent" : ""}`} key={a.id}>
+              <div className="row row-start">
+                <strong>{a.pinned ? "📌 " : "📣 "}{a.title}</strong>
+                <span className="muted small nowrap">{new Date(a.created_at).toLocaleDateString(undefined, { day: "numeric", month: "short" })}</span>
+              </div>
+              {a.body && <p style={{ whiteSpace: "pre-wrap", margin: "6px 0 0" }}>{a.body}</p>}
+            </div>
+          ))}
         </div>
       )}
 
-      <h2>Recently added</h2>
-      {(listings ?? []).length === 0 && <div className="card">Nothing listed yet — be the first!</div>}
-      {(listings ?? []).map((l) => (
-        <ListingCard key={l.id} l={l as unknown as CardListing} slug={slug}
-          thumb={thumbs.get(l.image_urls[0])} rating={ratingOf.get(l.id)} />
-      ))}
+      {link && (
+        <div className="card row" style={{ marginBottom: 6 }}>
+          <div>
+            <b>Know a neighbour who&apos;d love this?</b>
+            <div className="muted small">They&apos;ll still be verified by an admin.</div>
+          </div>
+          <a className="btn sm nowrap" href={`https://wa.me/?text=${encodeURIComponent(`Join the ${community!.name} community marketplace: ${link}`)}`}>Invite</a>
+        </div>
+      )}
+
+      <div className="page-head" style={{ marginTop: 22 }}><h2 style={{ margin: 0 }}>Recently added</h2></div>
+      {(listings ?? []).length === 0 ? (
+        <Empty emoji="🌱" title="Nothing listed yet" href={`/c/${slug}/sell`} cta="List something">Be the first neighbour to post a service or product.</Empty>
+      ) : (
+        <div className="listing-grid">
+          {(listings ?? []).map((l) => (
+            <ListingCard key={l.id} l={l as unknown as CardListing} slug={slug}
+              thumb={thumbs.get(l.image_urls[0])} rating={ratingOf.get(l.id)} />
+          ))}
+        </div>
+      )}
     </>
   );
 }

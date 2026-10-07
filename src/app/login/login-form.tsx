@@ -44,31 +44,31 @@ export default function LoginForm({ next, initialError, initialEmail, initialSte
   if (state.step === "code") {
     return (
       <>
-        <div className="card" role="status" aria-live="polite" style={{ borderColor: "var(--accent)" }}>
+        <div className="card accent" role="status" aria-live="polite" style={{ marginBottom: 14 }}>
           <strong>✉️ Check your email</strong>
-          <p style={{ margin: "6px 0 0" }}>
+          <p style={{ margin: "6px 0 0" }} className="muted">
             {state.notice ?? `Enter the 6-digit code we sent to ${state.email}.`}
           </p>
         </div>
 
-        <form action={act} className="card">
+        <form action={act} className="card stack">
           {hidden}
           <input type="hidden" name="intent" value="verify" />
           <label>
             6-digit code
             <input name="token" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]*" maxLength={8}
-              placeholder="123456" required autoFocus style={{ fontSize: 24, letterSpacing: 6, textAlign: "center" }} />
+              placeholder="123456" required autoFocus className="kbd-code" />
           </label>
           <Submit idle="Sign in" busy="Checking…" />
-          {state.error && <p role="alert" style={{ color: "#c0392b", margin: 0 }}>{state.error}</p>}
+          {state.error && <div role="alert" className="alert error">{state.error}</div>}
         </form>
 
-        <form action={act} style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+        <form action={act} className="inline-form" style={{ marginTop: 12 }}>
           {hidden}
           <input type="hidden" name="intent" value="send" />
           <input type="hidden" name="resend" value="1" />
           <Submit secondary idle={cooldown > 0 ? `Send a new code (${cooldown}s)` : "Send a new code"} busy="Sending…" disabled={cooldown > 0} />
-          <a href={`/login?next=${encodeURIComponent(state.next)}`} className="muted">Use a different email</a>
+          <a href={`/login?next=${encodeURIComponent(state.next)}`} className="muted small">Use a different email</a>
         </form>
       </>
     );
@@ -76,14 +76,14 @@ export default function LoginForm({ next, initialError, initialEmail, initialSte
 
   return (
     <>
-      {state.error && <div className="card" role="alert" style={{ borderColor: "#c0392b", color: "#c0392b" }}>{state.error}</div>}
-      <form action={act} className="card">
+      {state.error && <div className="alert error" role="alert" style={{ marginBottom: 12 }}>{state.error}</div>}
+      <form action={act} className="card stack">
         <input type="hidden" name="intent" value="send" />
         <input type="hidden" name="next" value={state.next} />
         <label>Your name<input name="name" placeholder="Jane Wanjiku" defaultValue={state.name} autoComplete="name" /></label>
         <label>Email<input name="email" type="email" required defaultValue={state.email} autoComplete="email" /></label>
         <Submit idle="Email me a sign-in code" busy="Sending code…" />
-        <p className="muted" style={{ margin: 0 }}>No password needed. We&apos;ll email you a 6-digit code.</p>
+        <p className="muted small" style={{ margin: 0 }}>We&apos;ll email you a 6-digit code. It takes a few seconds.</p>
       </form>
     </>
   );
