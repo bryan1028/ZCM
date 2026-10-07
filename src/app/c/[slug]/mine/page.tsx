@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatPrice, type PRICE_UNITS } from "@/lib/catalog";
 import { signedUrls } from "@/lib/images";
 import Empty from "@/components/empty";
+import ActionButton from "@/components/action-button";
 
 async function setStatus(formData: FormData) {
   "use server";
@@ -88,18 +89,17 @@ export default async function Mine({ params, searchParams }: { params: Promise<{
                   </div>
                 </div>
               </div>
-              <form action={setStatus} className="inline-form">
-                <input type="hidden" name="id" value={l.id} /><input type="hidden" name="back" value={back} />
+              <div className="inline-form">
                 <Link href={`/c/${slug}/l/${l.id}/edit`} className="btn secondary sm">Edit & photos</Link>
-                {l.status === "active" && <button className="secondary sm" name="status" value="paused">Pause</button>}
-                {l.status !== "active" && <button className="secondary sm" name="status" value="active">Activate</button>}
-                {l.status !== "sold" && <button className="secondary sm" name="status" value="sold">Mark sold</button>}
+                {l.status === "active" && <ActionButton action={setStatus} fields={{ id: l.id, back, status: "paused" }} className="secondary sm">Pause</ActionButton>}
+                {l.status !== "active" && <ActionButton action={setStatus} fields={{ id: l.id, back, status: "active" }} className="secondary sm">Activate</ActionButton>}
+                {l.status !== "sold" && <ActionButton action={setStatus} fields={{ id: l.id, back, status: "sold" }} className="secondary sm">Mark sold</ActionButton>}
                 {limits?.can_feature && l.status === "active" && (
                   isFeatured
-                    ? <button className="secondary sm" formAction={feature} name="on" value="false">Unfeature</button>
-                    : <button className="secondary sm" formAction={feature} name="on" value="true">⭐ Feature 7 days</button>
+                    ? <ActionButton action={feature} fields={{ id: l.id, back, on: "false" }} className="secondary sm">Unfeature</ActionButton>
+                    : <ActionButton action={feature} fields={{ id: l.id, back, on: "true" }} className="secondary sm">⭐ Feature 7 days</ActionButton>
                 )}
-              </form>
+              </div>
               <details>
                 <summary className="muted small" style={{ cursor: "pointer" }}>Delete listing…</summary>
                 <form action={remove} className="inline-form" style={{ marginTop: 8 }}>

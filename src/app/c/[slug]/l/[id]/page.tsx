@@ -5,6 +5,7 @@ import { pushSoon } from "@/lib/push";
 import { createClient } from "@/lib/supabase/server";
 import { CATEGORY_EMOJI, formatPrice, PRICE_UNITS } from "@/lib/catalog";
 import { ChatIcon, ChevronLeftIcon } from "@/components/icons";
+import ActionButton from "@/components/action-button";
 import { signedUrls } from "@/lib/images";
 import { usernamesFor } from "@/lib/usernames";
 
@@ -154,10 +155,7 @@ export default async function ListingPage({ params, searchParams }: {
                 <div><b>This is your listing</b><div className="muted small">👁 {views?.views ?? 0} views · {views?.unique_viewers ?? 0} neighbours</div></div>
                 <Link href={`/c/${slug}/l/${id}/edit`} className="btn sm">Edit</Link>
               </div>
-              <form action={toggleAvailable}>
-                <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} />
-                <button className="secondary" name="available" value={String(!l.available)}>Mark as {l.available ? "unavailable" : "available"}</button>
-              </form>
+              <ActionButton action={toggleAvailable} fields={{ slug, id, available: String(!l.available) }} className="secondary">Mark as {l.available ? "unavailable" : "available"}</ActionButton>
             </div>
           ) : (
             <div className="sticky-cta">

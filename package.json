@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test:db": "bash scripts/test-db.sh"
+    "test:db": "bash scripts/test-db.sh",
+    "check:buttons": "bash scripts/check-buttons.sh"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

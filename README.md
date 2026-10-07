@@ -44,6 +44,11 @@ no longer be restored from the dashboard, so don't ignore a pause email.
 verification, plans and limits, reservations, chat, shadowbanning, invites, account deletion, and the hardening rules). CI runs it on every push
 together with the type-check and build. Run it locally with `PGHOST=localhost PGUSER=postgres scripts/test-db.sh`.
 
+## A pitfall to avoid
+Next 15 bundles its own React, which drops the clicked button's `name`/`value` from a server action's form data, so `<button name="x" value="y">` silently does
+nothing. Use `<ActionButton action={…} fields={{ … }}>` (`src/components/action-button.tsx`) for any button that needs a value. `scripts/check-buttons.sh`
+(run in CI) fails the build if the mistake is reintroduced.
+
 ## Security and privacy notes
 - Everything is protected by row-level security in Postgres; the web app is not trusted. Only the functions the app needs are callable through the
   API (`0009_hardening.sql`); internal/trigger functions are private. Shadowban status can't be probed.

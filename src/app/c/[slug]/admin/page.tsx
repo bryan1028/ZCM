@@ -3,6 +3,7 @@ import { pushSoon } from "@/lib/push";
 import { headers } from "next/headers";
 import { getCommunity } from "@/lib/community";
 import { fmtDay } from "@/lib/time";
+import ActionButton from "@/components/action-button";
 import CopyButton from "@/components/copy-button";
 import Empty from "@/components/empty";
 import { siteUrl } from "@/lib/nav";
@@ -127,11 +128,10 @@ export default async function Admin({ params, searchParams }: { params: Promise<
         </div>
         {m.proof_note && <div className="alert info">“{m.proof_note}”</div>}
         {m.invited_by_username && <div className="alert ok">✓ Invited by verified resident @{m.invited_by_username}</div>}
-        <form action={review} className="inline-form">
-          <input type="hidden" name="id" value={m.id} /><input type="hidden" name="back" value={back} />
-          <button name="status" value="verified">✓ Verify resident</button>
-          <button className="secondary" name="status" value="rejected">Reject</button>
-        </form>
+        <div className="inline-form">
+          <ActionButton action={review} fields={{ id: m.id, back, status: "verified" }}>✓ Verify resident</ActionButton>
+          <ActionButton action={review} fields={{ id: m.id, back, status: "rejected" }} className="secondary">Reject</ActionButton>
+        </div>
       </div>
     );
   };
@@ -155,24 +155,21 @@ export default async function Admin({ params, searchParams }: { params: Promise<
         </summary>
         <div className="inline-form" style={{ padding: "0 14px 14px" }}>
           {m.proof_note && <p className="muted small" style={{ width: "100%", margin: 0 }}>“{m.proof_note}”</p>}
-          <form action={review} className="inline-form">
-            <input type="hidden" name="id" value={m.id} /><input type="hidden" name="back" value={back} />
-            {m.status !== "verified" && <button className="sm" name="status" value="verified">Verify</button>}
-            {m.status === "verified" && m.role !== "admin" && <button className="danger sm" name="status" value="suspended">Ban</button>}
-          </form>
+          <div className="inline-form">
+            {m.status !== "verified" && <ActionButton action={review} fields={{ id: m.id, back, status: "verified" }} className="sm">Verify</ActionButton>}
+            {m.status === "verified" && m.role !== "admin" && <ActionButton action={review} fields={{ id: m.id, back, status: "suspended" }} className="danger sm">Ban</ActionButton>}
+          </div>
           {m.status === "verified" && m.user_id !== user!.id && (
-            <form action={setRole} className="inline-form">
-              <input type="hidden" name="id" value={m.id} /><input type="hidden" name="back" value={back} />
+            <div className="inline-form">
               {m.role === "admin"
-                ? <button className="secondary sm" name="role" value="resident">Remove admin</button>
-                : <button className="secondary sm" name="role" value="admin">Make admin</button>}
-            </form>
+                ? <ActionButton action={setRole} fields={{ id: m.id, back, role: "resident" }} className="secondary sm">Remove admin</ActionButton>
+                : <ActionButton action={setRole} fields={{ id: m.id, back, role: "admin" }} className="secondary sm">Make admin</ActionButton>}
+            </div>
           )}
           {m.status === "verified" && m.role !== "admin" && (
-            <form action={shadowban} className="inline-form">
-              <input type="hidden" name="id" value={m.id} /><input type="hidden" name="back" value={back} />
-              <button className="secondary sm" name="on" value={String(!m.shadowbanned)}>{m.shadowbanned ? "Lift shadowban" : "Shadowban"}</button>
-            </form>
+            <div className="inline-form">
+              <ActionButton action={shadowban} fields={{ id: m.id, back, on: String(!m.shadowbanned) }} className="secondary sm">{m.shadowbanned ? "Lift shadowban" : "Shadowban"}</ActionButton>
+            </div>
           )}
         </div>
       </details>
@@ -205,15 +202,11 @@ export default async function Admin({ params, searchParams }: { params: Promise<
                 <div><span className="badge danger">{r.target_type}</span> <span style={{ marginLeft: 6 }}>{r.reason}</span></div>
                 {r.target_type === "user" && <p className="muted small" style={{ margin: 0 }}>User id {r.target_id.slice(0, 8)}…, find them under Residents and ban or shadowban.</p>}
                 {r.target_type === "listing" && <a href={`/c/${slug}/l/${r.target_id}`} className="small">View listing →</a>}
-                <form action={resolveReport} className="inline-form">
-                  <input type="hidden" name="id" value={r.id} />
-                  <input type="hidden" name="target_type" value={r.target_type} />
-                  <input type="hidden" name="target_id" value={r.target_id} />
-                  <input type="hidden" name="back" value={back} />
-                  {r.target_type !== "user" && <button className="danger sm" name="action" value="remove">Remove content</button>}
-                  {r.target_type === "user" && <button className="sm" name="action" value="resolve">Mark handled</button>}
-                  <button className="secondary sm" name="action" value="dismiss">Dismiss</button>
-                </form>
+                <div className="inline-form">
+                  {r.target_type !== "user" && <ActionButton action={resolveReport} fields={{ id: r.id, target_type: r.target_type, target_id: r.target_id, back, action: "remove" }} className="danger sm">Remove content</ActionButton>}
+                  {r.target_type === "user" && <ActionButton action={resolveReport} fields={{ id: r.id, target_type: r.target_type, target_id: r.target_id, back, action: "resolve" }} className="sm">Mark handled</ActionButton>}
+                  <ActionButton action={resolveReport} fields={{ id: r.id, target_type: r.target_type, target_id: r.target_id, back, action: "dismiss" }} className="secondary sm">Dismiss</ActionButton>
+                </div>
               </div>
             ))}
           </div>

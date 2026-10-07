@@ -14,6 +14,7 @@ jobs:
         with: { node-version: 22, cache: npm }
       - run: npm ci
       - run: npx tsc --noEmit
+      - run: scripts/check-buttons.sh
       - run: npm run build
         env:
           NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
