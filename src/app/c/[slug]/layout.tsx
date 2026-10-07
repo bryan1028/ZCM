@@ -21,12 +21,15 @@ export default async function CommunityLayout({ children, params }: { children: 
   const { count: unread } = await supabase.from("messages").select("id", { count: "exact", head: true })
     .is("read_at", null).neq("sender_id", user.id);
 
+  const { count: openOrders } = await supabase.from("reservations").select("id", { count: "exact", head: true })
+    .eq("seller_user_id", user.id).eq("status", "requested");
+
   return (
     <>
       <div className="row">
         <h1>{community.name}</h1>
         <span>
-          <Link href={`/c/${slug}/inbox`}>Inbox{unread ? ` (${unread})` : ""}</Link> · <Link href={`/c/${slug}/sell`}>Sell / offer</Link>
+          <Link href={`/c/${slug}/inbox`}>Inbox{unread ? ` (${unread})` : ""}</Link> · <Link href={`/c/${slug}/orders`}>Orders{openOrders ? ` (${openOrders})` : ""}</Link> · <Link href={`/c/${slug}/mine`}>My listings</Link> · <Link href={`/c/${slug}/sell`}>Sell</Link>
           {m.role === "admin" && <> · <Link href={`/c/${slug}/admin`}>Admin</Link></>}
         </span>
       </div>

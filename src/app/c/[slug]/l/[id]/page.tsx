@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatPrice, PRICE_UNITS } from "@/lib/catalog";
+import { signedUrls } from "@/lib/images";
 import { usernamesFor } from "@/lib/usernames";
 
 async function ctx(slug: string, id: string) {
@@ -17,6 +18,16 @@ async function startChat(formData: FormData) {
   const { supabase, back } = await ctx(slug, id);
   const { data, error } = await supabase.rpc("start_conversation", { lid: id });
   redirect(error ? `${back}?error=${encodeURIComponent(error.message)}` : `/c/${slug}/inbox/${data}`);
+}
+
+async function reserve(formData: FormData) {
+  "use server";
+  const slug = String(formData.get("slug")), id = String(formData.get("id"));
+  const { supabase, back } = await ctx(slug, id);
+  const { error } = await supabase.rpc("create_reservation", {
+    lid: id, qty: Math.max(1, Number(formData.get("qty")) || 1), note_text: String(formData.get("note") ?? ""),
+  });
+  redirect(error ? `${back}?error=${encodeURIComponent(error.message)}` : `/c/${slug}/orders`);
 }
 
 async function addReview(formData: FormData) {
@@ -63,7 +74,7 @@ export default async function ListingPage({ params, searchParams }: {
 
   const { data: l } = await supabase
     .from("listings")
-    .select("id, kind, community_id, title, description, category, price_cents, price_unit, stock, available, sellers(user_id, display_name, business_name, account_type, whatsapp), communities(currency)")
+    .select("id, kind, community_id, title, description, category, price_cents, price_unit, stock, available, image_urls, sellers(user_id, display_name, business_name, account_type, whatsapp), communities(currency)")
     .eq("id", id).maybeSingle();
   if (!l) notFound();
   const s = l.sellers as unknown as { user_id: string; display_name: string; business_name: string | null; account_type: string; whatsapp: string | null };
@@ -77,6 +88,7 @@ export default async function ListingPage({ params, searchParams }: {
     mine ? supabase.from("listing_view_counts").select("views, unique_viewers").eq("listing_id", id).maybeSingle() : Promise.resolve({ data: null }),
   ]);
   const names = await usernamesFor(supabase, l.community_id, [s.user_id, ...(reviews ?? []).map((r) => r.reviewer_id)]);
+  const photos = await signedUrls(supabase, "listing-images", l.image_urls);
   const myReview = (reviews ?? []).find((r) => r.reviewer_id === user.id);
 
   return (
@@ -87,6 +99,14 @@ export default async function ListingPage({ params, searchParams }: {
           <h2 style={{ margin: 0 }}>{l.title}</h2>
           <strong>{formatPrice(l.price_cents, l.price_unit as keyof typeof PRICE_UNITS, currency)}</strong>
         </div>
+        {l.image_urls.length > 0 && (
+          <div style={{ display: "flex", gap: 8, overflowX: "auto", marginBottom: 8 }}>
+            {l.image_urls.map((path: string) => photos.get(path) && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={path} src={photos.get(path)} alt={l.title} style={{ height: 220, borderRadius: 8 }} />
+            ))}
+          </div>
+        )}
         <p>{l.description}</p>
         <p className="muted">
           {l.category} · {s.business_name ?? s.display_name} (@{names.get(s.user_id) ?? "neighbour"}) {s.account_type === "business" && <span className="badge">Business</span>}
@@ -98,6 +118,15 @@ export default async function ListingPage({ params, searchParams }: {
             <button>Message @{names.get(s.user_id) ?? "seller"}</button>
           </form>
         )}
+        {!mine && l.available && (
+          <form action={reserve} style={{ margin: "8px 0", gridTemplateColumns: "80px 1fr auto" }}>
+            <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} />
+            <input name="qty" type="number" min="1" defaultValue="1" aria-label="Quantity" />
+            <input name="note" placeholder="Note (pickup time, flat no.)" maxLength={500} />
+            <button>{l.kind === "service" ? "Book" : "Reserve"}</button>
+          </form>
+        )}
+        {mine && <p><Link href={`/c/${slug}/l/${id}/edit`}>Edit listing & photos</Link></p>}
         {s.whatsapp && <a href={`https://wa.me/${s.whatsapp.replace(/\D/g, "")}`}>Message on WhatsApp</a>}
         {mine && (
           <form action={toggleAvailable} style={{ marginTop: 12 }}>

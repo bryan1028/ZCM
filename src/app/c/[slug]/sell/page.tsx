@@ -27,7 +27,7 @@ async function save(formData: FormData) {
   }
 
   const price = String(formData.get("price") ?? "").trim();
-  const { error } = await supabase.from("listings").insert({
+  const { data: created, error } = await supabase.from("listings").insert({
     seller_id: seller!.id,
     kind: String(formData.get("kind")),
     category: String(formData.get("category")),
@@ -36,9 +36,9 @@ async function save(formData: FormData) {
     price_cents: price ? Math.round(Number(price) * 100) : null,
     price_unit: String(formData.get("price_unit")),
     stock: formData.get("stock") ? Number(formData.get("stock")) : null,
-  });
+  }).select("id").single();
   if (error) redirect(`/c/${slug}/sell?error=${encodeURIComponent(error.message)}`);
-  redirect(`/c/${slug}/${formData.get("kind") === "service" ? "services" : "products"}`);
+  redirect(`/c/${slug}/l/${created!.id}/edit?new=1`); // straight on to adding photos
 }
 
 export default async function Sell({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ error?: string }> }) {
