@@ -8,7 +8,7 @@ export function extFor(file: File) {
 }
 
 /** Private buckets: turn stored paths into short-lived signed URLs (access is checked by Storage RLS). */
-export async function signedUrls(supabase: SupabaseClient, bucket: string, paths: string[], seconds = 3600) {
+export async function signedUrls(supabase: SupabaseClient<any, any, any>, bucket: string, paths: string[], seconds = 3600) {
   if (!paths.length) return new Map<string, string>();
   const { data } = await supabase.storage.from(bucket).createSignedUrls(paths, seconds);
   const out = new Map<string, string>();

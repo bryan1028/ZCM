@@ -27,10 +27,10 @@ async function uploadProof(formData: FormData) {
   if (!ext) return bad("Proof must be a JPEG, PNG or WebP image");
   if (file.size > MAX_UPLOAD_BYTES) return bad("Image is larger than 5 MB");
   const path = `${rid}/${randomUUID()}.${ext}`;
-  const up = await supabase.storage.from("payment-proofs").upload(path, file, { contentType: file.type });
+  const up = await supabase.storage.from("zcm-payment-proofs").upload(path, file, { contentType: file.type });
   if (up.error) return bad(up.error.message);
   const { error } = await supabase.rpc("submit_payment", { rid, path, ref: String(formData.get("reference") ?? "") });
-  if (error) { await supabase.storage.from("payment-proofs").remove([path]); return bad(error.message); }
+  if (error) { await supabase.storage.from("zcm-payment-proofs").remove([path]); return bad(error.message); }
   pushSoon();
   redirect(back);
 }
@@ -54,7 +54,7 @@ export default async function Orders({ params, searchParams }: { params: Promise
     .eq("community_id", community.id).order("created_at", { ascending: false });
   const names = await usernamesFor(supabase, community.id, (rows ?? []).flatMap((r) => [r.buyer_id, r.seller_user_id]));
   const proofPaths = (rows ?? []).flatMap((r) => (r.payments as unknown as { proof_path: string }[]).map((p) => p.proof_path));
-  const proofs = await signedUrls(supabase, "payment-proofs", proofPaths);
+  const proofs = await signedUrls(supabase, "zcm-payment-proofs", proofPaths);
 
   const mineAsBuyer = (rows ?? []).filter((r) => r.buyer_id === user.id);
   const mineAsSeller = (rows ?? []).filter((r) => r.seller_user_id === user.id);

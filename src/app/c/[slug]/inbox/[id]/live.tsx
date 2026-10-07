@@ -12,7 +12,7 @@ export default function Live({ conversationId }: { conversationId: string }) {
     const channel = supabase
       .channel(`chat-${conversationId}`)
       .on("postgres_changes",
-        { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${conversationId}` },
+        { event: "INSERT", schema: "zcm", table: "messages", filter: `conversation_id=eq.${conversationId}` },
         () => router.refresh())
       .subscribe();
     const poll = setInterval(() => router.refresh(), 30000);

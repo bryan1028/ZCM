@@ -7,11 +7,18 @@ Two tabs: **Services** (gardeners, cleaners…) and **Products** (cookies…). S
 Stack (all free tiers): Next.js 15 · Supabase (Postgres + Auth + RLS) · Vercel.
 
 ## Setup
-1. Create a Supabase project. In the SQL editor run `supabase/migrations/0001_init.sql`, `0002_trust_and_moderation.sql`, `0003_usernames_and_chat.sql`, `0004_photos_and_reservations.sql`, `0005_notifications_and_expiry.sql`, `0006_launch_limits.sql`, `0007_growth.sql`, then `supabase/seed.sql`.
-2. Supabase → Auth → URL Configuration: set Site URL and add `<site>/auth/callback` as a redirect URL.
-3. `cp .env.example .env.local` and fill in the URL + anon key (never put the service-role key in the app).
-4. `npm install && npm run dev`.
-5. Sign in, request to join Kijani Ridge, then run the "bootstrap first admin" SQL at the bottom of `seed.sql` with your email.
+ZCM keeps **everything in its own Postgres schema, `zcm`**, so it can share a Supabase project with other apps without touching their tables
+(and can be lifted into its own project later with `pg_dump --schema=zcm`). Storage buckets are prefixed `zcm-`.
+
+1. In Supabase run the files in `supabase/migrations/` in order (`0000` … `0008`), then `supabase/seed.sql`.
+2. **Settings → API → Exposed schemas**: add `zcm` (keep the existing ones). Without this the app gets "schema must be one of…" errors.
+3. **Authentication → URL Configuration**: add `<your site>/auth/callback` to Redirect URLs.
+4. **Authentication → SMTP**: the built-in mailer allows only ~2 emails/hour, which blocks sign-ups. Add a free SMTP provider
+   (e.g. Resend or Brevo) before inviting residents.
+5. `cp .env.example .env.local`, fill in the URL + anon key (never put the service-role key in the browser), then `npm install && npm run dev`.
+6. Sign in, request to join Kijani Ridge, then run the "bootstrap first admin" SQL at the bottom of `seed.sql` with your email.
+
+To remove ZCM from a shared project: `supabase/teardown.sql` (destroys ZCM data only).
 
 ## How it scales to more communities
 - Every community-owned row has `community_id`; RLS only exposes rows to **verified members of that community**.

@@ -45,11 +45,11 @@ async function addPhoto(formData: FormData) {
   const { data: l } = await supabase.from("listings").select("community_id, image_urls").eq("id", id).single();
   if (!l) return fail(here, "Listing not found");
   const path = `${l.community_id}/${user.id}/${randomUUID()}.${ext}`;
-  const up = await supabase.storage.from("listing-images").upload(path, file, { contentType: file.type });
+  const up = await supabase.storage.from("zcm-listing-images").upload(path, file, { contentType: file.type });
   if (up.error) return fail(here, up.error.message);
   const { error } = await supabase.from("listings").update({ image_urls: [...l.image_urls, path] }).eq("id", id);
   if (error) {                       // e.g. over the plan's image limit → don't leave an orphan file behind
-    await supabase.storage.from("listing-images").remove([path]);
+    await supabase.storage.from("zcm-listing-images").remove([path]);
     return fail(here, error.message);
   }
   redirect(here);
@@ -63,7 +63,7 @@ async function removePhoto(formData: FormData) {
   const { data: l } = await supabase.from("listings").select("image_urls").eq("id", id).single();
   if (l) {
     await supabase.from("listings").update({ image_urls: l.image_urls.filter((p: string) => p !== path) }).eq("id", id);
-    await supabase.storage.from("listing-images").remove([path]);
+    await supabase.storage.from("zcm-listing-images").remove([path]);
   }
   redirect(here);
 }
@@ -86,7 +86,7 @@ async function removeVideo(formData: FormData) {
   const { data: l } = await supabase.from("listings").select("video_urls").eq("id", id).single();
   if (l) {
     await supabase.from("listings").update({ video_urls: l.video_urls.filter((p: string) => p !== path) }).eq("id", id);
-    await supabase.storage.from("listing-videos").remove([path]);
+    await supabase.storage.from("zcm-listing-videos").remove([path]);
   }
   redirect(here);
 }
@@ -100,8 +100,8 @@ export default async function Edit({ params, searchParams }: {
   const { data: l } = await supabase.from("listings")
     .select("id, kind, community_id, title, description, category, price_cents, price_unit, stock, image_urls, video_urls, sellers!inner(user_id)").eq("id", id).maybeSingle();
   if (!l || (l.sellers as unknown as { user_id: string }).user_id !== user.id) notFound();
-  const urls = await signedUrls(supabase, "listing-images", l.image_urls);
-  const vids = await signedUrls(supabase, "listing-videos", l.video_urls);
+  const urls = await signedUrls(supabase, "zcm-listing-images", l.image_urls);
+  const vids = await signedUrls(supabase, "zcm-listing-videos", l.video_urls);
 
   return (
     <>

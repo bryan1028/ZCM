@@ -23,11 +23,11 @@ export default function VideoUpload({ communityId, userId, attach }: {
     setBusy(true); setMsg(null);
     const supabase = createClient();
     const path = `${communityId}/${userId}/${crypto.randomUUID()}.${ext}`;
-    const up = await supabase.storage.from("listing-videos").upload(path, file, { contentType: file.type });
+    const up = await supabase.storage.from("zcm-listing-videos").upload(path, file, { contentType: file.type });
     if (up.error) { setBusy(false); return setMsg(up.error.message); }
     const res = await attach(path);
     if (res.error) {
-      await supabase.storage.from("listing-videos").remove([path]);   // don't leave an orphan behind
+      await supabase.storage.from("zcm-listing-videos").remove([path]);   // don't leave an orphan behind
       setMsg(res.error);
     } else {
       if (input.current) input.current.value = "";

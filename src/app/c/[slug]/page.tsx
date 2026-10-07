@@ -23,7 +23,7 @@ export default async function Feed({ params }: { params: Promise<{ slug: string 
   const { data: ratings } = await supabase.from("listing_ratings").select("listing_id, avg_rating, review_count")
     .in("listing_id", (listings ?? []).map((l) => l.id));
   const ratingOf = new Map((ratings ?? []).map((r) => [r.listing_id, r]));
-  const thumbs = await signedUrls(supabase, "listing-images", (listings ?? []).flatMap((l) => l.image_urls.slice(0, 1)));
+  const thumbs = await signedUrls(supabase, "zcm-listing-images", (listings ?? []).flatMap((l) => l.image_urls.slice(0, 1)));
 
   const link = code ? `${siteUrl((await headers()).get("host"))}/invite/${code}?ref=${me?.username ?? ""}` : null;
 

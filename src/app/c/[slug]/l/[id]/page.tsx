@@ -90,8 +90,8 @@ export default async function ListingPage({ params, searchParams }: {
     mine ? supabase.from("listing_view_counts").select("views, unique_viewers").eq("listing_id", id).maybeSingle() : Promise.resolve({ data: null }),
   ]);
   const names = await usernamesFor(supabase, l.community_id, [s.user_id, ...(reviews ?? []).map((r) => r.reviewer_id)]);
-  const photos = await signedUrls(supabase, "listing-images", l.image_urls);
-  const videos = await signedUrls(supabase, "listing-videos", l.video_urls);
+  const photos = await signedUrls(supabase, "zcm-listing-images", l.image_urls);
+  const videos = await signedUrls(supabase, "zcm-listing-videos", l.video_urls);
   const myReview = (reviews ?? []).find((r) => r.reviewer_id === user.id);
 
   return (

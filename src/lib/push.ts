@@ -9,7 +9,7 @@ export async function flushPendingPushes() {
     VAPID_PRIVATE_KEY: priv, VAPID_SUBJECT: subject } = process.env;
   if (!url || !key || !pub || !priv || !subject) return;
   webpush.setVapidDetails(subject, pub, priv);
-  const admin = createClient(url, key, { auth: { persistSession: false } });
+  const admin = createClient(url, key, { auth: { persistSession: false }, db: { schema: "zcm" } });
 
   // claim rows first so concurrent flushes don't double-send; ignore anything older than a day
   const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
