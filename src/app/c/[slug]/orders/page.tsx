@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { randomUUID } from "node:crypto";
+import { pushSoon } from "@/lib/push";
 import { createClient } from "@/lib/supabase/server";
 import { formatPrice, type PRICE_UNITS } from "@/lib/catalog";
 import { extFor, MAX_UPLOAD_BYTES, signedUrls } from "@/lib/images";
@@ -11,6 +12,7 @@ async function act(formData: FormData) {
   const supabase = await createClient();
   const back = String(formData.get("back"));
   const { error } = await supabase.rpc("transition_reservation", { rid: String(formData.get("id")), act: String(formData.get("act")) });
+  pushSoon();
   redirect(error ? `${back}?error=${encodeURIComponent(error.message)}` : back);
 }
 
@@ -29,6 +31,7 @@ async function uploadProof(formData: FormData) {
   if (up.error) return bad(up.error.message);
   const { error } = await supabase.rpc("submit_payment", { rid, path, ref: String(formData.get("reference") ?? "") });
   if (error) { await supabase.storage.from("payment-proofs").remove([path]); return bad(error.message); }
+  pushSoon();
   redirect(back);
 }
 

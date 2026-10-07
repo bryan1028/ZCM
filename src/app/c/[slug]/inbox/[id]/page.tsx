@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { pushSoon } from "@/lib/push";
 import { createClient } from "@/lib/supabase/server";
 import { usernamesFor } from "@/lib/usernames";
 import Live from "./live";
@@ -13,6 +14,7 @@ async function send(formData: FormData) {
   const body = String(formData.get("body") ?? "").trim();
   if (!body) redirect(`/c/${slug}/inbox/${id}`);
   const { error } = await supabase.from("messages").insert({ conversation_id: id, sender_id: user.id, body });
+  pushSoon();
   redirect(`/c/${slug}/inbox/${id}${error ? `?error=${encodeURIComponent(error.message)}` : ""}`);
 }
 

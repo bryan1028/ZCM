@@ -7,7 +7,7 @@ Two tabs: **Services** (gardeners, cleaners…) and **Products** (cookies…). S
 Stack (all free tiers): Next.js 15 · Supabase (Postgres + Auth + RLS) · Vercel.
 
 ## Setup
-1. Create a Supabase project. In the SQL editor run `supabase/migrations/0001_init.sql`, `0002_trust_and_moderation.sql`, `0003_usernames_and_chat.sql`, `0004_photos_and_reservations.sql`, then `supabase/seed.sql`.
+1. Create a Supabase project. In the SQL editor run `supabase/migrations/0001_init.sql`, `0002_trust_and_moderation.sql`, `0003_usernames_and_chat.sql`, `0004_photos_and_reservations.sql`, `0005_notifications_and_expiry.sql`, then `supabase/seed.sql`.
 2. Supabase → Auth → URL Configuration: set Site URL and add `<site>/auth/callback` as a redirect URL.
 3. `cp .env.example .env.local` and fill in the URL + anon key (never put the service-role key in the app).
 4. `npm install && npm run dev`.
@@ -49,11 +49,28 @@ reported to admins. Make sure **Realtime** is enabled for the `messages` table (
   changes go through Postgres functions (`create_reservation`, `transition_reservation`, `submit_payment`), so the
   rules can't be bypassed from the client. Money never moves through the app; it only records proof.
 
+## Notifications, expiry, dashboard (0005)
+- Database triggers create **in-app notifications** for: new/accepted/declined/cancelled/expired reservations, payment proof
+  received/rejected, completed orders, new chat messages (collapsed per chat), new residents awaiting admin verification, and
+  "you're verified". The 🔔 in the header shows the unread count.
+- **Web push** (optional): set the VAPID + `SUPABASE_SERVICE_ROLE_KEY` vars in `.env.example`; users tap "Turn on push
+  notifications" on the Notifications page. Pushes are sent after each action (`after()`), claimed via `pushed_at` so they
+  never double-send. Service-role key is server-only and used solely to look up subscriptions. On iPhone, the app must be
+  added to the Home Screen first. Without these vars, in-app notifications still work.
+- **Expiry**: `pg_cron` runs `expire_reservations()` every 15 min (stale requests expire after 48h); lazy checks keep results
+  correct even if cron isn't enabled. Expiry notifications show in-app; push for them goes out on the next action, or call
+  `POST /api/push/flush` with `Authorization: Bearer $CRON_SECRET` from any scheduler.
+- **Dashboard** (`/c/<slug>/dashboard`): gated by `plan_limits.can_see_analytics` (Business Pro). Free accounts see a teaser.
+  Pro also gets "Feature 7 days" on listings. Upgrade a seller with:
+  `update sellers set plan = 'pro' where id = '<seller id>';`
+
+Payments are **proof only** by design — the app never handles money.
+
 ## Mapping to the architecture doc
 Doc MVP: services & products, search, in-app messaging (WhatsApp link kept as an option). Phase 2: reservations + payment proof.
 Phase 3: seller dashboard, chatrooms. Phase 4: AI verification. Stack deviates from the doc on purpose
 (Supabase instead of Mongo/Express/Redis/S3) to stay on free tiers with one service to run.
 
 ## Not built yet (suggested next)
-newsfeed · group chats · in-app payments (M-Pesa Daraja/Stripe) · seller ratings of buyers ·
-push notifications · seller dashboard/analytics charts · admin logs · SMS login.
+newsfeed · group chats · seller ratings of buyers ·
+seller dashboard/analytics charts · admin logs · SMS login.

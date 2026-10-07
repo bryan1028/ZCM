@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { pushSoon } from "@/lib/push";
 import { createClient } from "@/lib/supabase/server";
 
 async function review(formData: FormData) {
@@ -7,6 +8,7 @@ async function review(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser();
   const status = String(formData.get("status"));
   if (!user || !["verified", "rejected", "suspended"].includes(status)) return;
+  pushSoon();
   // RLS guarantees only an admin of that community can make this update succeed.
   await supabase.from("memberships")
     .update({ status, reviewed_by: user.id, reviewed_at: new Date().toISOString() })

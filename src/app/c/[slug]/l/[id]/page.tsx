@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { pushSoon } from "@/lib/push";
 import { createClient } from "@/lib/supabase/server";
 import { formatPrice, PRICE_UNITS } from "@/lib/catalog";
 import { signedUrls } from "@/lib/images";
@@ -27,6 +28,7 @@ async function reserve(formData: FormData) {
   const { error } = await supabase.rpc("create_reservation", {
     lid: id, qty: Math.max(1, Number(formData.get("qty")) || 1), note_text: String(formData.get("note") ?? ""),
   });
+  pushSoon();
   redirect(error ? `${back}?error=${encodeURIComponent(error.message)}` : `/c/${slug}/orders`);
 }
 

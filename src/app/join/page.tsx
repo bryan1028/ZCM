@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { pushSoon } from "@/lib/push";
 import { createClient } from "@/lib/supabase/server";
 
 async function requestToJoin(formData: FormData) {
@@ -12,6 +13,7 @@ async function requestToJoin(formData: FormData) {
     unit: String(formData.get("unit")).trim(),
     proof_note: String(formData.get("proof_note") ?? "").trim() || null,
   });
+  pushSoon();
   redirect(error ? `/join?error=${encodeURIComponent(error.message)}` : "/");
 }
 
