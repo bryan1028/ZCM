@@ -20,6 +20,15 @@ ZCM keeps **everything in its own Postgres schema, `zcm`**, so it can share a Su
 
 To remove ZCM from a shared project: `supabase/teardown.sql` (destroys ZCM data only).
 
+## Deploying (Netlify, free plan)
+`netlify.toml` is set up for Next.js. Production site: https://kijani-ridge.netlify.app (Supabase project `zist`, schema `zcm`).
+- Env vars on the site: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SITE_URL` (+ optional push vars).
+  `NEXT_PUBLIC_*` values are baked in at build time, so redeploy after changing them.
+- Deploy from a terminal: `npx netlify-cli deploy --prod` (with `NETLIFY_AUTH_TOKEN` set and the folder linked via `netlify link`).
+  In restricted networks set `NODE_USE_ENV_PROXY=1` so Node's `fetch` honours the proxy.
+- For auto-deploys on every push, connect the GitHub repo under Netlify → Site configuration → Build & deploy → Continuous deployment.
+- Supabase Auth → URL Configuration must list `<site>/auth/callback`.
+
 ## How it scales to more communities
 - Every community-owned row has `community_id`; RLS only exposes rows to **verified members of that community**.
 - A new estate = one `insert into communities`. Routes are `/c/<slug>/…`; no code change.
