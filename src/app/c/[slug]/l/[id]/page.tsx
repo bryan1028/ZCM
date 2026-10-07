@@ -2,12 +2,21 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatPrice, PRICE_UNITS } from "@/lib/catalog";
+import { usernamesFor } from "@/lib/usernames";
 
 async function ctx(slug: string, id: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
   return { supabase, user, back: `/c/${slug}/l/${id}` };
+}
+
+async function startChat(formData: FormData) {
+  "use server";
+  const slug = String(formData.get("slug")), id = String(formData.get("id"));
+  const { supabase, back } = await ctx(slug, id);
+  const { data, error } = await supabase.rpc("start_conversation", { lid: id });
+  redirect(error ? `${back}?error=${encodeURIComponent(error.message)}` : `/c/${slug}/inbox/${data}`);
 }
 
 async function addReview(formData: FormData) {
@@ -54,7 +63,7 @@ export default async function ListingPage({ params, searchParams }: {
 
   const { data: l } = await supabase
     .from("listings")
-    .select("id, kind, title, description, category, price_cents, price_unit, stock, available, sellers(user_id, display_name, business_name, account_type, whatsapp), communities(currency)")
+    .select("id, kind, community_id, title, description, category, price_cents, price_unit, stock, available, sellers(user_id, display_name, business_name, account_type, whatsapp), communities(currency)")
     .eq("id", id).maybeSingle();
   if (!l) notFound();
   const s = l.sellers as unknown as { user_id: string; display_name: string; business_name: string | null; account_type: string; whatsapp: string | null };
@@ -64,9 +73,10 @@ export default async function ListingPage({ params, searchParams }: {
   await supabase.rpc("record_view", { lid: id }); // no-op for the seller's own views
 
   const [{ data: reviews }, { data: views }] = await Promise.all([
-    supabase.from("reviews").select("id, rating, comment, reviewer_id, created_at, profiles:reviewer_id(full_name)").eq("listing_id", id).order("created_at", { ascending: false }),
+    supabase.from("reviews").select("id, rating, comment, reviewer_id, created_at").eq("listing_id", id).order("created_at", { ascending: false }),
     mine ? supabase.from("listing_view_counts").select("views, unique_viewers").eq("listing_id", id).maybeSingle() : Promise.resolve({ data: null }),
   ]);
+  const names = await usernamesFor(supabase, l.community_id, [s.user_id, ...(reviews ?? []).map((r) => r.reviewer_id)]);
   const myReview = (reviews ?? []).find((r) => r.reviewer_id === user.id);
 
   return (
@@ -79,9 +89,15 @@ export default async function ListingPage({ params, searchParams }: {
         </div>
         <p>{l.description}</p>
         <p className="muted">
-          {l.category} · {s.business_name ?? s.display_name} {s.account_type === "business" && <span className="badge">Business</span>}
+          {l.category} · {s.business_name ?? s.display_name} (@{names.get(s.user_id) ?? "neighbour"}) {s.account_type === "business" && <span className="badge">Business</span>}
           {l.stock != null && <> · {l.stock} in stock</>} {!l.available && <span className="badge">Unavailable</span>}
         </p>
+        {!mine && (
+          <form action={startChat} style={{ marginBottom: 8 }}>
+            <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} />
+            <button>Message @{names.get(s.user_id) ?? "seller"}</button>
+          </form>
+        )}
         {s.whatsapp && <a href={`https://wa.me/${s.whatsapp.replace(/\D/g, "")}`}>Message on WhatsApp</a>}
         {mine && (
           <form action={toggleAvailable} style={{ marginTop: 12 }}>
@@ -99,7 +115,7 @@ export default async function ListingPage({ params, searchParams }: {
       {(reviews ?? []).map((r) => (
         <div className="card" key={r.id}>
           <div className="row"><strong>{"★".repeat(r.rating)}{"☆".repeat(5 - r.rating)}</strong>
-            <span className="muted">{(r.profiles as unknown as { full_name: string | null } | null)?.full_name ?? "Neighbour"}</span></div>
+            <span className="muted">@{names.get(r.reviewer_id) ?? "neighbour"}</span></div>
           {r.comment && <p>{r.comment}</p>}
           {r.reviewer_id !== user.id && (
             <details><summary className="muted">Report review</summary>

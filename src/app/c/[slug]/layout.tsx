@@ -8,18 +8,25 @@ import { KINDS } from "@/lib/catalog";
 export default async function CommunityLayout({ children, params }: { children: React.ReactNode; params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+  const { data: me } = await supabase.from("profiles").select("username").eq("id", user.id).maybeSingle();
+  if (!me?.username) redirect(`/welcome?next=/c/${slug}`);
   const { data: community } = await supabase.from("communities").select("id, name").eq("slug", slug).maybeSingle();
   if (!community) notFound();
   const { data: m } = await supabase
     .from("memberships").select("status, role").eq("community_id", community.id).maybeSingle();
   if (m?.status !== "verified") redirect("/");
 
+  const { count: unread } = await supabase.from("messages").select("id", { count: "exact", head: true })
+    .is("read_at", null).neq("sender_id", user.id);
+
   return (
     <>
       <div className="row">
         <h1>{community.name}</h1>
         <span>
-          <Link href={`/c/${slug}/sell`}>Sell / offer</Link>
+          <Link href={`/c/${slug}/inbox`}>Inbox{unread ? ` (${unread})` : ""}</Link> · <Link href={`/c/${slug}/sell`}>Sell / offer</Link>
           {m.role === "admin" && <> · <Link href={`/c/${slug}/admin`}>Admin</Link></>}
         </span>
       </div>

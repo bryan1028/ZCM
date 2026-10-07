@@ -50,7 +50,7 @@ export default async function Admin({ params }: { params: Promise<{ slug: string
 
   const { data: members } = await supabase
     .from("memberships")
-    .select("id, status, role, shadowbanned, unit, proof_note, created_at, profiles:user_id(full_name)")
+    .select("id, status, role, shadowbanned, unit, proof_note, created_at, profiles:user_id(full_name, username)")
     .eq("community_id", community.id).order("created_at", { ascending: false });
   // `profiles` isn't directly related to memberships in PostgREST's eyes; fall back gracefully.
   const { data: reports } = await supabase
@@ -62,7 +62,7 @@ export default async function Admin({ params }: { params: Promise<{ slug: string
   const row = (m: NonNullable<typeof members>[number]) => (
     <div className="card" key={m.id}>
       <div className="row">
-        <strong>{(m.profiles as unknown as { full_name: string | null } | null)?.full_name ?? "Unnamed"} — {m.unit}</strong>
+        <strong>{(m.profiles as unknown as { full_name: string | null } | null)?.full_name ?? "Unnamed"} (@{(m.profiles as unknown as { username: string | null } | null)?.username ?? "?"}) — {m.unit}</strong>
         <span className="badge">{m.shadowbanned ? "shadowbanned" : m.status}</span>
       </div>
       {m.proof_note && <p className="muted">{m.proof_note}</p>}
@@ -91,13 +91,15 @@ export default async function Admin({ params }: { params: Promise<{ slug: string
       {(reports ?? []).map((r) => (
         <div className="card" key={r.id}>
           <p><span className="badge">{r.target_type}</span> {r.reason}</p>
+          {r.target_type === "user" && <p className="muted">User id {r.target_id.slice(0, 8)}… — find them below and ban or shadowban.</p>}
           {r.target_type === "listing" && <p><a href={`/c/${slug}/l/${r.target_id}`}>View listing</a></p>}
           <form action={resolveReport} style={{ display: "flex", gap: 8 }}>
             <input type="hidden" name="id" value={r.id} />
             <input type="hidden" name="target_type" value={r.target_type} />
             <input type="hidden" name="target_id" value={r.target_id} />
             <input type="hidden" name="back" value={`/c/${slug}/admin`} />
-            <button name="action" value="remove">Remove content</button>
+            {r.target_type !== "user" && <button name="action" value="remove">Remove content</button>}
+            {r.target_type === "user" && <button name="action" value="resolve">Mark handled</button>}
             <button className="secondary" name="action" value="dismiss">Dismiss</button>
           </form>
         </div>

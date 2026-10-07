@@ -18,6 +18,9 @@ async function requestToJoin(formData: FormData) {
 export default async function Join({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { error } = await searchParams;
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: me } = await supabase.from("profiles").select("username").eq("id", user!.id).maybeSingle();
+  if (!me?.username) redirect("/welcome?next=/join");
   const { data: communities } = await supabase.from("communities").select("id, name").order("name");
   return (
     <>
