@@ -76,7 +76,8 @@ export default async function Admin({ params }: { params: Promise<{ slug: string
   const supabase = await createClient();
   const { data: community } = await supabase.from("communities").select("id").eq("slug", slug).single();
   if (!community) notFound();
-  const { data: me } = await supabase.from("memberships").select("role").eq("community_id", community.id).maybeSingle();
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: me } = await supabase.from("memberships").select("role").eq("community_id", community.id).eq("user_id", user!.id).maybeSingle();
   if (me?.role !== "admin") notFound();
 
   const { data: members } = await supabase

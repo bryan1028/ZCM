@@ -45,7 +45,8 @@ export default async function Sell({ params, searchParams }: { params: Promise<{
   const { slug } = await params;
   const { error } = await searchParams;
   const supabase = await createClient();
-  const { data: seller } = await supabase.from("sellers").select("id, communities!inner(slug)").eq("communities.slug", slug).maybeSingle();
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: seller } = await supabase.from("sellers").select("id, communities!inner(slug)").eq("communities.slug", slug).eq("user_id", user!.id).maybeSingle();
 
   return (
     <>

@@ -11,6 +11,7 @@ export default async function Home() {
   const { data: memberships } = await supabase
     .from("memberships")
     .select("status, communities(slug, name)")
+    .eq("user_id", user!.id)   // admins can read everyone's rows; we only want our own
     .order("created_at");
 
   const verified = (memberships ?? []).filter((m) => m.status === "verified");

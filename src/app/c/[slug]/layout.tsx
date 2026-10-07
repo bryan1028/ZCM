@@ -15,7 +15,7 @@ export default async function CommunityLayout({ children, params }: { children: 
   const { data: community } = await supabase.from("communities").select("id, name").eq("slug", slug).maybeSingle();
   if (!community) notFound();
   const { data: m } = await supabase
-    .from("memberships").select("status, role").eq("community_id", community.id).maybeSingle();
+    .from("memberships").select("status, role").eq("community_id", community.id).eq("user_id", user.id).maybeSingle();
   if (m?.status !== "verified") redirect("/");
 
   const { count: unread } = await supabase.from("messages").select("id", { count: "exact", head: true })
