@@ -141,13 +141,18 @@ export default async function Edit({ params, searchParams }: {
 
       <section className="card stack" style={{ marginBottom: 14 }}>
         <div className="row"><h3 style={{ margin: 0 }}>Video</h3><span className="muted small">{l.video_urls.length} added</span></div>
-        {l.video_urls.map((path: string) => (
-          <form action={removeVideo} key={path} className="stack">
-            <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} /><input type="hidden" name="path" value={path} />
-            {vids.get(path) && <video src={vids.get(path)} controls preload="metadata" playsInline style={{ width: "100%", maxHeight: 280, borderRadius: 12 }} />}
-            <button className="danger sm" style={{ justifySelf: "start" }}>Remove video</button>
-          </form>
-        ))}
+        {l.video_urls.length > 0 && (
+          <div className="photo-grid">
+            {l.video_urls.map((path: string) => (
+              <form action={removeVideo} key={path} className="photo photo-video">
+                <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} /><input type="hidden" name="path" value={path} />
+                {vids.get(path) && <video src={`${vids.get(path)}#t=0.1`} muted playsInline preload="metadata" />}
+                <span className="play-badge" aria-hidden>▶</span>
+                <button aria-label="Remove video" title="Remove video">✕</button>
+              </form>
+            ))}
+          </div>
+        )}
         <VideoUpload communityId={l.community_id} userId={user.id} attach={attachVideo.bind(null, slug, id)} />
         <p className="muted small" style={{ margin: 0 }}>MP4, WebM or MOV, up to 20 MB. A ~30 second clip works well.</p>
       </section>

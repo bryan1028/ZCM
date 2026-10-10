@@ -27,8 +27,14 @@ export default function ListingCard({ l, slug, thumb, rating }: {
           {featured && <span className="badge accent">⭐ Featured</span>}
           {s.account_type === "business" && <span className="badge brand">Business</span>}
           {!l.available && <span className="badge">Unavailable</span>}
-          {l.video_urls.length > 0 && <span className="badge">▶ Video</span>}
         </div>
+        {l.image_urls.length + l.video_urls.length > 1 && (
+          <span className="media-count" aria-label={`${l.image_urls.length + l.video_urls.length} photos and videos`}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="8" y="8" width="13" height="13" rx="3" /><path d="M16 4H7a3 3 0 0 0-3 3v9" /></svg>
+            {l.image_urls.length + l.video_urls.length}
+          </span>
+        )}
+        {l.video_urls.length > 0 && l.image_urls.length === 0 && <span className="media-count">▶</span>}
       </div>
       <div className="listing-body">
         <div className="listing-price">{formatPrice(l.price_cents, l.price_unit as keyof typeof PRICE_UNITS, c.currency)}</div>

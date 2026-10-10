@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { CATEGORY_EMOJI, formatPrice, PRICE_UNITS } from "@/lib/catalog";
 import { ChatIcon, ChevronLeftIcon } from "@/components/icons";
 import ActionButton from "@/components/action-button";
+import MediaCarousel, { type MediaItem } from "@/components/media-carousel";
 import { signedUrls } from "@/lib/images";
 import { usernamesFor } from "@/lib/usernames";
 
@@ -95,6 +96,10 @@ export default async function ListingPage({ params, searchParams }: {
   const names = await usernamesFor(supabase, l.community_id, [s.user_id, ...(reviews ?? []).map((r) => r.reviewer_id)]);
   const photos = await signedUrls(supabase, "zcm-listing-images", l.image_urls);
   const videos = await signedUrls(supabase, "zcm-listing-videos", l.video_urls);
+  const media: MediaItem[] = [
+    ...l.image_urls.flatMap((path: string) => (photos.get(path) ? [{ type: "image" as const, src: photos.get(path)! }] : [])),
+    ...l.video_urls.flatMap((path: string) => (videos.get(path) ? [{ type: "video" as const, src: videos.get(path)! }] : [])),
+  ];
   const myReview = (reviews ?? []).find((r) => r.reviewer_id === user.id);
 
   const sellerName = s.business_name ?? s.display_name;
@@ -110,19 +115,11 @@ export default async function ListingPage({ params, searchParams }: {
       </p>
 
       <div className="detail-grid">
-        <div className="stack">
-          {l.image_urls.length > 0 || l.video_urls.length > 0 ? (
-            <div className="gallery" aria-label="Photos and video">
-              {l.image_urls.map((path: string) => photos.get(path) && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img key={path} src={photos.get(path)} alt={l.title} />
-              ))}
-              {l.video_urls.map((path: string) => videos.get(path) && (
-                <video key={path} src={videos.get(path)} controls preload="metadata" playsInline />
-              ))}
-            </div>
+        <div className="detail-media">
+          {media.length > 0 ? (
+            <MediaCarousel items={media} alt={l.title} />
           ) : (
-            <div className="listing-media" style={{ borderRadius: "var(--radius)" }}><div className="listing-ph" style={{ fontSize: 64 }} aria-hidden>{CATEGORY_EMOJI[l.category] ?? "✨"}</div></div>
+            <div className="carousel carousel-empty"><div className="listing-ph" style={{ fontSize: 72 }} aria-hidden>{CATEGORY_EMOJI[l.category] ?? "✨"}</div></div>
           )}
         </div>
 
@@ -146,7 +143,12 @@ export default async function ListingPage({ params, searchParams }: {
             </div>
           </div>
 
-          {l.description && <p style={{ whiteSpace: "pre-wrap", margin: 0 }}>{l.description}</p>}
+          {l.description && (
+            <section className="detail-desc">
+              <h3>About this {l.kind === "service" ? "service" : "product"}</h3>
+              <p>{l.description}</p>
+            </section>
+          )}
           {l.stock != null && <p className="muted small" style={{ margin: 0 }}>{l.stock} in stock</p>}
 
           {mine ? (
