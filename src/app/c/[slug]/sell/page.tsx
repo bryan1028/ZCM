@@ -1,11 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import SellForm from "./sell-form";
+import { getUser } from "@/lib/auth";
 
 export default async function Sell({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ error?: string }> }) {
   const { slug } = await params;
   const { error } = await searchParams;
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getUser(supabase);
   const { data: seller } = await supabase.from("sellers").select("id, communities!inner(slug)").eq("communities.slug", slug).eq("user_id", user!.id).maybeSingle();
 
   return (

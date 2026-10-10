@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Page from "@/components/page";
+import { getUser } from "@/lib/auth";
+import Submit from "@/components/submit-button";
 
 async function signOut() {
   "use server";
@@ -14,7 +16,7 @@ async function signOut() {
 async function deleteAccount(formData: FormData) {
   "use server";
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getUser(supabase);
   if (!user) redirect("/login");
   if (String(formData.get("confirm") ?? "").trim().toUpperCase() !== "DELETE") {
     redirect(`/account?error=${encodeURIComponent("Type DELETE to confirm")}`);
@@ -44,7 +46,7 @@ async function deleteAccount(formData: FormData) {
 export default async function Account({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { error } = await searchParams;
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getUser(supabase);
   const { data: me } = await supabase.from("profiles").select("username").eq("id", user!.id).maybeSingle();
   const { data: memberships } = await supabase.from("memberships").select("status, role, communities(slug, name)").eq("user_id", user!.id);
 
@@ -73,7 +75,7 @@ export default async function Account({ searchParams }: { searchParams: Promise<
         <p className="muted small" style={{ margin: 0 }}>See the <Link href="/privacy">Privacy Policy</Link> and <Link href="/terms">Terms of Use</Link>.</p>
       </section>
 
-      <form action={signOut} style={{ marginTop: 12 }}><button className="secondary block">Sign out</button></form>
+      <form action={signOut} style={{ marginTop: 12 }}><Submit className="secondary block">Sign out</Submit></form>
 
       <section className="card stack" style={{ marginTop: 22, borderColor: "color-mix(in srgb, var(--danger) 35%, var(--line))" }}>
         <h3 style={{ margin: 0, color: "var(--danger)" }}>Delete my account</h3>
@@ -83,7 +85,7 @@ export default async function Account({ searchParams }: { searchParams: Promise<
         </p>
         <form action={deleteAccount} className="stack">
           <label>Type <b>DELETE</b> to confirm<input name="confirm" autoComplete="off" required placeholder="DELETE" /></label>
-          <button className="danger">Permanently delete my account</button>
+          <Submit className="danger">Permanently delete my account</Submit>
         </form>
       </section>
     </Page>

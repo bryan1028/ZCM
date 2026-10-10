@@ -6,6 +6,7 @@ import { CATEGORIES, CATEGORY_EMOJI, KINDS, type KindSlug } from "@/lib/catalog"
 import { SearchIcon } from "@/components/icons";
 import Empty from "@/components/empty";
 import ListingCard, { type CardListing } from "@/components/listing-card";
+import Submit from "@/components/submit-button";
 
 export default async function Listings({ params, searchParams }: {
   params: Promise<{ slug: string; kind: string }>;
@@ -64,7 +65,7 @@ export default async function Listings({ params, searchParams }: {
           <SearchIcon size={18} style={{ position: "absolute", left: 14, top: 14, color: "var(--muted)" }} />
           <input name="q" defaultValue={search} placeholder={`Search ${def.label.toLowerCase()}…`} style={{ paddingLeft: 42 }} aria-label="Search" />
         </div>
-        <button className="secondary" aria-label="Search">Search</button>
+        <Submit className="secondary" aria-label="Search">Search</Submit>
       </form>
 
       <div className="chips" role="list" aria-label="Categories">

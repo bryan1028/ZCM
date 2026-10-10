@@ -8,11 +8,14 @@ import CopyButton from "@/components/copy-button";
 import Empty from "@/components/empty";
 import { siteUrl } from "@/lib/nav";
 import { createClient } from "@/lib/supabase/server";
+import { getUser } from "@/lib/auth";
+import { done } from "@/lib/after-action";
+import Submit from "@/components/submit-button";
 
 async function review(formData: FormData) {
   "use server";
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getUser(supabase);
   const status = String(formData.get("status"));
   if (!user || !["verified", "rejected", "suspended"].includes(status)) return;
   pushSoon();
@@ -20,34 +23,34 @@ async function review(formData: FormData) {
   await supabase.from("memberships")
     .update({ status, reviewed_by: user.id, reviewed_at: new Date().toISOString() })
     .eq("id", String(formData.get("id")));
-  redirect(String(formData.get("back")));
+  await done(String(formData.get("back")));
 }
 
 async function postAnnouncement(formData: FormData) {
   "use server";
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getUser(supabase);
   if (!user) return;
   await supabase.from("announcements").insert({
     community_id: String(formData.get("community_id")), author_id: user.id,
     title: String(formData.get("title")).trim(), body: String(formData.get("body") ?? "").trim() || null,
     pinned: formData.get("pinned") === "on",
   });
-  redirect(String(formData.get("back")));
+  await done(String(formData.get("back")));
 }
 
 async function deleteAnnouncement(formData: FormData) {
   "use server";
   const supabase = await createClient();
   await supabase.from("announcements").delete().eq("id", String(formData.get("id")));
-  redirect(String(formData.get("back")));
+  await done(String(formData.get("back")));
 }
 
 async function rotateInvite(formData: FormData) {
   "use server";
   const supabase = await createClient();
   await supabase.rpc("rotate_invite_code", { cid: String(formData.get("community_id")) });
-  redirect(String(formData.get("back")));
+  await done(String(formData.get("back")));
 }
 
 async function setRole(formData: FormData) {
@@ -57,20 +60,21 @@ async function setRole(formData: FormData) {
   // RLS limits this to admins; the database also refuses to leave a community without an admin.
   const { error } = await supabase.from("memberships").update({ role: String(formData.get("role")) === "admin" ? "admin" : "resident" })
     .eq("id", String(formData.get("id")));
-  redirect(error ? `${back}?error=${encodeURIComponent(error.message)}` : back);
+  if (error) redirect(`${back}?error=${encodeURIComponent(error.message)}`);
+  await done(back);
 }
 
 async function shadowban(formData: FormData) {
   "use server";
   const supabase = await createClient();
   await supabase.from("memberships").update({ shadowbanned: formData.get("on") === "true" }).eq("id", String(formData.get("id")));
-  redirect(String(formData.get("back")));
+  await done(String(formData.get("back")));
 }
 
 async function resolveReport(formData: FormData) {
   "use server";
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getUser(supabase);
   if (!user) return;
   const action = String(formData.get("action"));
   const type = String(formData.get("target_type"));
@@ -83,7 +87,7 @@ async function resolveReport(formData: FormData) {
   await supabase.from("reports").update({
     status: action === "dismiss" ? "dismissed" : "resolved", resolved_by: user.id, resolved_at: new Date().toISOString(),
   }).eq("id", String(formData.get("id")));
-  redirect(String(formData.get("back")));
+  await done(String(formData.get("back")));
 }
 
 export default async function Admin({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ error?: string }> }) {
@@ -92,7 +96,7 @@ export default async function Admin({ params, searchParams }: { params: Promise<
   const supabase = await createClient();
   const community = await getCommunity(slug);
   if (!community) notFound();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getUser(supabase);
   const { data: me } = await supabase.from("memberships").select("role").eq("community_id", community.id).eq("user_id", user!.id).maybeSingle();
   if (me?.role !== "admin") notFound();
 
@@ -226,7 +230,7 @@ export default async function Admin({ params, searchParams }: { params: Promise<
           <form action={rotateInvite} className="inline-form" style={{ marginTop: 8 }}>
             <input type="hidden" name="community_id" value={community.id} /><input type="hidden" name="back" value={back} />
             <span className="small">The old link stops working immediately.</span>
-            <button className="danger sm">Yes, replace it</button>
+            <Submit className="danger sm">Yes, replace it</Submit>
           </form>
         </details>
       </div>
@@ -237,13 +241,13 @@ export default async function Admin({ params, searchParams }: { params: Promise<
         <label>Title<input name="title" required minLength={3} maxLength={120} placeholder="e.g. Water outage Thursday" /></label>
         <label>Message <span className="hint">(optional)</span><textarea name="body" rows={3} maxLength={2000} /></label>
         <label style={{ display: "flex", gap: 8, alignItems: "center", fontWeight: 500 }}><input type="checkbox" name="pinned" /> Pin to the top of the feed</label>
-        <button>Post to the feed</button>
+        <Submit>Post to the feed</Submit>
       </form>
       <div className="list" style={{ marginTop: 10 }}>
         {(announcements ?? []).map((a) => (
           <form action={deleteAnnouncement} className="item" key={a.id}>
             <input type="hidden" name="id" value={a.id} /><input type="hidden" name="back" value={back} />
-            <span className="grow">{a.pinned ? "📌 " : "📣 "}{a.title}</span><button className="ghost sm">Delete</button>
+            <span className="grow">{a.pinned ? "📌 " : "📣 "}{a.title}</span><Submit className="ghost sm">Delete</Submit>
           </form>
         ))}
       </div>

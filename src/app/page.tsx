@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import Page from "@/components/page";
+import { getUser } from "@/lib/auth";
 
 const STATUS: Record<string, { label: string; tone: string; note: string }> = {
   pending: { label: "Awaiting approval", tone: "accent", note: "An admin will confirm you live here. We'll notify you." },
@@ -12,7 +13,7 @@ const STATUS: Record<string, { label: string; tone: string; note: string }> = {
 // Landing: send people to their community, or to the join flow.
 export default async function Home() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getUser(supabase);
   const { data: me } = await supabase.from("profiles").select("username").eq("id", user!.id).maybeSingle();
   if (!me?.username) redirect("/welcome");
   const { data: memberships } = await supabase

@@ -5,13 +5,16 @@ import Empty from "@/components/empty";
 import { getCommunity } from "@/lib/community";
 import { fmtDay } from "@/lib/time";
 import EnablePush from "@/components/enable-push";
+import { getUser } from "@/lib/auth";
+import { done } from "@/lib/after-action";
+import Submit from "@/components/submit-button";
 
 async function markAllRead(formData: FormData) {
   "use server";
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getUser(supabase);
   if (user) await supabase.from("notifications").update({ read_at: new Date().toISOString() }).eq("user_id", user.id).is("read_at", null);
-  redirect(String(formData.get("back")));
+  await done(String(formData.get("back")));
 }
 
 async function saveSubscription(sub: { endpoint: string; p256dh: string; auth: string }) {
@@ -40,7 +43,7 @@ export default async function Notifications({ params }: { params: Promise<{ slug
     <div className="page-narrow" style={{ maxWidth: 640 }}>
       <div className="page-head">
         <div><h1>Notifications</h1><p className="muted">{unread > 0 ? `${unread} unread` : "You're all caught up"}</p></div>
-        {unread > 0 && <form action={markAllRead}><input type="hidden" name="back" value={`/c/${slug}/notifications`} /><button className="secondary sm">Mark all read</button></form>}
+        {unread > 0 && <form action={markAllRead}><input type="hidden" name="back" value={`/c/${slug}/notifications`} /><Submit className="secondary sm">Mark all read</Submit></form>}
       </div>
       <div className="card flat" style={{ marginBottom: 14 }}><EnablePush save={saveSubscription} /></div>
       {(items ?? []).length === 0 && <Empty emoji="🔔" title="Nothing yet">New messages, orders and approvals will show up here.</Empty>}

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Page from "@/components/page";
+import { getUser } from "@/lib/auth";
 
 // Public landing page for an invite link: shows only the community name.
 export default async function Invite({ params, searchParams }: { params: Promise<{ code: string }>; searchParams: Promise<{ ref?: string }> }) {
@@ -23,7 +24,7 @@ export default async function Invite({ params, searchParams }: { params: Promise
   }
 
   const joinPath = `/join?code=${encodeURIComponent(code)}${ref ? `&ref=${encodeURIComponent(ref)}` : ""}`;
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getUser(supabase);
   if (user) redirect(joinPath);
 
   return (

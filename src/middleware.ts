@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { getUser } from "@/lib/auth";
 
 // Refreshes the Supabase session cookie on every request and keeps signed-out
 // users away from the app. Authorization itself lives in Postgres RLS, not here.
@@ -19,7 +20,7 @@ export async function middleware(request: NextRequest) {
       },
     },
   );
-  const { data } = await supabase.auth.getUser();
+  const { data } = await getUser(supabase);
   const open = ["/login", "/api/push", "/invite", "/terms", "/privacy"].some((p) => request.nextUrl.pathname.startsWith(p));
   if (!data.user && !open) {
     return NextResponse.redirect(new URL("/login", request.url));

@@ -3,11 +3,13 @@ import { createClient } from "@/lib/supabase/server";
 import { pushSoon } from "@/lib/push";
 import Link from "next/link";
 import Page from "@/components/page";
+import { getUser } from "@/lib/auth";
+import Submit from "@/components/submit-button";
 
 async function requestToJoin(formData: FormData) {
   "use server";
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getUser(supabase);
   if (!user) redirect("/login");
   if (formData.get("agree") !== "on") redirect(`/join?error=${encodeURIComponent("Please accept the Terms and Privacy Policy")}`);
   const { error } = await supabase.from("memberships").insert({
@@ -24,7 +26,7 @@ async function requestToJoin(formData: FormData) {
 export default async function Join({ searchParams }: { searchParams: Promise<{ error?: string; code?: string; ref?: string }> }) {
   const { error, code, ref } = await searchParams;
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getUser(supabase);
   const { data: me } = await supabase.from("profiles").select("username").eq("id", user!.id).maybeSingle();
   if (!me?.username) {
     const back = `/join${code ? `?code=${encodeURIComponent(code)}${ref ? `&ref=${encodeURIComponent(ref)}` : ""}` : ""}`;
@@ -58,7 +60,7 @@ export default async function Join({ searchParams }: { searchParams: Promise<{ e
           <input type="checkbox" name="agree" required style={{ marginTop: 2 }} />
           <span>I live here and agree to the <Link href="/terms">Terms</Link> and <Link href="/privacy">Privacy Policy</Link>.</span>
         </label>
-        <button>Request access</button>
+        <Submit>Request access</Submit>
       </form>
     </Page>
   );

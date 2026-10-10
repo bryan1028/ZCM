@@ -9,10 +9,13 @@ import ActionButton from "@/components/action-button";
 import MediaCarousel, { type MediaItem } from "@/components/media-carousel";
 import { signedUrls } from "@/lib/images";
 import { usernamesFor } from "@/lib/usernames";
+import { getUser } from "@/lib/auth";
+import { done } from "@/lib/after-action";
+import Submit from "@/components/submit-button";
 
 async function ctx(slug: string, id: string) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getUser(supabase);
   if (!user) redirect("/login");
   return { supabase, user, back: `/c/${slug}/l/${id}` };
 }
@@ -45,7 +48,8 @@ async function addReview(formData: FormData) {
     { listing_id: id, reviewer_id: user.id, rating, comment: String(formData.get("comment") ?? "").trim() || null },
     { onConflict: "listing_id,reviewer_id" },
   );
-  redirect(error ? `${back}?error=${encodeURIComponent(error.message)}` : back);
+  if (error) redirect(`${back}?error=${encodeURIComponent(error.message)}`);
+  await done(back);
 }
 
 async function report(formData: FormData) {
@@ -68,7 +72,7 @@ async function toggleAvailable(formData: FormData) {
   const slug = String(formData.get("slug")), id = String(formData.get("id"));
   const { supabase, back } = await ctx(slug, id);
   await supabase.from("listings").update({ available: formData.get("available") === "true" }).eq("id", id);
-  redirect(back);
+  await done(back);
 }
 
 export default async function ListingPage({ params, searchParams }: {
@@ -87,15 +91,15 @@ export default async function ListingPage({ params, searchParams }: {
   const currency = (l.communities as unknown as { currency: string }).currency;
   const mine = s.user_id === user.id;
 
-  await supabase.rpc("record_view", { lid: id }); // no-op for the seller's own views
-
-  const [{ data: reviews }, { data: views }] = await Promise.all([
+  // One round for everything that only needs the listing, then one for usernames (which needs the reviewers).
+  const [, { data: reviews }, { data: views }, photos, videos] = await Promise.all([
+    supabase.rpc("record_view", { lid: id }), // no-op for the seller's own views
     supabase.from("reviews").select("id, rating, comment, reviewer_id, created_at").eq("listing_id", id).order("created_at", { ascending: false }),
     mine ? supabase.from("listing_view_counts").select("views, unique_viewers").eq("listing_id", id).maybeSingle() : Promise.resolve({ data: null }),
+    signedUrls(supabase, "zcm-listing-images", l.image_urls),
+    signedUrls(supabase, "zcm-listing-videos", l.video_urls),
   ]);
   const names = await usernamesFor(supabase, l.community_id, [s.user_id, ...(reviews ?? []).map((r) => r.reviewer_id)]);
-  const photos = await signedUrls(supabase, "zcm-listing-images", l.image_urls);
-  const videos = await signedUrls(supabase, "zcm-listing-videos", l.video_urls);
   const media: MediaItem[] = [
     ...l.image_urls.flatMap((path: string) => (photos.get(path) ? [{ type: "image" as const, src: photos.get(path)! }] : [])),
     ...l.video_urls.flatMap((path: string) => (videos.get(path) ? [{ type: "video" as const, src: videos.get(path)! }] : [])),
@@ -167,12 +171,12 @@ export default async function ListingPage({ params, searchParams }: {
                     <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} />
                     <input name="qty" type="number" min="1" defaultValue="1" aria-label="Quantity" />
                     <input name="note" placeholder="Note: pickup time, flat no." maxLength={500} aria-label="Note to seller" />
-                    <button style={{ gridColumn: "1 / -1" }}>{verb} {l.kind === "service" ? "this service" : "now"}</button>
+                    <Submit style={{ gridColumn: "1 / -1" }}>{verb} {l.kind === "service" ? "this service" : "now"}</Submit>
                   </form>
                 )}
                 <form action={startChat}>
                   <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} />
-                  <button className="secondary"><ChatIcon size={18} />Message @{sellerHandle}</button>
+                  <Submit className="secondary"><ChatIcon size={18} />Message @{sellerHandle}</Submit>
                 </form>
                 {s.whatsapp && <a className="muted small center" href={`https://wa.me/${s.whatsapp.replace(/\D/g, "")}`}>or reach out on WhatsApp</a>}
                 {error && <div className="alert error" role="alert">{error}</div>}
@@ -219,7 +223,7 @@ export default async function ListingPage({ params, searchParams }: {
             ))}
           </div>
           <label>Comment <span className="hint">(optional)</span><textarea name="comment" rows={2} defaultValue={myReview?.comment ?? ""} placeholder="How was it?" /></label>
-          <button>Save review</button>
+          <Submit>Save review</Submit>
         </form>
       )}
       {!mine && (
@@ -238,7 +242,7 @@ function ReportForm({ slug, id, type, target }: { slug: string; id: string; type
       <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} />
       <input type="hidden" name="target_type" value={type} /><input type="hidden" name="target_id" value={target} />
       <label>What&apos;s wrong?<textarea name="reason" rows={2} required minLength={3} /></label>
-      <button className="secondary sm">Send report</button>
+      <Submit className="secondary sm">Send report</Submit>
     </form>
   );
 }

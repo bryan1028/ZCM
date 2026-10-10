@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { checkListing } from "@/lib/sell-validate";
+import { getUser } from "@/lib/auth";
 
 export type SellState = { error?: string; field?: string; values: Record<string, string> };
 
@@ -16,7 +17,7 @@ export async function saveListing(_prev: SellState, formData: FormData): Promise
 
   const slug = String(formData.get("slug"));
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getUser(supabase);
   if (!user) redirect("/login");
   const { data: community } = await supabase.from("communities").select("id").eq("slug", slug).single();
   if (!community) redirect("/");

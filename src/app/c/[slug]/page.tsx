@@ -7,12 +7,13 @@ import { getCommunity } from "@/lib/community";
 import { fmtDay } from "@/lib/time";
 import ListingCard, { type CardListing } from "@/components/listing-card";
 import Empty from "@/components/empty";
+import { getUser } from "@/lib/auth";
 
 // Community home: announcements from admins, an invite prompt, and what's new.
 export default async function Feed({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getUser(supabase);
   const community = await getCommunity(slug);
 
   const [{ data: announcements }, { data: listings }, { data: code }, { data: me }] = await Promise.all([

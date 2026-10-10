@@ -5,11 +5,12 @@ import Empty from "@/components/empty";
 import { getCommunity } from "@/lib/community";
 import { fmtDay, fmtTime, isToday } from "@/lib/time";
 import { usernamesFor } from "@/lib/usernames";
+import { getUser } from "@/lib/auth";
 
 export default async function Inbox({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getUser(supabase);
   const community = await getCommunity(slug);
   if (!community || !user) notFound();
 

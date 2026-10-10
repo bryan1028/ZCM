@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getUser } from "@/lib/auth";
 
 // "Download my data": everything tied to the signed-in person, as one JSON file.
 // Uses the person's own session, so database rules guarantee they only get what they're allowed to see.
 export async function GET() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getUser(supabase);
   if (!user) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
 
   const sellerIds = ((await supabase.from("sellers").select("id").eq("user_id", user.id)).data ?? []).map((s) => s.id);

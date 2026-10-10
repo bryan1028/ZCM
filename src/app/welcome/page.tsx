@@ -2,11 +2,13 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { USERNAME_RE } from "@/lib/usernames";
 import Page from "@/components/page";
+import { getUser } from "@/lib/auth";
+import Submit from "@/components/submit-button";
 
 async function setUsername(formData: FormData) {
   "use server";
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getUser(supabase);
   if (!user) redirect("/login");
   const username = String(formData.get("username")).trim().toLowerCase();
   const next = String(formData.get("next") || "/");
@@ -32,7 +34,7 @@ export default async function Welcome({ searchParams }: { searchParams: Promise<
           <input name="username" required minLength={3} maxLength={20} pattern="[A-Za-z0-9_]+" autoCapitalize="none" autoCorrect="off" placeholder="e.g. jane_k" />
           <span className="hint">3–20 characters: letters, numbers, underscores.</span>
         </label>
-        <button>Continue</button>
+        <Submit>Continue</Submit>
       </form>
     </Page>
   );

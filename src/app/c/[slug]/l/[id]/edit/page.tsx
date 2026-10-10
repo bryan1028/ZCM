@@ -7,10 +7,12 @@ import { ChevronLeftIcon } from "@/components/icons";
 import VideoUpload from "@/components/video-upload";
 import ImageInput from "@/components/image-input";
 import { extFor, MAX_UPLOAD_BYTES, signedUrls } from "@/lib/images";
+import { getUser } from "@/lib/auth";
+import Submit from "@/components/submit-button";
 
 async function ctx(slug: string, id: string) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getUser(supabase);
   if (!user) redirect("/login");
   return { supabase, user, here: `/c/${slug}/l/${id}/edit` };
 }
@@ -126,7 +128,7 @@ export default async function Edit({ params, searchParams }: {
                 <input type="hidden" name="path" value={path} />
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 {urls.get(path) && <img src={urls.get(path)} alt="" />}
-                <button aria-label="Remove photo" title="Remove">✕</button>
+                <Submit aria-label="Remove photo" title="Remove">✕</Submit>
               </form>
             ))}
           </div>
@@ -134,7 +136,7 @@ export default async function Edit({ params, searchParams }: {
         <form action={addPhoto} className="stack">
           <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} />
           <ImageInput name="photo" required />
-          <button>Upload photo</button>
+          <Submit>Upload photo</Submit>
         </form>
         <p className="muted small" style={{ margin: 0 }}>JPEG, PNG or WebP. Big photos are shrunk automatically to save data.</p>
       </section>
@@ -148,7 +150,7 @@ export default async function Edit({ params, searchParams }: {
                 <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} /><input type="hidden" name="path" value={path} />
                 {vids.get(path) && <video src={`${vids.get(path)}#t=0.1`} muted playsInline preload="metadata" />}
                 <span className="play-badge" aria-hidden>▶</span>
-                <button aria-label="Remove video" title="Remove video">✕</button>
+                <Submit aria-label="Remove video" title="Remove video">✕</Submit>
               </form>
             ))}
           </div>
@@ -174,7 +176,7 @@ export default async function Edit({ params, searchParams }: {
           </label>
         </div>
         <label>Stock <span className="hint">(optional)</span><input name="stock" type="number" inputMode="numeric" min="0" defaultValue={l.stock ?? ""} /></label>
-        <button>Save changes</button>
+        <Submit>Save changes</Submit>
       </form>
       <p style={{ textAlign: "center", marginTop: 14 }}><Link href={`/c/${slug}/l/${id}`} className="muted">View listing →</Link></p>
     </div>

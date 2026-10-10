@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import CommunityNav from "@/components/community-nav";
 import { getCommunity } from "@/lib/community";
+import { getUser } from "@/lib/auth";
 
 async function signOut() {
   "use server";
@@ -15,23 +16,23 @@ async function signOut() {
 export default async function CommunityLayout({ children, params }: { children: React.ReactNode; params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getUser(supabase);
   if (!user) redirect("/login");
-  const { data: me } = await supabase.from("profiles").select("username").eq("id", user.id).maybeSingle();
-  if (!me?.username) redirect(`/welcome?next=/c/${slug}`);
-  const community = await getCommunity(slug);
-  if (!community) notFound();
-  const { data: m } = await supabase
-    .from("memberships").select("status, role").eq("community_id", community.id).eq("user_id", user.id).maybeSingle();
-  if (m?.status !== "verified") redirect("/");
-
-  const [{ count: unreadMessages }, { count: unreadNotifications }, { count: openOrders }] = await Promise.all([
+  // Two rounds of parallel queries instead of six in a row: each round trip to the database costs real time.
+  const [{ data: me }, community, { count: unreadMessages }, { count: openOrders }] = await Promise.all([
+    supabase.from("profiles").select("username").eq("id", user.id).maybeSingle(),
+    getCommunity(slug),
     supabase.from("messages").select("id", { count: "exact", head: true }).is("read_at", null).neq("sender_id", user.id),
+    supabase.from("reservations").select("id", { count: "exact", head: true }).eq("seller_user_id", user.id).eq("status", "requested"),
+  ]);
+  if (!me?.username) redirect(`/welcome?next=/c/${slug}`);
+  if (!community) notFound();
+  const [{ data: m }, { count: unreadNotifications }] = await Promise.all([
+    supabase.from("memberships").select("status, role").eq("community_id", community.id).eq("user_id", user.id).maybeSingle(),
     supabase.from("notifications").select("id", { count: "exact", head: true })
       .eq("user_id", user.id).eq("community_id", community.id).is("read_at", null),
-    supabase.from("reservations").select("id", { count: "exact", head: true })
-      .eq("seller_user_id", user.id).eq("status", "requested"),
   ]);
+  if (m?.status !== "verified") redirect("/");
 
   return (
     <>

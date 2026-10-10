@@ -5,6 +5,9 @@ import { formatPrice, type PRICE_UNITS } from "@/lib/catalog";
 import { signedUrls } from "@/lib/images";
 import Empty from "@/components/empty";
 import ActionButton from "@/components/action-button";
+import { getUser } from "@/lib/auth";
+import { done } from "@/lib/after-action";
+import Submit from "@/components/submit-button";
 
 async function setStatus(formData: FormData) {
   "use server";
@@ -14,7 +17,7 @@ async function setStatus(formData: FormData) {
     const { error } = await supabase.from("listings").update({ status }).eq("id", String(formData.get("id")));
     if (error) redirect(`${formData.get("back")}?error=${encodeURIComponent(error.message)}`);
   }
-  redirect(String(formData.get("back")));
+  await done(String(formData.get("back")));
 }
 
 async function feature(formData: FormData) {
@@ -23,21 +26,22 @@ async function feature(formData: FormData) {
   const on = formData.get("on") === "true";
   const { error } = await supabase.from("listings")
     .update({ featured_until: on ? new Date(Date.now() + 7 * 86400000).toISOString() : null }).eq("id", String(formData.get("id")));
-  redirect(`${formData.get("back")}${error ? `?error=${encodeURIComponent(error.message)}` : ""}`);
+  if (error) redirect(`${formData.get("back")}?error=${encodeURIComponent(error.message)}`);
+  await done(String(formData.get("back")));
 }
 
 async function remove(formData: FormData) {
   "use server";
   const supabase = await createClient();
   await supabase.from("listings").update({ status: "removed" }).eq("id", String(formData.get("id")));
-  redirect(String(formData.get("back")));
+  await done(String(formData.get("back")));
 }
 
 export default async function Mine({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ error?: string }> }) {
   const { slug } = await params;
   const { error } = await searchParams;
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getUser(supabase);
   const { data: seller } = await supabase.from("sellers").select("id, account_type, plan, communities!inner(slug, currency)")
     .eq("communities.slug", slug).eq("user_id", user!.id).maybeSingle();
   if (!seller) {
@@ -105,7 +109,7 @@ export default async function Mine({ params, searchParams }: { params: Promise<{
                 <form action={remove} className="inline-form" style={{ marginTop: 8 }}>
                   <input type="hidden" name="id" value={l.id} /><input type="hidden" name="back" value={back} />
                   <span className="small">This removes it from the marketplace.</span>
-                  <button className="danger sm">Yes, delete</button>
+                  <Submit className="danger sm">Yes, delete</Submit>
                 </form>
               </details>
             </div>

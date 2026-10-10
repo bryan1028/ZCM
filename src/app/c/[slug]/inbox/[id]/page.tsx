@@ -8,25 +8,29 @@ import { getCommunity } from "@/lib/community";
 import { fmtTime, fmtWeekday } from "@/lib/time";
 import ScrollEnd from "./scroll-end";
 import { ChevronLeftIcon, SendIcon } from "@/components/icons";
+import { getUser } from "@/lib/auth";
+import { done } from "@/lib/after-action";
+import Submit from "@/components/submit-button";
 
 async function send(formData: FormData) {
   "use server";
   const slug = String(formData.get("slug")), id = String(formData.get("id"));
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getUser(supabase);
   if (!user) redirect("/login");
   const body = String(formData.get("body") ?? "").trim();
   if (!body) redirect(`/c/${slug}/inbox/${id}`);
   const { error } = await supabase.from("messages").insert({ conversation_id: id, sender_id: user.id, body });
   pushSoon();
-  redirect(`/c/${slug}/inbox/${id}${error ? `?error=${encodeURIComponent(error.message)}` : ""}`);
+  if (error) redirect(`/c/${slug}/inbox/${id}?error=${encodeURIComponent(error.message)}`);
+  await done(`/c/${slug}/inbox/${id}`);
 }
 
 async function reportUser(formData: FormData) {
   "use server";
   const slug = String(formData.get("slug")), id = String(formData.get("id"));
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getUser(supabase);
   if (!user) redirect("/login");
   const { data: c } = await supabase.from("conversations").select("community_id").eq("id", id).single();
   if (c) await supabase.from("reports").insert({
@@ -42,7 +46,7 @@ export default async function Chat({ params, searchParams }: {
   const { slug, id } = await params;
   const { error, reported } = await searchParams;
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getUser(supabase);
   if (!user) redirect("/login");
 
   const { data: conv } = await supabase.from("conversations")
@@ -95,7 +99,7 @@ export default async function Chat({ params, searchParams }: {
         <form action={send}>
           <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} />
           <input name="body" required maxLength={2000} placeholder="Write a message…" autoComplete="off" aria-label="Message" />
-          <button aria-label="Send"><SendIcon size={18} /></button>
+          <Submit aria-label="Send"><SendIcon size={18} /></Submit>
         </form>
       </div>
 
@@ -105,7 +109,7 @@ export default async function Chat({ params, searchParams }: {
           <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} />
           <input type="hidden" name="target_id" value={other} />
           <label>What happened?<textarea name="reason" rows={2} required minLength={3} /></label>
-          <button className="secondary sm" style={{ justifySelf: "start" }}>Send report</button>
+          <Submit className="secondary sm" style={{ justifySelf: "start" }}>Send report</Submit>
         </form>
       </details>
       {reported && <div className="alert ok" style={{ marginTop: 12 }}>Thanks, an admin will take a look.</div>}

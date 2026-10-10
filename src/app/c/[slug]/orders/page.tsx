@@ -10,6 +10,9 @@ import Empty from "@/components/empty";
 import { getCommunity } from "@/lib/community";
 import { fmtDateTime } from "@/lib/time";
 import { usernamesFor } from "@/lib/usernames";
+import { getUser } from "@/lib/auth";
+import { done } from "@/lib/after-action";
+import Submit from "@/components/submit-button";
 
 async function act(formData: FormData) {
   "use server";
@@ -17,7 +20,8 @@ async function act(formData: FormData) {
   const back = String(formData.get("back"));
   const { error } = await supabase.rpc("transition_reservation", { rid: String(formData.get("id")), act: String(formData.get("act")) });
   pushSoon();
-  redirect(error ? `${back}?error=${encodeURIComponent(error.message)}` : back);
+  if (error) redirect(`${back}?error=${encodeURIComponent(error.message)}`);
+  await done(back);
 }
 
 async function uploadProof(formData: FormData) {
@@ -36,7 +40,7 @@ async function uploadProof(formData: FormData) {
   const { error } = await supabase.rpc("submit_payment", { rid, path, ref: String(formData.get("reference") ?? "") });
   if (error) { await supabase.storage.from("zcm-payment-proofs").remove([path]); return bad(error.message); }
   pushSoon();
-  redirect(back);
+  await done(back);
 }
 
 const LABEL: Record<string, string> = {
@@ -48,7 +52,7 @@ export default async function Orders({ params, searchParams }: { params: Promise
   const { slug } = await params;
   const { error, tab } = await searchParams;
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getUser(supabase);
   const community = await getCommunity(slug);
   if (!community || !user) notFound();
   const back = `/c/${slug}/orders`;
@@ -107,14 +111,14 @@ export default async function Orders({ params, searchParams }: { params: Promise
 
         <div className="inline-form">
           {asSeller && r.status === "requested" && (<>
-            <form action={act}>{hidden("accept")}<button className="sm">Accept</button></form>
-            <form action={act}>{hidden("decline")}<button className="secondary sm">Decline</button></form>
+            <form action={act}>{hidden("accept")}<Submit className="sm">Accept</Submit></form>
+            <form action={act}>{hidden("decline")}<Submit className="secondary sm">Decline</Submit></form>
           </>)}
           {asSeller && r.status === "paid" && (<>
-            <form action={act}>{hidden("confirm")}<button className="sm">Confirm payment received</button></form>
-            <form action={act}>{hidden("reject_proof")}<button className="secondary sm">Reject proof</button></form>
+            <form action={act}>{hidden("confirm")}<Submit className="sm">Confirm payment received</Submit></form>
+            <form action={act}>{hidden("reject_proof")}<Submit className="secondary sm">Reject proof</Submit></form>
           </>)}
-          {open && <form action={act}>{hidden("cancel")}<button className="ghost sm">Cancel</button></form>}
+          {open && <form action={act}>{hidden("cancel")}<Submit className="ghost sm">Cancel</Submit></form>}
           {!asSeller && r.status === "completed" && <Link href={`/c/${slug}/l/${l?.id}`} className="btn secondary sm">Leave a review</Link>}
         </div>
 
@@ -125,7 +129,7 @@ export default async function Orders({ params, searchParams }: { params: Promise
             <span className="muted small">Pay the seller (e.g. M-Pesa), then upload a screenshot. The app never handles your money.</span>
             <label>Payment reference <span className="hint">(optional)</span><input name="reference" maxLength={100} placeholder="e.g. M-Pesa code" /></label>
             <ImageInput name="proof" required />
-            <button>Send proof</button>
+            <Submit>Send proof</Submit>
           </form>
         )}
         {open && r.expires_at && <p className="muted small" style={{ margin: 0 }}>Expires {fmtDateTime(r.expires_at, community.timezone)}</p>}

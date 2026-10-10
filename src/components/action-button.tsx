@@ -4,6 +4,8 @@
 // button. So a submit button that relies on its own name/value silently loses the value and the action does nothing.
 // Every button that needs a value therefore gets its own small form with hidden inputs. (CI enforces this:
 // scripts/check-buttons.sh fails if a button with a name attribute appears in src/.)
+import Submit from "./submit-button";
+
 export default function ActionButton({ action, fields, children, className }: {
   action: (formData: FormData) => void | Promise<void>;
   fields: Record<string, string>;
@@ -13,7 +15,7 @@ export default function ActionButton({ action, fields, children, className }: {
   return (
     <form action={action} style={{ display: "contents" }}>
       {Object.entries(fields).map(([name, value]) => <input key={name} type="hidden" name={name} value={value} />)}
-      <button className={className}>{children}</button>
+      <Submit className={className}>{children}</Submit>
     </form>
   );
 }
