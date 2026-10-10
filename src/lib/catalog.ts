@@ -19,7 +19,7 @@ export const PRICE_UNITS = {
 
 export function formatPrice(cents: number | null, unit: keyof typeof PRICE_UNITS, currency = "KES") {
   if (cents == null || unit === "negotiable") return "Negotiable";
-  return `${currency} ${(cents / 100).toLocaleString()} ${PRICE_UNITS[unit]}`.trim();
+  return `${currency} ${(cents / 100).toLocaleString("en-KE", { minimumFractionDigits: cents % 100 ? 2 : 0, maximumFractionDigits: 2 })} ${PRICE_UNITS[unit]}`.trim();
 }
 
 export const CATEGORY_EMOJI: Record<string, string> = {
