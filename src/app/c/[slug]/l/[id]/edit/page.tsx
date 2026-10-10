@@ -163,7 +163,7 @@ export default async function Edit({ params, searchParams }: {
           </select>
         </label>
         <div className="row" style={{ alignItems: "flex-end" }}>
-          <label className="grow">Price (KES)<input name="price" type="number" inputMode="numeric" min="0" defaultValue={l.price_cents != null ? l.price_cents / 100 : ""} /></label>
+          <label className="grow">Price (KES)<input name="price" type="number" inputMode="decimal" step="any" min="0" defaultValue={l.price_cents != null ? l.price_cents / 100 : ""} /></label>
           <label className="grow">Price type
             <select name="price_unit" defaultValue={l.price_unit}>{Object.keys(PRICE_UNITS).map((u) => <option key={u} value={u}>{u.replace("_", " ")}</option>)}</select>
           </label>
