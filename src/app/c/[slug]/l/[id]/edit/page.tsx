@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { CATEGORIES, PRICE_UNITS } from "@/lib/catalog";
+import { CATEGORIES, UNITS_FOR, UNIT_LABEL } from "@/lib/catalog";
 import { ChevronLeftIcon } from "@/components/icons";
 import MediaUploader from "@/components/media-uploader";
 import { signedUrls } from "@/lib/images";
@@ -116,7 +116,7 @@ export default async function Edit({ params, searchParams }: {
         <div className="row" style={{ alignItems: "flex-end" }}>
           <label className="grow">Price (KES)<input name="price" type="number" inputMode="decimal" step="any" min="0" defaultValue={l.price_cents != null ? l.price_cents / 100 : ""} /></label>
           <label className="grow">Price type
-            <select name="price_unit" defaultValue={l.price_unit}>{Object.keys(PRICE_UNITS).map((u) => <option key={u} value={u}>{u.replace("_", " ")}</option>)}</select>
+            <select name="price_unit" defaultValue={l.price_unit}>{[...new Set([...UNITS_FOR[l.kind as "service" | "product"], l.price_unit as keyof typeof UNIT_LABEL])].map((u) => <option key={u} value={u}>{UNIT_LABEL[u]}</option>)}</select>
           </label>
         </div>
         <label>Stock <span className="hint">(optional)</span><input name="stock" type="number" inputMode="numeric" min="0" defaultValue={l.stock ?? ""} /></label>

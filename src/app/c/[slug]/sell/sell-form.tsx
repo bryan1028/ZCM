@@ -2,11 +2,9 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { CATEGORIES, PRICE_UNITS } from "@/lib/catalog";
+import { CATEGORIES, PRICE_UNITS, UNITS_FOR, UNIT_HINT, UNIT_LABEL } from "@/lib/catalog";
 import MediaUploader from "@/components/media-uploader";
 import { saveListing, type SellState } from "./actions";
-
-const UNIT_LABEL: Record<string, string> = { fixed: "Fixed price", per_hour: "Per hour", per_job: "Per job", negotiable: "Negotiable" };
 
 function Publish({ uploading }: { uploading: boolean }) {
   const { pending } = useFormStatus();
@@ -30,8 +28,10 @@ export default function SellForm({ slug, hasSeller, communityId, userId, action 
   const fe = (name: string) => state.field === name && state.error ? <span className="field-error" role="alert">{state.error}</span> : null;
   const bad = (name: string) => (state.field === name && state.error ? true : undefined);
   const accountType = v.account_type === "business" ? "business" : "individual";
-  const kind = v.kind === "product" ? "product" : "service";
-  const unit = v.price_unit && v.price_unit in PRICE_UNITS ? v.price_unit : "fixed";
+  const [kind, setKind] = useState<"service" | "product">(v.kind === "product" ? "product" : "service");
+  const [unit, setUnit] = useState<keyof typeof PRICE_UNITS>(v.price_unit && v.price_unit in PRICE_UNITS ? (v.price_unit as keyof typeof PRICE_UNITS) : "fixed");
+  const pickKind = (k: "service" | "product") => { setKind(k); if (!UNITS_FOR[k].includes(unit)) setUnit("fixed"); };
+  const suffix = unit === "fixed" || unit === "negotiable" ? "" : ` ${PRICE_UNITS[unit]}`;
 
   return (
     <form ref={formRef} action={act} noValidate className="stack sell-form">
@@ -60,8 +60,8 @@ export default function SellForm({ slug, hasSeller, communityId, userId, action 
       <section className="card stack">
         <h3 style={{ margin: 0 }}>What are you offering?</h3>
         <div className="choices">
-          <label className="choice"><input type="radio" name="kind" value="service" defaultChecked={kind === "service"} /><span className="box"><b>🛠️ A service</b><small>Work you do for people</small></span></label>
-          <label className="choice"><input type="radio" name="kind" value="product" defaultChecked={kind === "product"} /><span className="box"><b>🛍️ A product</b><small>Something you make or sell</small></span></label>
+          <label className="choice"><input type="radio" name="kind" value="service" checked={kind === "service"} onChange={() => pickKind("service")} /><span className="box"><b>🛠️ A service</b><small>Work you do for people</small></span></label>
+          <label className="choice"><input type="radio" name="kind" value="product" checked={kind === "product"} onChange={() => pickKind("product")} /><span className="box"><b>🛍️ A product</b><small>Something you make or sell</small></span></label>
         </div>
         <label className="for-service">Category
           <select name="category_service" defaultValue={v.category_service || CATEGORIES.service[0]} aria-invalid={bad("category_service")}>{CATEGORIES.service.map((c) => <option key={c}>{c}</option>)}</select>
@@ -87,11 +87,11 @@ export default function SellForm({ slug, hasSeller, communityId, userId, action 
       <section className="card stack">
         <h3 style={{ margin: 0 }}>Price</h3>
         <div className="choices four">
-          {Object.keys(PRICE_UNITS).map((u) => (
-            <label className="choice" key={u}><input type="radio" name="price_unit" value={u} defaultChecked={u === unit} /><span className="box"><b>{UNIT_LABEL[u]}</b></span></label>
+          {UNITS_FOR[kind].map((u) => (
+            <label className="choice" key={u}><input type="radio" name="price_unit" value={u} checked={u === unit} onChange={() => setUnit(u)} /><span className="box"><b>{UNIT_LABEL[u]}</b><small>{UNIT_HINT[u]}</small></span></label>
           ))}
         </div>
-        <label className="price-field">Amount (KES)
+        <label className="price-field">Amount (KES{suffix})
           <input name="price" defaultValue={v.price} inputMode="decimal" autoComplete="off" placeholder="e.g. 1500" aria-invalid={bad("price")} />
           {fe("price")}
         </label>

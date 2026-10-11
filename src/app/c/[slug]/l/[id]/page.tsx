@@ -92,13 +92,15 @@ export default async function ListingPage({ params, searchParams }: {
   const mine = s.user_id === user.id;
 
   // One round for everything that only needs the listing, then one for usernames (which needs the reviewers).
-  const [, { data: reviews }, { data: views }, photos, videos] = await Promise.all([
+  const [, { data: reviews }, { data: views }, photos, videos, { data: bought }] = await Promise.all([
     supabase.rpc("record_view", { lid: id }), // no-op for the seller's own views
     supabase.from("reviews").select("id, rating, comment, reviewer_id, created_at").eq("listing_id", id).order("created_at", { ascending: false }),
     mine ? supabase.from("listing_view_counts").select("views, unique_viewers").eq("listing_id", id).maybeSingle() : Promise.resolve({ data: null }),
     signedUrls(supabase, "zcm-listing-images", l.image_urls),
     signedUrls(supabase, "zcm-listing-videos", l.video_urls),
+    mine ? Promise.resolve({ data: null }) : supabase.from("reservations").select("id").eq("listing_id", id).eq("buyer_id", user.id).eq("status", "completed").limit(1),
   ]);
+  const canReview = !!bought?.length;
   const names = await usernamesFor(supabase, l.community_id, [s.user_id, ...(reviews ?? []).map((r) => r.reviewer_id)]);
   const media: MediaItem[] = [
     ...l.image_urls.flatMap((path: string) => (photos.get(path) ? [{ type: "image" as const, src: photos.get(path)! }] : [])),
@@ -187,7 +189,7 @@ export default async function ListingPage({ params, searchParams }: {
       </div>
 
       <h2 style={{ marginTop: 28 }}>Reviews {avg != null && <span className="stars" style={{ fontSize: 16 }}>★ {avg.toFixed(1)} <span className="muted">({reviews?.length})</span></span>}</h2>
-      {(reviews ?? []).length === 0 && <p className="muted">No reviews yet{!mine ? ". Be the first once you've dealt with this seller." : "."}</p>}
+      {(reviews ?? []).length === 0 && <p className="muted">No reviews yet{!mine ? ". Reviews come from neighbours who have completed an order with this seller." : "."}</p>}
       <div className="list">
         {(reviews ?? []).map((r) => {
           const who = names.get(r.reviewer_id) ?? "neighbour";
@@ -210,7 +212,16 @@ export default async function ListingPage({ params, searchParams }: {
         })}
       </div>
 
-      {!mine && (
+      {!mine && !canReview && !myReview && (
+        <div className="card flat" style={{ marginTop: 14 }}>
+          <strong>Want to leave a review?</strong>
+          <p className="muted" style={{ margin: "4px 0 0" }}>
+            Reviews come from neighbours who have completed an order for this listing. Once the seller confirms your order, you&apos;ll be able to review it here.
+          </p>
+        </div>
+      )}
+
+      {!mine && (canReview || !!myReview) && (
         <form action={addReview} className="card stack" style={{ marginTop: 14 }}>
           <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} />
           <strong>{myReview ? "Update your review" : "Leave a review"}</strong>

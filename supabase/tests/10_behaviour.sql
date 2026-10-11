@@ -100,6 +100,18 @@ do $$ declare l uuid; begin
   perform t.become(2);
   assert t.fails(format($q$insert into zcm.reviews(listing_id,reviewer_id,rating) values (%L,%L,5)$q$, l, t.uid(2))) like '%own listing%', 'no reviewing your own listing';
   perform t.become(3);
+  assert t.fails(format($q$insert into zcm.reviews(listing_id,reviewer_id,rating) values (%L,%L,5)$q$, l, t.uid(3))) like '%completed an order%', 'no review without a purchase';
+  perform t.su();
+  set local session_replication_role = replica;   -- fixture only: don't fire the order notification triggers
+  insert into zcm.reservations(community_id, listing_id, buyer_id, seller_user_id, status) select community_id, id, t.uid(3), t.uid(2), 'requested' from zcm.listings where id = l;
+  set local session_replication_role = origin;
+  perform t.become(3);
+  assert t.fails(format($q$insert into zcm.reviews(listing_id,reviewer_id,rating) values (%L,%L,5)$q$, l, t.uid(3))) like '%completed an order%', 'a pending order is not enough';
+  perform t.su();
+  set local session_replication_role = replica;
+  update zcm.reservations set status = 'completed' where listing_id = l and buyer_id = t.uid(3);
+  set local session_replication_role = origin;
+  perform t.become(3);
   insert into zcm.reviews(listing_id, reviewer_id, rating, comment) values (l, t.uid(3), 5, 'great');
   assert t.fails(format($q$insert into zcm.reviews(listing_id,reviewer_id,rating) values (%L,%L,4)$q$, l, t.uid(3))) is not null, 'one review per listing per person';
   assert t.fails(format($q$insert into zcm.reviews(listing_id,reviewer_id,rating) values (%L,%L,4)$q$, l, t.uid(2))) is not null, 'cannot review as someone else';
@@ -108,6 +120,9 @@ do $$ declare l uuid; begin
   perform t.become(5);
   assert t.n('select 1 from zcm.reviews') = 0, 'outsiders see no reviews';
   perform t.su();
+  set local session_replication_role = replica;
+  delete from zcm.reservations where listing_id = l and buyer_id = t.uid(3);   -- keep the later order tests starting from a clean slate
+  set local session_replication_role = origin;
   raise notice 'ok 4 reviews';
 end $$;
 
@@ -348,4 +363,17 @@ do $$ declare k uuid; s uuid; l uuid; c uuid; begin
   assert not exists (select 1 from auth.users where id = t.uid(1)), 'an admin with a successor can delete their account';
   assert (select count(*) from zcm.memberships where reviewed_by is null) > 0, 'reviewed_by is cleared, not blocking';
   raise notice 'ok 10 account deletion';
+end $$;
+
+-- price types: products can go per item / per kg, anything else is rejected
+do $$
+declare s uuid;
+begin
+  perform t.su();
+  select seller_id into s from zcm.listings limit 1;
+  assert s is not null, 'there is a seller to attach test listings to';
+  insert into zcm.listings (seller_id, kind, category, title, price_cents, price_unit) values (s, 'product', 'Produce', 'Onions', 12000, 'per_kg');
+  insert into zcm.listings (seller_id, kind, category, title, price_cents, price_unit) values (s, 'product', 'Baked goods', 'Cookies', 8000, 'per_item');
+  assert t.fails(format($q$insert into zcm.listings (seller_id, kind, category, title, price_unit) values (%L, 'product', 'Produce', 'Onions', 'per_pound')$q$, s)) is not null, 'an unknown price type is rejected';
+  raise notice 'ok 11 price units';
 end $$;

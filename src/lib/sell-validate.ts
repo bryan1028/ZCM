@@ -1,4 +1,4 @@
-import { CATEGORIES } from "./catalog";
+import { CATEGORIES, UNITS_FOR, type PRICE_UNITS } from "./catalog";
 
 export type SellValues = Record<string, string>;
 export type SellCheck =
@@ -11,7 +11,8 @@ export function checkListing(values: SellValues, hasSeller: boolean): SellCheck 
   const kind = values.kind === "product" ? "product" : "service";
   const category = values[`category_${kind}`] ?? "";
   const title = (values.title ?? "").trim();
-  const priceUnit = ["fixed", "per_hour", "per_job", "negotiable"].includes(values.price_unit) ? values.price_unit : "fixed";
+  // a price type that doesn't suit this kind of listing (e.g. "per kg" on a service) quietly becomes a fixed price
+  const priceUnit = (UNITS_FOR[kind] as string[]).includes(values.price_unit) ? values.price_unit : "fixed";
 
   if (!hasSeller) {
     if (!(values.display_name ?? "").trim()) return { ok: false, error: "Please enter your name so neighbours know who you are", field: "display_name" };
