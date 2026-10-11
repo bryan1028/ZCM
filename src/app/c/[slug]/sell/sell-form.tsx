@@ -1,18 +1,20 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { CATEGORIES, PRICE_UNITS } from "@/lib/catalog";
+import MediaUploader from "@/components/media-uploader";
 import { saveListing, type SellState } from "./actions";
 
 const UNIT_LABEL: Record<string, string> = { fixed: "Fixed price", per_hour: "Per hour", per_job: "Per job", negotiable: "Negotiable" };
 
-function Publish() {
+function Publish({ uploading }: { uploading: boolean }) {
   const { pending } = useFormStatus();
-  return <button className="cta" disabled={pending} aria-busy={pending}>{pending ? "Publishing…" : "Publish listing"}</button>;
+  return <button className="cta" disabled={pending || uploading} aria-busy={pending}>{pending ? "Publishing…" : uploading ? "Uploading photos…" : "Publish listing"}</button>;
 }
 
-export default function SellForm({ slug, hasSeller, action = saveListing }: { slug: string; hasSeller: boolean; action?: (prev: SellState, fd: FormData) => Promise<SellState> }) {
+export default function SellForm({ slug, hasSeller, communityId, userId, action = saveListing }: { slug: string; hasSeller: boolean; communityId: string; userId: string; action?: (prev: SellState, fd: FormData) => Promise<SellState> }) {
+  const [uploading, setUploading] = useState(false);
   const [state, act] = useActionState<SellState, FormData>(action, { values: {} });
   const v = state.values;
   const formRef = useRef<HTMLFormElement>(null);
@@ -77,6 +79,12 @@ export default function SellForm({ slug, hasSeller, action = saveListing }: { sl
       </section>
 
       <section className="card stack">
+        <h3 style={{ margin: 0 }}>Photos &amp; video</h3>
+        <MediaUploader communityId={communityId} userId={userId} onBusyChange={setUploading} />
+        <p className="muted small" style={{ margin: 0 }}>Listings with photos get far more attention. The first photo is the cover.</p>
+      </section>
+
+      <section className="card stack">
         <h3 style={{ margin: 0 }}>Price</h3>
         <div className="choices four">
           {Object.keys(PRICE_UNITS).map((u) => (
@@ -96,7 +104,7 @@ export default function SellForm({ slug, hasSeller, action = saveListing }: { sl
       {state.error && (
         <div ref={errRef} className="alert error pop-in" role="alert"><strong>Not published yet.</strong> {state.error}</div>
       )}
-      <Publish />
+      <Publish uploading={uploading} />
     </form>
   );
 }

@@ -22,6 +22,13 @@ export async function saveListing(_prev: SellState, formData: FormData): Promise
   const { data: community } = await supabase.from("communities").select("id").eq("slug", slug).single();
   if (!community) redirect("/");
 
+  // Photos/videos were already uploaded straight from the browser into this person's own folder; accept only those paths.
+  const own = `${community.id}/${user.id}/`;
+  const parse = (key: string): string[] => {
+    try { const v = JSON.parse(String(formData.get(key) ?? "[]")); return Array.isArray(v) ? v.filter((p) => typeof p === "string" && p.startsWith(own) && !p.includes("..")).slice(0, 10) : []; } catch { return []; }
+  };
+  const photoPaths = parse("photo_paths"), videoPaths = parse("video_paths");
+
   // First time selling here → we also need the seller profile, so find out before validating.
   let { data: seller } = await supabase.from("sellers").select("id").eq("community_id", community.id).eq("user_id", user.id).maybeSingle();
   const check = checkListing(values, !!seller);
@@ -50,7 +57,10 @@ export async function saveListing(_prev: SellState, formData: FormData): Promise
     price_cents: check.priceCents,
     price_unit: check.priceUnit,
     stock: check.stock,
+    image_urls: photoPaths,
+    video_urls: videoPaths,
   }).select("id").single();
   if (error) return fail(`Couldn't publish: ${error.message}`);
-  redirect(`/c/${slug}/l/${created!.id}/edit?new=1`); // straight on to adding photos
+  // with photos already attached, go straight to the listing; otherwise offer the photo screen
+  redirect(photoPaths.length || videoPaths.length ? `/c/${slug}/l/${created!.id}` : `/c/${slug}/l/${created!.id}/edit?new=1`);
 }

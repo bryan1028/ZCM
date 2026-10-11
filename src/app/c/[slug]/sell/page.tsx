@@ -1,10 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 import SellForm from "./sell-form";
+import { getCommunity } from "@/lib/community";
+import { notFound } from "next/navigation";
 import { getUser } from "@/lib/auth";
 
 export default async function Sell({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ error?: string }> }) {
   const { slug } = await params;
   const { error } = await searchParams;
+  const community = await getCommunity(slug);
+  if (!community) notFound();
   const supabase = await createClient();
   const { data: { user } } = await getUser(supabase);
   const { data: seller } = await supabase.from("sellers").select("id, communities!inner(slug)").eq("communities.slug", slug).eq("user_id", user!.id).maybeSingle();
@@ -13,7 +17,7 @@ export default async function Sell({ params, searchParams }: { params: Promise<{
     <div className="page-narrow">
       <div className="page-head"><div><h1>Sell or offer something</h1><p className="muted">It takes a minute. You can add photos right after.</p></div></div>
       {error && <div className="alert error" role="alert" style={{ marginBottom: 12 }}>{error}</div>}
-      <SellForm slug={slug} hasSeller={!!seller} />
+      <SellForm slug={slug} hasSeller={!!seller} communityId={community.id} userId={user!.id} />
     </div>
   );
 }

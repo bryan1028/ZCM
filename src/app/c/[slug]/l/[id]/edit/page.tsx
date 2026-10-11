@@ -1,12 +1,11 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { randomUUID } from "node:crypto";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { CATEGORIES, PRICE_UNITS } from "@/lib/catalog";
 import { ChevronLeftIcon } from "@/components/icons";
-import VideoUpload from "@/components/video-upload";
-import ImageInput from "@/components/image-input";
-import { extFor, MAX_UPLOAD_BYTES, signedUrls } from "@/lib/images";
+import MediaUploader from "@/components/media-uploader";
+import { signedUrls } from "@/lib/images";
 import { getUser } from "@/lib/auth";
 import Submit from "@/components/submit-button";
 
@@ -37,63 +36,31 @@ async function saveDetails(formData: FormData) {
   redirect(`${here}?saved=1`);
 }
 
-async function addPhoto(formData: FormData) {
+// Photos and videos are uploaded straight from the browser into the person's own storage folder (see MediaUploader);
+// these two just record / forget the path on the listing. Row-level security and the plan-limit trigger still apply.
+async function attachMedia(slug: string, id: string, kind: "image" | "video", path: string): Promise<{ error?: string }> {
   "use server";
-  const slug = String(formData.get("slug")), id = String(formData.get("id"));
   const { supabase, user, here } = await ctx(slug, id);
-  const file = formData.get("photo");
-  if (!(file instanceof File) || file.size === 0) return fail(here, "Choose a photo first");
-  const ext = extFor(file);
-  if (!ext) return fail(here, "Photos must be JPEG, PNG or WebP");
-  if (file.size > MAX_UPLOAD_BYTES) return fail(here, "Photo is larger than 5 MB");
-
-  const { data: l } = await supabase.from("listings").select("community_id, image_urls").eq("id", id).single();
-  if (!l) return fail(here, "Listing not found");
-  const path = `${l.community_id}/${user.id}/${randomUUID()}.${ext}`;
-  const up = await supabase.storage.from("zcm-listing-images").upload(path, file, { contentType: file.type });
-  if (up.error) return fail(here, up.error.message);
-  const { error } = await supabase.from("listings").update({ image_urls: [...l.image_urls, path] }).eq("id", id);
-  if (error) {                       // e.g. over the plan's image limit → don't leave an orphan file behind
-    await supabase.storage.from("zcm-listing-images").remove([path]);
-    return fail(here, error.message);
-  }
-  redirect(here);
+  const { data: l } = await supabase.from("listings").select("community_id, image_urls, video_urls").eq("id", id).single();
+  if (!l || !path.startsWith(`${l.community_id}/${user.id}/`) || path.includes("..")) return { error: "Invalid upload" };
+  const col = kind === "image" ? "image_urls" : "video_urls";
+  const { error } = await supabase.from("listings").update({ [col]: [...l[col], path] }).eq("id", id);
+  if (error) return { error: error.message };
+  revalidatePath(here);
+  return {};
 }
 
-async function removePhoto(formData: FormData) {
+async function detachMedia(slug: string, id: string, kind: "image" | "video", path: string): Promise<{ error?: string }> {
   "use server";
-  const slug = String(formData.get("slug")), id = String(formData.get("id"));
   const { supabase, here } = await ctx(slug, id);
-  const path = String(formData.get("path"));
-  const { data: l } = await supabase.from("listings").select("image_urls").eq("id", id).single();
-  if (l) {
-    await supabase.from("listings").update({ image_urls: l.image_urls.filter((p: string) => p !== path) }).eq("id", id);
-    await supabase.storage.from("zcm-listing-images").remove([path]);
-  }
-  redirect(here);
-}
-
-async function attachVideo(slug: string, id: string, path: string): Promise<{ error?: string }> {
-  "use server";
-  const { supabase, user } = await ctx(slug, id);
-  // the path must sit in this user's own folder for this listing's community
-  const { data: l } = await supabase.from("listings").select("community_id, video_urls").eq("id", id).single();
-  if (!l || !path.startsWith(`${l.community_id}/${user.id}/`)) return { error: "Invalid upload" };
-  const { error } = await supabase.from("listings").update({ video_urls: [...l.video_urls, path] }).eq("id", id);
-  return error ? { error: error.message } : {};
-}
-
-async function removeVideo(formData: FormData) {
-  "use server";
-  const slug = String(formData.get("slug")), id = String(formData.get("id"));
-  const { supabase, here } = await ctx(slug, id);
-  const path = String(formData.get("path"));
-  const { data: l } = await supabase.from("listings").select("video_urls").eq("id", id).single();
-  if (l) {
-    await supabase.from("listings").update({ video_urls: l.video_urls.filter((p: string) => p !== path) }).eq("id", id);
-    await supabase.storage.from("zcm-listing-videos").remove([path]);
-  }
-  redirect(here);
+  const col = kind === "image" ? "image_urls" : "video_urls";
+  const { data: l } = await supabase.from("listings").select(col).eq("id", id).single();
+  if (!l) return { error: "Listing not found" };
+  const { error } = await supabase.from("listings").update({ [col]: (l as unknown as Record<string, string[]>)[col].filter((p) => p !== path) }).eq("id", id);
+  if (error) return { error: error.message };
+  await supabase.storage.from(kind === "image" ? "zcm-listing-images" : "zcm-listing-videos").remove([path]);
+  revalidatePath(here);
+  return {};
 }
 
 export default async function Edit({ params, searchParams }: {
@@ -103,10 +70,14 @@ export default async function Edit({ params, searchParams }: {
   const { error, saved, new: isNew } = await searchParams;
   const { supabase, user } = await ctx(slug, id);
   const { data: l } = await supabase.from("listings")
-    .select("id, kind, community_id, title, description, category, price_cents, price_unit, stock, image_urls, video_urls, sellers!inner(user_id)").eq("id", id).maybeSingle();
+    .select("id, kind, community_id, title, description, category, price_cents, price_unit, stock, image_urls, video_urls, sellers!inner(user_id, plan, account_type)").eq("id", id).maybeSingle();
   if (!l || (l.sellers as unknown as { user_id: string }).user_id !== user.id) notFound();
-  const urls = await signedUrls(supabase, "zcm-listing-images", l.image_urls);
-  const vids = await signedUrls(supabase, "zcm-listing-videos", l.video_urls);
+  const sl = l.sellers as unknown as { plan: string; account_type: string };
+  const [urls, vids, { data: limits }] = await Promise.all([
+    signedUrls(supabase, "zcm-listing-images", l.image_urls),
+    signedUrls(supabase, "zcm-listing-videos", l.video_urls),
+    supabase.from("plan_limits").select("max_images, max_videos").eq("plan", sl.plan).eq("account_type", sl.account_type).maybeSingle(),
+  ]);
 
   return (
     <div className="page-narrow">
@@ -119,44 +90,17 @@ export default async function Edit({ params, searchParams }: {
       {saved && <div className="alert ok" role="status" style={{ marginBottom: 12 }}>Changes saved.</div>}
 
       <section className="card stack" style={{ marginBottom: 14 }}>
-        <div className="row"><h3 style={{ margin: 0 }}>Photos</h3><span className="muted small">{l.image_urls.length} added</span></div>
-        {l.image_urls.length > 0 && (
-          <div className="photo-grid">
-            {l.image_urls.map((path: string) => (
-              <form action={removePhoto} key={path} className="photo">
-                <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} />
-                <input type="hidden" name="path" value={path} />
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                {urls.get(path) && <img src={urls.get(path)} alt="" />}
-                <Submit aria-label="Remove photo" title="Remove">✕</Submit>
-              </form>
-            ))}
-          </div>
-        )}
-        <form action={addPhoto} className="stack">
-          <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} />
-          <ImageInput name="photo" required />
-          <Submit>Upload photo</Submit>
-        </form>
-        <p className="muted small" style={{ margin: 0 }}>JPEG, PNG or WebP. Big photos are shrunk automatically to save data.</p>
-      </section>
-
-      <section className="card stack" style={{ marginBottom: 14 }}>
-        <div className="row"><h3 style={{ margin: 0 }}>Video</h3><span className="muted small">{l.video_urls.length} added</span></div>
-        {l.video_urls.length > 0 && (
-          <div className="photo-grid">
-            {l.video_urls.map((path: string) => (
-              <form action={removeVideo} key={path} className="photo photo-video">
-                <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} /><input type="hidden" name="path" value={path} />
-                {vids.get(path) && <video src={`${vids.get(path)}#t=0.1`} muted playsInline preload="metadata" />}
-                <span className="play-badge" aria-hidden>▶</span>
-                <Submit aria-label="Remove video" title="Remove video">✕</Submit>
-              </form>
-            ))}
-          </div>
-        )}
-        <VideoUpload communityId={l.community_id} userId={user.id} attach={attachVideo.bind(null, slug, id)} />
-        <p className="muted small" style={{ margin: 0 }}>MP4, WebM or MOV, up to 20 MB. A ~30 second clip works well.</p>
+        <div className="row"><h3 style={{ margin: 0 }}>Photos &amp; video</h3></div>
+        <MediaUploader
+          communityId={l.community_id} userId={user.id}
+          initial={[
+            ...l.image_urls.flatMap((path: string) => (urls.get(path) ? [{ kind: "image" as const, path, url: urls.get(path)! }] : [])),
+            ...l.video_urls.flatMap((path: string) => (vids.get(path) ? [{ kind: "video" as const, path, url: vids.get(path)! }] : [])),
+          ]}
+          maxImages={limits?.max_images ?? 6} maxVideos={limits?.max_videos ?? 1}
+          attach={attachMedia.bind(null, slug, id)} detach={detachMedia.bind(null, slug, id)}
+        />
+        <p className="muted small" style={{ margin: 0 }}>Photos are shrunk automatically to save data. Videos: MP4, WebM or MOV up to 20 MB (about 30 seconds works well). The first photo is the cover.</p>
       </section>
 
       <form action={saveDetails} className="card stack">
