@@ -31,7 +31,7 @@ export default function SellForm({ slug, hasSeller, communityId, userId, action 
   const [kind, setKind] = useState<"service" | "product">(v.kind === "product" ? "product" : "service");
   const [unit, setUnit] = useState<keyof typeof PRICE_UNITS>(v.price_unit && v.price_unit in PRICE_UNITS ? (v.price_unit as keyof typeof PRICE_UNITS) : "fixed");
   const pickKind = (k: "service" | "product") => { setKind(k); if (!UNITS_FOR[k].includes(unit)) setUnit("fixed"); };
-  const suffix = unit === "fixed" || unit === "negotiable" ? "" : ` ${PRICE_UNITS[unit]}`;
+  const suffix = unit === "fixed" ? "" : ` ${PRICE_UNITS[unit]}`;
 
   return (
     <form ref={formRef} action={act} noValidate className="stack sell-form">
@@ -91,9 +91,13 @@ export default function SellForm({ slug, hasSeller, communityId, userId, action 
             <label className="choice" key={u}><input type="radio" name="price_unit" value={u} checked={u === unit} onChange={() => setUnit(u)} /><span className="box"><b>{UNIT_LABEL[u]}</b><small>{UNIT_HINT[u]}</small></span></label>
           ))}
         </div>
-        <label className="price-field">Amount (KES{suffix})
+        <label className="price-field">Amount (KES{suffix}) <span className="hint">(leave blank to show &ldquo;Ask for price&rdquo;)</span>
           <input name="price" defaultValue={v.price} inputMode="decimal" autoComplete="off" placeholder="e.g. 1500" aria-invalid={bad("price")} />
           {fe("price")}
+        </label>
+        <label className="check-row">
+          <input type="checkbox" name="negotiable" defaultChecked={v.negotiable === "on"} />
+          <span><b>Open to offers</b><small>Shows a &ldquo;Negotiable&rdquo; tag. Buyers message you to agree the price.</small></span>
         </label>
         <label className="for-product">Stock <span className="hint">(optional)</span>
           <input name="stock" defaultValue={v.stock} inputMode="numeric" autoComplete="off" placeholder="How many do you have?" aria-invalid={bad("stock")} />

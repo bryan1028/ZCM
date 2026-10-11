@@ -3,7 +3,7 @@ import { CATEGORIES, UNITS_FOR, type PRICE_UNITS } from "./catalog";
 export type SellValues = Record<string, string>;
 export type SellCheck =
   | { ok: false; error: string; field?: string }
-  | { ok: true; kind: "service" | "product"; category: string; title: string; priceUnit: string; priceCents: number | null; stock: number | null };
+  | { ok: true; kind: "service" | "product"; category: string; title: string; priceUnit: string; priceCents: number | null; negotiable: boolean; stock: number | null };
 
 // Pure checks for the "sell something" form: forgiving about how people type prices ("1,500", "KES 1500", "150.50"),
 // and every failure names the field so the page can say exactly what to fix.
@@ -24,7 +24,7 @@ export function checkListing(values: SellValues, hasSeller: boolean): SellCheck 
 
   let priceCents: number | null = null;
   const rawPrice = (values.price ?? "").replace(/kes|ksh|\s|,/gi, "");
-  if (priceUnit !== "negotiable" && rawPrice) {
+  if (rawPrice) {
     const n = Number(rawPrice);
     if (!Number.isFinite(n) || n < 0) return { ok: false, error: "Amount should be a number like 1500 or 150.50", field: "price" };
     priceCents = Math.round(n * 100);
@@ -36,5 +36,5 @@ export function checkListing(values: SellValues, hasSeller: boolean): SellCheck 
     if (!Number.isInteger(n) || n < 0) return { ok: false, error: "Stock should be a whole number, like 12", field: "stock" };
     stock = n;
   }
-  return { ok: true, kind, category, title, priceUnit, priceCents, stock };
+  return { ok: true, kind, category, title, priceUnit, priceCents, negotiable: values.negotiable === "on", stock };
 }

@@ -16,23 +16,22 @@ export const PRICE_UNITS = {
   per_job: "/ job",
   per_item: "/ item",
   per_kg: "/ kg",
-  negotiable: "(negotiable)",
 } as const;
 
 /** How a listing can be priced, depending on what it is: onions go by the kilo, a vehicle has one fixed price, a gardener charges per hour. */
 export const UNITS_FOR: Record<"service" | "product", (keyof typeof PRICE_UNITS)[]> = {
-  service: ["fixed", "per_hour", "per_job", "negotiable"],
-  product: ["fixed", "per_item", "per_kg", "negotiable"],
+  service: ["fixed", "per_hour", "per_job"],
+  product: ["fixed", "per_item", "per_kg"],
 };
 export const UNIT_LABEL: Record<keyof typeof PRICE_UNITS, string> = {
-  fixed: "Fixed price", per_hour: "Per hour", per_job: "Per job", per_item: "Per item", per_kg: "Per kg", negotiable: "Negotiable",
+  fixed: "Fixed price", per_hour: "Per hour", per_job: "Per job", per_item: "Per item", per_kg: "Per kg",
 };
 export const UNIT_HINT: Record<keyof typeof PRICE_UNITS, string> = {
-  fixed: "one price for the whole thing", per_hour: "charged by the hour", per_job: "one price per job", per_item: "price of each one", per_kg: "price of each kilo", negotiable: "agree it with the buyer",
+  fixed: "one price for the whole thing", per_hour: "charged by the hour", per_job: "one price per job", per_item: "price of each one", per_kg: "price of each kilo",
 };
 
 export function formatPrice(cents: number | null, unit: keyof typeof PRICE_UNITS, currency = "KES") {
-  if (cents == null || unit === "negotiable") return "Negotiable";
+  if (cents == null) return "Ask for price";
   return `${currency} ${(cents / 100).toLocaleString("en-KE", { minimumFractionDigits: cents % 100 ? 2 : 0, maximumFractionDigits: 2 })} ${PRICE_UNITS[unit]}`.trim();
 }
 

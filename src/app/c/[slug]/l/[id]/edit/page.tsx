@@ -30,6 +30,7 @@ async function saveDetails(formData: FormData) {
     category: String(formData.get("category")),
     price_cents: price ? Math.round(Number(price) * 100) : null,
     price_unit: String(formData.get("price_unit")),
+    negotiable: formData.get("negotiable") === "on",
     stock: stock ? Number(stock) : null,
   }).eq("id", id);
   if (error) fail(here, error.message);
@@ -70,7 +71,7 @@ export default async function Edit({ params, searchParams }: {
   const { error, saved, new: isNew } = await searchParams;
   const { supabase, user } = await ctx(slug, id);
   const { data: l } = await supabase.from("listings")
-    .select("id, kind, community_id, title, description, category, price_cents, price_unit, stock, image_urls, video_urls, sellers!inner(user_id, plan, account_type)").eq("id", id).maybeSingle();
+    .select("id, kind, community_id, title, description, category, price_cents, price_unit, negotiable, stock, image_urls, video_urls, sellers!inner(user_id, plan, account_type)").eq("id", id).maybeSingle();
   if (!l || (l.sellers as unknown as { user_id: string }).user_id !== user.id) notFound();
   const sl = l.sellers as unknown as { plan: string; account_type: string };
   const [urls, vids, { data: limits }] = await Promise.all([
@@ -119,6 +120,10 @@ export default async function Edit({ params, searchParams }: {
             <select name="price_unit" defaultValue={l.price_unit}>{[...new Set([...UNITS_FOR[l.kind as "service" | "product"], l.price_unit as keyof typeof UNIT_LABEL])].map((u) => <option key={u} value={u}>{UNIT_LABEL[u]}</option>)}</select>
           </label>
         </div>
+        <label className="check-row">
+          <input type="checkbox" name="negotiable" defaultChecked={l.negotiable} />
+          <span><b>Open to offers</b><small>Shows a &ldquo;Negotiable&rdquo; tag. Buyers message you to agree the price.</small></span>
+        </label>
         <label>Stock <span className="hint">(optional)</span><input name="stock" type="number" inputMode="numeric" min="0" defaultValue={l.stock ?? ""} /></label>
         <Submit>Save changes</Submit>
       </form>

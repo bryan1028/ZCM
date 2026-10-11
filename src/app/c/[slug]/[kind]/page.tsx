@@ -20,7 +20,7 @@ export default async function Listings({ params, searchParams }: {
   const supabase = await createClient();
   let q = supabase
     .from("listings")
-    .select("id, title, description, category, price_cents, price_unit, featured_until, available, stock, image_urls, video_urls, kind, sellers(display_name, business_name, account_type, whatsapp), communities!inner(slug, currency)")
+    .select("id, title, description, category, price_cents, price_unit, negotiable, featured_until, available, stock, image_urls, video_urls, kind, sellers(display_name, business_name, account_type, whatsapp), communities!inner(slug, currency)")
     .eq("communities.slug", slug).eq("kind", def.kind).eq("status", "active")
     .order("featured_until", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false });

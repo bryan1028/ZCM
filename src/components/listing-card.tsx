@@ -4,7 +4,7 @@ import { StarIcon } from "./icons";
 
 export type CardListing = {
   id: string; title: string; description: string | null; category: string; kind: string;
-  price_cents: number | null; price_unit: string; featured_until: string | null; available: boolean;
+  price_cents: number | null; price_unit: string; negotiable?: boolean; featured_until: string | null; available: boolean;
   image_urls: string[]; video_urls: string[];
   sellers: unknown; communities: unknown;
 };
@@ -37,7 +37,7 @@ export default function ListingCard({ l, slug, thumb, rating }: {
         {l.video_urls.length > 0 && l.image_urls.length === 0 && <span className="media-count">▶</span>}
       </div>
       <div className="listing-body">
-        <div className="listing-price">{formatPrice(l.price_cents, l.price_unit as keyof typeof PRICE_UNITS, c.currency)}</div>
+        <div className="listing-price">{formatPrice(l.price_cents, l.price_unit as keyof typeof PRICE_UNITS, c.currency)}{l.negotiable && l.price_cents != null && <span className="nego-tag">negotiable</span>}</div>
         <div className="listing-title clamp-2">{l.title}</div>
         <div className="listing-meta">
           <span className="seller">{seller}</span>
