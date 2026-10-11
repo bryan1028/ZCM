@@ -84,7 +84,7 @@ export default async function ListingPage({ params, searchParams }: {
 
   const { data: l } = await supabase
     .from("listings")
-    .select("id, kind, community_id, title, description, category, price_cents, price_unit, negotiable, stock, available, image_urls, video_urls, sellers(user_id, display_name, business_name, account_type, whatsapp), communities(currency)")
+    .select("id, kind, community_id, title, description, category, price_cents, price_unit, stock, available, image_urls, video_urls, sellers(user_id, display_name, business_name, account_type, whatsapp), communities(currency)")
     .eq("id", id).maybeSingle();
   if (!l) notFound();
   const s = l.sellers as unknown as { user_id: string; display_name: string; business_name: string | null; account_type: string; whatsapp: string | null };
@@ -138,10 +138,7 @@ export default async function ListingPage({ params, searchParams }: {
               {l.stock != null && l.stock <= 3 && l.stock > 0 && <span className="badge accent">Only {l.stock} left</span>}
             </div>
             <h1>{l.title}</h1>
-            <div className="price-big" style={{ marginTop: 6 }}>
-              {formatPrice(l.price_cents, l.price_unit as keyof typeof PRICE_UNITS, currency)}
-              {l.negotiable && l.price_cents != null && <span className="nego-tag" style={{ fontSize: 13 }}>Negotiable</span>}
-            </div>
+            <div className="price-big" style={{ marginTop: 6 }}>{formatPrice(l.price_cents, l.price_unit as keyof typeof PRICE_UNITS, currency)}</div>
           </div>
 
           <div className="card flat row" style={{ justifyContent: "flex-start" }}>
@@ -171,9 +168,7 @@ export default async function ListingPage({ params, searchParams }: {
           ) : (
             <div className="sticky-cta">
               <div className="cta-bar">
-                {l.price_cents == null && <p className="cta-note">No price is listed. Message @{sellerHandle} to ask what it costs.</p>}
-                {l.price_cents != null && l.negotiable && <p className="cta-note">Open to offers: message @{sellerHandle} to agree a price, then {verb.toLowerCase()} it.</p>}
-                {l.available && l.price_cents != null && (
+                {l.available && (
                   <form action={reserve} style={{ gridTemplateColumns: "76px 1fr", gap: 8 }}>
                     <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} />
                     <input name="qty" type="number" min="1" defaultValue="1" aria-label="Quantity" />
@@ -183,7 +178,7 @@ export default async function ListingPage({ params, searchParams }: {
                 )}
                 <form action={startChat}>
                   <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} />
-                  <Submit className="secondary"><ChatIcon size={18} />{l.price_cents == null ? "Ask for the price" : l.negotiable ? "Make an offer" : `Message @${sellerHandle}`}</Submit>
+                  <Submit className="secondary"><ChatIcon size={18} />Message @{sellerHandle}</Submit>
                 </form>
                 {s.whatsapp && <a className="muted small center" href={`https://wa.me/${s.whatsapp.replace(/\D/g, "")}`}>or reach out on WhatsApp</a>}
                 {error && <div className="alert error" role="alert">{error}</div>}

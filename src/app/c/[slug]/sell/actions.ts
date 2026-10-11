@@ -7,7 +7,7 @@ import { getUser } from "@/lib/auth";
 
 export type SellState = { error?: string; field?: string; values: Record<string, string> };
 
-const KEYS = ["account_type", "display_name", "business_name", "whatsapp", "kind", "category_service", "category_product", "title", "description", "price_unit", "price", "negotiable", "stock"];
+const KEYS = ["account_type", "display_name", "business_name", "whatsapp", "kind", "category_service", "category_product", "title", "description", "price_unit", "price", "stock"];
 
 // Every problem comes back as { error, field } together with what the person typed, so nothing is ever lost or silent.
 export async function saveListing(_prev: SellState, formData: FormData): Promise<SellState> {
@@ -56,7 +56,6 @@ export async function saveListing(_prev: SellState, formData: FormData): Promise
     description: values.description.trim() || null,
     price_cents: check.priceCents,
     price_unit: check.priceUnit,
-    negotiable: check.negotiable,
     stock: check.stock,
     image_urls: photoPaths,
     video_urls: videoPaths,

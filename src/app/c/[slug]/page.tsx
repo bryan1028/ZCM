@@ -20,7 +20,7 @@ export default async function Feed({ params }: { params: Promise<{ slug: string 
     supabase.from("announcements").select("id, title, body, pinned, created_at").eq("community_id", community!.id)
       .order("pinned", { ascending: false }).order("created_at", { ascending: false }).limit(3),
     supabase.from("listings")
-      .select("id, title, description, category, kind, price_cents, price_unit, negotiable, featured_until, available, image_urls, video_urls, sellers(display_name, business_name, account_type, whatsapp), communities!inner(slug, currency)")
+      .select("id, title, description, category, kind, price_cents, price_unit, featured_until, available, image_urls, video_urls, sellers(display_name, business_name, account_type, whatsapp), communities!inner(slug, currency)")
       .eq("communities.slug", slug).eq("status", "active").order("created_at", { ascending: false }).limit(20),
     supabase.rpc("get_invite_code", { cid: community!.id }),
     supabase.from("profiles").select("username").eq("id", user!.id).single(),

@@ -377,16 +377,3 @@ begin
   assert t.fails(format($q$insert into zcm.listings (seller_id, kind, category, title, price_unit) values (%L, 'product', 'Produce', 'Onions', 'per_pound')$q$, s)) is not null, 'an unknown price type is rejected';
   raise notice 'ok 11 price units';
 end $$;
-
--- negotiable is a flag on a priced listing, no longer a price type
-do $$
-declare s uuid;
-begin
-  perform t.su();
-  select seller_id into s from zcm.listings limit 1;
-  insert into zcm.listings (seller_id, kind, category, title, price_cents, price_unit, negotiable) values (s, 'product', 'Second-hand', 'Used bicycle', 900000, 'fixed', true);
-  assert (select negotiable from zcm.listings where title = 'Used bicycle'), 'the negotiable flag is stored';
-  assert not (select negotiable from zcm.listings where title = 'Onions'), 'it defaults to off';
-  assert t.fails(format($q$insert into zcm.listings (seller_id, kind, category, title, price_unit) values (%L, 'product', 'Produce', 'X1', 'negotiable')$q$, s)) is not null, 'negotiable is no longer a price type';
-  raise notice 'ok 12 negotiable flag';
-end $$;

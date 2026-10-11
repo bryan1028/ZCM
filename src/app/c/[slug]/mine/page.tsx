@@ -49,7 +49,7 @@ export default async function Mine({ params, searchParams }: { params: Promise<{
   }
 
   const { data: listings } = await supabase.from("listings")
-    .select("id, title, status, kind, price_cents, price_unit, negotiable, featured_until, image_urls").eq("seller_id", seller.id).neq("status", "removed").order("created_at", { ascending: false });
+    .select("id, title, status, kind, price_cents, price_unit, featured_until, image_urls").eq("seller_id", seller.id).neq("status", "removed").order("created_at", { ascending: false });
   const { data: counts } = await supabase.from("listing_view_counts").select("listing_id, views, unique_viewers")
     .in("listing_id", (listings ?? []).map((l) => l.id));
   const views = new Map((counts ?? []).map((c) => [c.listing_id, c]));
@@ -88,7 +88,7 @@ export default async function Mine({ params, searchParams }: { params: Promise<{
                     <span className={`badge ${TONE[l.status] ?? ""}`}>{l.status}</span>
                   </div>
                   <div className="muted small">
-                    {formatPrice(l.price_cents, l.price_unit as keyof typeof PRICE_UNITS, currency)}{l.negotiable && l.price_cents != null ? " · negotiable" : ""} · 👁 {views.get(l.id)?.views ?? 0} views
+                    {formatPrice(l.price_cents, l.price_unit as keyof typeof PRICE_UNITS, currency)} · 👁 {views.get(l.id)?.views ?? 0} views
                     {isFeatured && <> · <span className="badge accent">⭐ Featured</span></>}
                   </div>
                 </div>

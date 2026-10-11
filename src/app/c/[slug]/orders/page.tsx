@@ -81,7 +81,7 @@ export default async function Orders({ params, searchParams }: { params: Promise
       .sort((a, b) => a.created_at.localeCompare(b.created_at));
     const latest = pays[pays.length - 1];
     const other = names.get(asSeller ? r.buyer_id : r.seller_user_id) ?? "neighbour";
-    const total = r.unit_price_cents != null ? formatPrice(r.unit_price_cents * r.quantity, "fixed", community.currency) : "Price to be agreed";
+    const total = r.unit_price_cents != null ? formatPrice(r.unit_price_cents * r.quantity, "fixed", community.currency) : "Price not set";
     const hidden = (act: string) => (<><input type="hidden" name="id" value={r.id} /><input type="hidden" name="back" value={back} /><input type="hidden" name="act" value={act} /></>);
     const step = stepOf[r.status];
     const open = ["requested", "accepted"].includes(r.status);

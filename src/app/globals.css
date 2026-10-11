@@ -652,13 +652,3 @@ main > *:nth-child(n+6) { animation-delay: .25s; }
 .photo-state button { background: #fff; color: #7a1c10; box-shadow: none; background-image: none; min-height: 28px; padding: 0 10px; font-size: 12px; }
 .spinner { width: 20px; height: 20px; border-radius: 50%; border: 3px solid rgba(255, 255, 255, .45); border-top-color: #fff; animation: spin .7s linear infinite; }
 .photo-uploading img, .photo-uploading video { filter: saturate(.7); }
-
-/* negotiable tag next to a price + the "open to offers" checkbox */
-.nego-tag { display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 99px; background: var(--accent-soft); color: var(--accent-ink); font-size: 11.5px; font-weight: 700; vertical-align: 1px; }
-.check-row { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border: 1.5px solid var(--line); border-radius: 16px; background: var(--surface); cursor: pointer; font-weight: 400; transition: border-color .15s, background .15s; }
-.check-row:hover { background: var(--surface-2); }
-.check-row:has(input:checked) { border-color: var(--brand); background: var(--brand-soft); }
-.check-row input { margin-top: 2px; flex: none; }
-.check-row b { display: block; font-weight: 700; }
-.check-row small { display: block; color: var(--muted); font-size: 12.5px; }
-.cta-note { margin: 0; font-size: 13.5px; color: var(--ink-2); }

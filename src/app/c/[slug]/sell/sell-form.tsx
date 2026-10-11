@@ -91,14 +91,11 @@ export default function SellForm({ slug, hasSeller, communityId, userId, action 
             <label className="choice" key={u}><input type="radio" name="price_unit" value={u} checked={u === unit} onChange={() => setUnit(u)} /><span className="box"><b>{UNIT_LABEL[u]}</b><small>{UNIT_HINT[u]}</small></span></label>
           ))}
         </div>
-        <label className="price-field">Amount (KES{suffix}) <span className="hint">(leave blank to show &ldquo;Ask for price&rdquo;)</span>
+        <label className="price-field">Amount (KES{suffix})
           <input name="price" defaultValue={v.price} inputMode="decimal" autoComplete="off" placeholder="e.g. 1500" aria-invalid={bad("price")} />
           {fe("price")}
         </label>
-        <label className="check-row">
-          <input type="checkbox" name="negotiable" defaultChecked={v.negotiable === "on"} />
-          <span><b>Open to offers</b><small>Shows a &ldquo;Negotiable&rdquo; tag. Buyers message you to agree the price.</small></span>
-        </label>
+        <p className="muted small" style={{ margin: 0 }}>Buyers see this price. If you agree a different one in the chat, just confirm the payment you receive.</p>
         <label className="for-product">Stock <span className="hint">(optional)</span>
           <input name="stock" defaultValue={v.stock} inputMode="numeric" autoComplete="off" placeholder="How many do you have?" aria-invalid={bad("stock")} />
           {fe("stock")}
