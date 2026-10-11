@@ -9,7 +9,7 @@ No code changes or redeploys. About 15 minutes of your time, plus the admin's.
 
 ## Set up (SQL editor, ~2 min)
 1. Ask the admin to **sign in once** at your site (this creates their account).
-2. Run: `select create_community('green-park', 'Green Park', 'Nairobi', 'admin@example.com');`
+2. Run: `select zcm.create_community('green-park', 'Green Park', 'Nairobi', 'admin@example.com');`
    It creates the community, its invite link, and makes that person the verified admin. (If they hadn't signed in yet, it tells you the one-liner to run afterwards.)
 3. Open `/c/green-park/admin` as the admin and copy the **invite link**.
 

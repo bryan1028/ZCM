@@ -58,7 +58,7 @@ nothing. Use `<ActionButton action={…} fields={{ … }}>` (`src/components/act
 
 ## How it scales to more communities
 - Every community-owned row has `community_id`; RLS only exposes rows to **verified members of that community**.
-- A new estate = one `select create_community(...)` call. Routes are `/c/<slug>/…`; no code change.
+- A new estate = one `select zcm.create_community(...)` call. Routes are `/c/<slug>/…`; no code change.
 - One person can belong to several communities. Each community has its own admin(s) who verify residents.
 
 ## Resident verification
@@ -117,7 +117,7 @@ Payments are **proof only** by design — the app never handles money.
 - **Feed + announcements**: community home shows admin announcements (pin/unpin) and recently added listings across both tabs.
 - **Videos**: up to 1 per listing on free (3 on Pro), MP4/WebM/MOV ≤ 20 MB, uploaded directly to a private bucket.
   Supabase free tier caps each upload at 50 MB and total storage at 1 GB — watch storage as you grow.
-- **New estates**: `select create_community('slug','Name','City','admin@email')` — see `docs/NEW_COMMUNITY.md`.
+- **New estates**: `select zcm.create_community('slug','Name','City','admin@email')` — see `docs/NEW_COMMUNITY.md`.
 
 ## Mapping to the architecture doc
 Doc MVP: services & products, search, in-app messaging (WhatsApp link kept as an option). Phase 2: reservations + payment proof.
