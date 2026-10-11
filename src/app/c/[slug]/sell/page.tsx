@@ -15,7 +15,7 @@ export default async function Sell({ params, searchParams }: { params: Promise<{
 
   return (
     <div className="page-narrow">
-      <div className="page-head"><div><h1>Sell or offer something</h1><p className="muted">It takes a minute. You can add photos right after.</p></div></div>
+      <div className="page-head"><div><h1>Sell or offer something</h1><p className="muted">It takes a minute. Add photos and a video below, or later from My listings.</p></div></div>
       {error && <div className="alert error" role="alert" style={{ marginBottom: 12 }}>{error}</div>}
       <SellForm slug={slug} hasSeller={!!seller} communityId={community.id} userId={user!.id} />
     </div>
