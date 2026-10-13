@@ -20,7 +20,7 @@ export default function Terms() {
         <ul>
           <li><b>Services</b> (a gardener, a cleaner, a handyman) are arranged by chat. Message the person, agree the details, and pay them directly once the work is done. Nothing is paid through the app, and you should not pay for a service before it has been done.</li>
           <li><b>Products</b> can be reserved in the app. The buyer pays the seller directly (for example by M-Pesa) and uploads a payment-proof screenshot, and the seller confirms they received it. That screenshot is only a record shared between buyer and seller. It is not a guarantee of payment or of quality.</li>
-          <li>Any price different from the one listed is a matter between the buyer and seller, who agree it in the chat. The seller confirms the payment they actually receive.</li>
+          <li>The listed price is the price. If a buyer and seller ever agree something different between themselves, that is up to them, and the seller confirms the payment they actually receive.</li>
         </ul>
 
         <h3>Your content and behaviour</h3>
