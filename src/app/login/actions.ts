@@ -7,7 +7,6 @@ import { safeNext } from "@/lib/nav";
 export type LoginState = {
   step: "email" | "code";
   email: string;
-  name: string;
   next: string;
   error?: string;
   notice?: string;
@@ -29,16 +28,14 @@ function friendly(message: string, status?: number) {
 /** Step 1: email the 6-digit code. */
 async function sendCode(_prev: LoginState, formData: FormData): Promise<LoginState> {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
-  const name = String(formData.get("name") ?? "").trim();
   const next = safeNext(String(formData.get("next") ?? ""));
-  const base = { email, name, next };
+  const base = { email, next };
   if (!/^\S+@\S+\.\S+$/.test(email)) return { ...base, step: "email", error: "Enter a valid email address." };
 
+  // Same call for new and returning people: if the email has an account they are signed in, otherwise one is created.
+  // Their name and community come later, on the join screen.
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: { data: name ? { full_name: name } : undefined },
-  });
+  const { error } = await supabase.auth.signInWithOtp({ email });
   if (error) return { ...base, step: formData.get("resend") === "1" ? "code" : "email", error: friendly(error.message, error.status) };
   return { ...base, step: "code", notice: `We sent a 6-digit code to ${email}. It can take a minute — check spam or promotions too.` };
 }
@@ -46,10 +43,9 @@ async function sendCode(_prev: LoginState, formData: FormData): Promise<LoginSta
 /** Step 2: check the code and sign in. */
 async function verifyCode(_prev: LoginState, formData: FormData): Promise<LoginState> {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
-  const name = String(formData.get("name") ?? "").trim();
   const next = safeNext(String(formData.get("next") ?? ""));
   const token = String(formData.get("token") ?? "").replace(/\s+/g, "");
-  const base = { email, name, next, step: "code" as const };
+  const base = { email, next, step: "code" as const };
   if (!/^\d{6,8}$/.test(token)) return { ...base, error: "Enter the 6-digit code from the email." };
 
   const supabase = await createClient();

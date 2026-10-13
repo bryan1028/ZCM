@@ -5,7 +5,7 @@ import Page from "@/components/page";
 import { getUser } from "@/lib/auth";
 
 const STATUS: Record<string, { label: string; tone: string; note: string }> = {
-  pending: { label: "Awaiting approval", tone: "accent", note: "An admin will confirm you live here. We'll notify you." },
+  pending: { label: "Awaiting approval", tone: "accent", note: "Request sent. Your community admin will confirm you live here, then you can come back and pick a username." },
   rejected: { label: "Not approved", tone: "danger", note: "Contact your community admin if you think this is a mistake." },
   suspended: { label: "Suspended", tone: "danger", note: "Contact your community admin." },
 };
@@ -15,20 +15,23 @@ export default async function Home() {
   const supabase = await createClient();
   const { data: { user } } = await getUser(supabase);
   const { data: me } = await supabase.from("profiles").select("username").eq("id", user!.id).maybeSingle();
-  if (!me?.username) redirect("/welcome");
   const { data: memberships } = await supabase
     .from("memberships")
     .select("status, communities(slug, name)")
     .eq("user_id", user!.id)   // admins can read everyone's rows; we only want our own
     .order("created_at");
 
+  // New here: no communities yet, so go and request one (name, unit, community). The username comes later, once verified.
+  if ((memberships ?? []).length === 0) redirect("/join");
+
   const verified = (memberships ?? []).filter((m) => m.status === "verified");
+  if (verified.length && !me?.username) redirect("/welcome");   // approved: now pick the username neighbours will see
   if (verified.length === 1) redirect(`/c/${(verified[0].communities as unknown as { slug: string }).slug}`);
 
   return (
     <Page>
       <h1>Your communities</h1>
-      <p className="muted" style={{ margin: "6px 0 16px" }}>Signed in as @{me.username}</p>
+      <p className="muted" style={{ margin: "6px 0 16px" }}>Signed in as {me?.username ? `@${me.username}` : user!.email}</p>
       <div className="list">
         {(memberships ?? []).map((m) => {
           const c = m.communities as unknown as { slug: string; name: string };

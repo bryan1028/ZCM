@@ -140,7 +140,7 @@ export default async function Admin({ params, searchParams }: { params: Promise<
         <div className="row row-start" style={{ justifyContent: "flex-start" }}>
           <span className="avatar avatar-lg" aria-hidden>{(p?.username ?? p?.full_name ?? "?").slice(0, 1)}</span>
           <div className="grow">
-            <div style={{ fontWeight: 700 }}>{p?.full_name ?? "Unnamed"} <span className="muted" style={{ fontWeight: 400 }}>@{p?.username ?? "?"}</span></div>
+            <div style={{ fontWeight: 700 }}>{p?.full_name ?? "Unnamed"} {p?.username && <span className="muted" style={{ fontWeight: 400 }}>@{p.username}</span>}</div>
             <div className="muted small">Unit <b style={{ color: "var(--ink)" }}>{m.unit}</b> · applied {fmtDay(m.created_at, community.timezone)}</div>
           </div>
         </div>

@@ -19,7 +19,7 @@ export default function LoginForm({ next, initialError, initialEmail, initialSte
   next: string; initialError?: string; initialEmail?: string; initialStep?: "email" | "code";
 }) {
   const [state, act] = useActionState<LoginState, FormData>(loginAction, {
-    step: initialStep, email: initialEmail ?? "", name: "", next, error: initialError,
+    step: initialStep, email: initialEmail ?? "", next, error: initialError,
   });
   const [cooldown, setCooldown] = useState(0);
 
@@ -36,7 +36,6 @@ export default function LoginForm({ next, initialError, initialEmail, initialSte
   const hidden = (
     <>
       <input type="hidden" name="email" value={state.email} />
-      <input type="hidden" name="name" value={state.name} />
       <input type="hidden" name="next" value={state.next} />
     </>
   );
@@ -80,10 +79,9 @@ export default function LoginForm({ next, initialError, initialEmail, initialSte
       <form action={act} className="card stack">
         <input type="hidden" name="intent" value="send" />
         <input type="hidden" name="next" value={state.next} />
-        <label>Your name<input name="name" placeholder="Jane Wanjiku" defaultValue={state.name} autoComplete="name" /></label>
-        <label>Email<input name="email" type="email" required defaultValue={state.email} autoComplete="email" placeholder="you@example.com" /></label>
+        <label>Email<input name="email" type="email" required defaultValue={state.email} autoComplete="email" placeholder="you@example.com" autoFocus /></label>
         <Submit idle="Email me a sign-in code" busy="Sending code…" />
-        <p className="muted small" style={{ margin: 0 }}>We&apos;ll email you a 6-digit code. It takes a few seconds.</p>
+        <p className="muted small" style={{ margin: 0 }}>We&apos;ll email you a 6-digit code. Already a member? It signs you straight in. New here? Next you&apos;ll choose your community and tell us who you are.</p>
       </form>
     </>
   );

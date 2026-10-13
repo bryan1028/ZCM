@@ -14,6 +14,9 @@ async function requestToJoin(formData: FormData) {
   const { data: { user } } = await getUser(supabase);
   if (!user) redirect("/login");
   if (formData.get("agree") !== "on") redirect(`/join?error=${encodeURIComponent("Please accept the Terms and Privacy Policy")}`);
+  const fullName = String(formData.get("full_name") ?? "").trim();
+  if (fullName.length < 2) redirect(`/join?error=${encodeURIComponent("Please enter your name so your admin knows who you are")}`);
+  await supabase.from("profiles").update({ full_name: fullName }).eq("id", user.id);   // only admins ever see this
   const { error } = await supabase.from("memberships").insert({
     community_id: String(formData.get("community_id")),
     user_id: user.id,
@@ -29,11 +32,7 @@ export default async function Join({ searchParams }: { searchParams: Promise<{ e
   const { error, code, ref } = await searchParams;
   const supabase = await createClient();
   const { data: { user } } = await getUser(supabase);
-  const { data: me } = await supabase.from("profiles").select("username").eq("id", user!.id).maybeSingle();
-  if (!me?.username) {
-    const back = `/join${code ? `?code=${encodeURIComponent(code)}${ref ? `&ref=${encodeURIComponent(ref)}` : ""}` : ""}`;
-    redirect(`/welcome?next=${encodeURIComponent(back)}`);
-  }
+  const { data: me } = await supabase.from("profiles").select("full_name").eq("id", user!.id).maybeSingle();
 
   // With an invite code we show just that community; otherwise the full list.
   const { data: invited } = code ? await supabase.rpc("community_by_invite", { c: code }) : { data: null };
@@ -49,6 +48,9 @@ export default async function Join({ searchParams }: { searchParams: Promise<{ e
       {error && <div className="alert error" role="alert" style={{ marginBottom: 12 }}>{error.includes("duplicate") ? "You've already requested this community." : error}</div>}
       <form action={requestToJoin} className="card stack">
         <input type="hidden" name="ref" value={invited?.length ? ref ?? "" : ""} />
+        <label>Your name <span className="hint">(your admin sees this, neighbours don&apos;t)</span>
+          <input name="full_name" required defaultValue={me?.full_name ?? ""} autoComplete="name" placeholder="e.g. Jane Wanjiku" />
+        </label>
         <label>Community
           <select name="community_id" required>
             {options.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}

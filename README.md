@@ -62,7 +62,7 @@ nothing. Use `<ActionButton action={…} fields={{ … }}>` (`src/components/act
 - One person can belong to several communities. Each community has its own admin(s) who verify residents.
 
 ## Resident verification
-Sign in (6-digit code emailed to you) → request to join with unit number + a note → status `pending` → a community admin
+Enter your email (a 6-digit code signs you in; returning members go straight in) → new people choose a community and give their name, unit number and a note → status `pending` → a community admin
 verifies at `/c/<slug>/admin`. Only `verified` memberships can read anything. Users cannot verify themselves (RLS).
 
 ## Monetisation hooks (already in the schema)
@@ -76,7 +76,7 @@ ban (suspend) and shadowban (user keeps posting, nobody else sees it) · per-lis
 stock/availability · search · installable PWA manifest.
 
 ## Usernames & chat (0003)
-Everyone picks a unique `@username` on first sign-in (`/welcome`). Neighbours only ever see usernames — never real
+Once an admin has verified you, you pick a unique `@username` (`/welcome`) the first time you open the community. Neighbours only ever see usernames — never real
 names, emails or phones (`member_names` view). Chat is 1:1 and always starts from a listing ("Message @seller").
 Only the two participants can read it; messages arrive live via Supabase Realtime (30s poll fallback), are
 rate-limited (20/min), shadowbanned senders' messages are silently dropped for the recipient, and any chat can be
