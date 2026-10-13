@@ -246,7 +246,10 @@ do $$ declare k uuid; l uuid; code text; begin
   select id into k from zcm.communities where slug = 'kijani-ridge';
   select id into l from zcm.listings where title = 'Cookies';
   perform t.become(3);
-  insert into zcm.reports(community_id, reporter_id, target_type, target_id, reason) values (k, t.uid(3), 'listing', l, 'looks like spam');
+  assert t.fails(format($q$insert into zcm.reports(community_id,reporter_id,target_type,target_id,reason) values (%L,%L,'listing',%L,'looks like spam, take it down')$q$, k, t.uid(3), l)) is not null, 'a report needs a category';
+  assert t.fails(format($q$insert into zcm.reports(community_id,reporter_id,target_type,target_id,category,reason) values (%L,%L,'listing',%L,'Spam','spam')$q$, k, t.uid(3), l)) is not null, 'a report needs a real explanation';
+  insert into zcm.reports(community_id, reporter_id, target_type, target_id, category, reason) values (k, t.uid(3), 'listing', l, 'Spam', 'Looks like spam: the same text posted twice');
+  assert t.fails(format($q$insert into zcm.reports(community_id,reporter_id,target_type,target_id,category,reason) values (%L,%L,'listing',%L,'Spam','Reporting the same thing again')$q$, k, t.uid(3), l)) is not null, 'one open report per person per target';
   assert t.n('select 1 from zcm.reports') = 1, 'a reporter sees their own report';
   perform t.become(2);
   assert t.n('select 1 from zcm.reports') = 0, 'other residents do not see reports';
@@ -289,7 +292,7 @@ do $$ declare bad text; begin
     where n.nspname = 'zcm' and p.proname in ('handle_new_user','guard_seller_plan','listings_before_write','messages_before_insert',
       'reviews_before_insert','memberships_check_referral','on_community_created','on_message_notify','on_reservation_notify',
       'on_membership_notify','guard_last_admin','notify','slug_of','is_shadowbanned','reserved_units','expire_reservations',
-      'create_community','make_community_admin','reviewer_eligible') and has_function_privilege('authenticated', p.oid, 'execute');
+      'create_community','make_community_admin','reviewer_eligible','reports_before_insert') and has_function_privilege('authenticated', p.oid, 'execute');
   assert bad is null, 'internal functions callable by signed-in users: ' || coalesce(bad, '');
   -- the app's own functions still work for them
   assert has_function_privilege('authenticated', 'zcm.create_reservation(uuid,int,text)', 'execute') and

@@ -11,6 +11,8 @@ import { ChevronLeftIcon, SendIcon } from "@/components/icons";
 import { getUser } from "@/lib/auth";
 import { done } from "@/lib/after-action";
 import Submit from "@/components/submit-button";
+import ReportFields from "@/components/report-fields";
+import { checkReport } from "@/lib/reports";
 
 async function send(formData: FormData) {
   "use server";
@@ -32,11 +34,16 @@ async function reportUser(formData: FormData) {
   const supabase = await createClient();
   const { data: { user } } = await getUser(supabase);
   if (!user) redirect("/login");
+  const rep = checkReport(formData);
+  if (!rep.ok) redirect(`/c/${slug}/inbox/${id}?error=${encodeURIComponent(rep.error)}`);
   const { data: c } = await supabase.from("conversations").select("community_id").eq("id", id).single();
-  if (c) await supabase.from("reports").insert({
-    community_id: c.community_id, reporter_id: user.id, target_type: "user",
-    target_id: String(formData.get("target_id")), reason: String(formData.get("reason")).trim(),
-  });
+  if (c) {
+    const { error } = await supabase.from("reports").insert({
+      community_id: c.community_id, reporter_id: user.id, target_type: "user",
+      target_id: String(formData.get("target_id")), category: rep.category, reason: rep.reason,
+    });
+    if (error) redirect(`/c/${slug}/inbox/${id}?error=${encodeURIComponent(error.code === "23505" ? "You have already reported this person. An admin will take a look." : error.message)}`);
+  }
   redirect(`/c/${slug}/inbox/${id}?reported=1`);
 }
 
@@ -108,7 +115,7 @@ export default async function Chat({ params, searchParams }: {
         <form action={reportUser} className="stack" style={{ marginTop: 8 }}>
           <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} />
           <input type="hidden" name="target_id" value={other} />
-          <label>What happened?<textarea name="reason" rows={2} required minLength={3} /></label>
+          <ReportFields />
           <Submit className="secondary sm" style={{ justifySelf: "start" }}>Send report</Submit>
         </form>
       </details>

@@ -12,6 +12,8 @@ import { usernamesFor } from "@/lib/usernames";
 import { getUser } from "@/lib/auth";
 import { done } from "@/lib/after-action";
 import Submit from "@/components/submit-button";
+import ReportFields from "@/components/report-fields";
+import { checkReport } from "@/lib/reports";
 
 async function ctx(slug: string, id: string) {
   const supabase = await createClient();
@@ -58,12 +60,14 @@ async function report(formData: FormData) {
   const { supabase, user, back } = await ctx(slug, id);
   const { data: l } = await supabase.from("listings").select("community_id").eq("id", id).single();
   if (!l) redirect(back);
-  const targetId = String(formData.get("target_id"));
-  await supabase.from("reports").insert({
+  const rep = checkReport(formData);
+  if (!rep.ok) redirect(`${back}?error=${encodeURIComponent(rep.error)}`);
+  const { error } = await supabase.from("reports").insert({
     community_id: l.community_id, reporter_id: user.id,
     target_type: String(formData.get("target_type")) === "review" ? "review" : "listing",
-    target_id: targetId, reason: String(formData.get("reason")).trim(),
+    target_id: String(formData.get("target_id")), category: rep.category, reason: rep.reason,
   });
+  if (error) redirect(`${back}?error=${encodeURIComponent(error.code === "23505" ? "You have already reported this. An admin will take a look." : error.message)}`);
   redirect(`${back}?reported=1`);
 }
 
@@ -255,7 +259,7 @@ function ReportForm({ slug, id, type, target }: { slug: string; id: string; type
     <form action={report} className="stack" style={{ marginTop: 8 }}>
       <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} />
       <input type="hidden" name="target_type" value={type} /><input type="hidden" name="target_id" value={target} />
-      <label>What&apos;s wrong?<textarea name="reason" rows={2} required minLength={3} /></label>
+      <ReportFields />
       <Submit className="secondary sm">Send report</Submit>
     </form>
   );

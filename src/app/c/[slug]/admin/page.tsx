@@ -11,6 +11,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getUser } from "@/lib/auth";
 import { done } from "@/lib/after-action";
 import Submit from "@/components/submit-button";
+import { usernamesFor } from "@/lib/usernames";
 
 async function review(formData: FormData) {
   "use server";
@@ -105,8 +106,19 @@ export default async function Admin({ params, searchParams }: { params: Promise<
     .select("id, user_id, status, role, shadowbanned, invited_by_username, unit, proof_note, created_at, profiles:user_id(full_name, username)")
     .eq("community_id", community.id).order("created_at", { ascending: false });
   const { data: reports } = await supabase
-    .from("reports").select("id, target_type, target_id, reason, created_at")
+    .from("reports").select("id, target_type, target_id, reason, category, reporter_id, created_at")
     .eq("community_id", community.id).eq("status", "open").order("created_at");
+  // who is who, so a report reads "@anna reported @brian" instead of a string of ids
+  const reportRows = reports ?? [];
+  const reportUsers = await usernamesFor(supabase, community.id, reportRows.flatMap((r) => [r.reporter_id, ...(r.target_type === "user" ? [r.target_id] : [])]));
+  const reportedListings = reportRows.filter((r) => r.target_type === "listing").map((r) => r.target_id);
+  const reportedReviews = reportRows.filter((r) => r.target_type === "review").map((r) => r.target_id);
+  const [{ data: listingRows }, { data: reviewRows }] = await Promise.all([
+    reportedListings.length ? supabase.from("listings").select("id, title").in("id", reportedListings) : Promise.resolve({ data: [] as { id: string; title: string }[] }),
+    reportedReviews.length ? supabase.from("reviews").select("id, comment, rating, listing_id").in("id", reportedReviews) : Promise.resolve({ data: [] as { id: string; comment: string | null; rating: number; listing_id: string }[] }),
+  ]);
+  const listingTitle = new Map((listingRows ?? []).map((l) => [l.id, l.title]));
+  const reviewById = new Map((reviewRows ?? []).map((r) => [r.id, r]));
   const { data: code } = await supabase.rpc("get_invite_code", { cid: community.id });
   const { data: announcements } = await supabase.from("announcements").select("id, title, pinned, created_at")
     .eq("community_id", community.id).order("created_at", { ascending: false }).limit(10);
@@ -201,18 +213,43 @@ export default async function Admin({ params, searchParams }: { params: Promise<
         <>
           <h2>Open reports</h2>
           <div className="list">
-            {(reports ?? []).map((r) => (
-              <div className="card stack" key={r.id}>
-                <div><span className="badge danger">{r.target_type}</span> <span style={{ marginLeft: 6 }}>{r.reason}</span></div>
-                {r.target_type === "user" && <p className="muted small" style={{ margin: 0 }}>User id {r.target_id.slice(0, 8)}…, find them under Residents and ban or shadowban.</p>}
-                {r.target_type === "listing" && <a href={`/c/${slug}/l/${r.target_id}`} className="small">View listing →</a>}
-                <div className="inline-form">
-                  {r.target_type !== "user" && <ActionButton action={resolveReport} fields={{ id: r.id, target_type: r.target_type, target_id: r.target_id, back, action: "remove" }} className="danger sm">Remove content</ActionButton>}
-                  {r.target_type === "user" && <ActionButton action={resolveReport} fields={{ id: r.id, target_type: r.target_type, target_id: r.target_id, back, action: "resolve" }} className="sm">Mark handled</ActionButton>}
-                  <ActionButton action={resolveReport} fields={{ id: r.id, target_type: r.target_type, target_id: r.target_id, back, action: "dismiss" }} className="secondary sm">Dismiss</ActionButton>
+            {reportRows.map((r) => {
+              const reporter = reportUsers.get(r.reporter_id);
+              const target = r.target_type === "user" ? (members ?? []).find((m) => m.user_id === r.target_id) : undefined;
+              const reviewRow = r.target_type === "review" ? reviewById.get(r.target_id) : undefined;
+              const fields = { id: r.id, target_type: r.target_type, target_id: r.target_id, back };
+              return (
+                <div className="card stack" key={r.id}>
+                  <div className="row gap-sm wrap" style={{ justifyContent: "flex-start" }}>
+                    <span className="badge danger">{r.target_type === "user" ? "person" : r.target_type}</span>
+                    {r.category && <span className="badge">{r.category}</span>}
+                    <span className="muted small">reported by @{reporter ?? "a neighbour"}</span>
+                  </div>
+                  <p style={{ margin: 0 }}>{r.reason}</p>
+                  {r.target_type === "listing" && <a href={`/c/${slug}/l/${r.target_id}`} className="small">View the listing: {listingTitle.get(r.target_id) ?? "open"} →</a>}
+                  {reviewRow && (
+                    <p className="muted small" style={{ margin: 0 }}>
+                      Review ({"★".repeat(reviewRow.rating)}): {reviewRow.comment ? `“${reviewRow.comment}”` : "no comment"} · <a href={`/c/${slug}/l/${reviewRow.listing_id}`}>view →</a>
+                    </p>
+                  )}
+                  {r.target_type === "user" && (
+                    <p className="muted small" style={{ margin: 0 }}>
+                      About <b style={{ color: "var(--ink)" }}>@{reportUsers.get(r.target_id) ?? prof(target!)?.username ?? "unknown"}</b>
+                      {target ? <> · unit {target.unit} · {target.status}{target.shadowbanned ? " · shadowbanned" : ""}</> : null}
+                    </p>
+                  )}
+                  <div className="inline-form">
+                    {r.target_type !== "user" && <ActionButton action={resolveReport} fields={{ ...fields, action: "remove" }} className="danger sm">Remove content</ActionButton>}
+                    {r.target_type === "user" && target && target.status === "verified" && target.role !== "admin" && (<>
+                      <ActionButton action={review} fields={{ id: target.id, back, status: "suspended" }} className="danger sm">Ban</ActionButton>
+                      {!target.shadowbanned && <ActionButton action={shadowban} fields={{ id: target.id, back, on: "true" }} className="secondary sm">Shadowban</ActionButton>}
+                    </>)}
+                    {r.target_type === "user" && <ActionButton action={resolveReport} fields={{ ...fields, action: "resolve" }} className="sm">Mark handled</ActionButton>}
+                    <ActionButton action={resolveReport} fields={{ ...fields, action: "dismiss" }} className="secondary sm">Dismiss</ActionButton>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </>
       )}
