@@ -13,7 +13,12 @@ import { getUser } from "@/lib/auth";
 import { done } from "@/lib/after-action";
 import Submit from "@/components/submit-button";
 import ReportFields from "@/components/report-fields";
+import CopyButton from "@/components/copy-button";
+import { headers } from "next/headers";
+import { siteUrl } from "@/lib/nav";
 import { checkReport } from "@/lib/reports";
+
+export const metadata = { title: "Listing" };
 
 async function ctx(slug: string, id: string) {
   const supabase = await createClient();
@@ -117,6 +122,8 @@ export default async function ListingPage({ params, searchParams }: {
   const avg = (reviews ?? []).length ? (reviews ?? []).reduce((n, r) => n + r.rating, 0) / (reviews ?? []).length : null;
   const listPath = `/c/${slug}/${l.kind === "service" ? "services" : "products"}`;
   const isService = l.kind === "service";
+  const pageUrl = `${siteUrl((await headers()).get("host"))}/c/${slug}/l/${id}`;
+  const shareText = `${l.title} (${formatPrice(l.price_cents, l.price_unit as keyof typeof PRICE_UNITS, currency)}) on Zist: ${pageUrl}`;
 
   return (
     <>
@@ -160,6 +167,10 @@ export default async function ListingPage({ params, searchParams }: {
             </section>
           )}
           {l.stock != null && <p className="muted small" style={{ margin: 0 }}>{l.stock} in stock</p>}
+          <div className="row gap-sm wrap" style={{ justifyContent: "flex-start" }}>
+            <a className="btn secondary sm" href={`https://wa.me/?text=${encodeURIComponent(shareText)}`} target="_blank" rel="noreferrer">Share on WhatsApp</a>
+            <CopyButton text={pageUrl} label="Copy link" />
+          </div>
 
           {mine ? (
             <div className="card stack">

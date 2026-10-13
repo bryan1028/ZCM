@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "Zist Community Marketplace", template: "%s · Zist" },
+  title: { default: "Zist Community Marketplaces", template: "%s · Zist" },
   description: "A closed marketplace for your estate: trusted services and local goods from verified neighbours.",
   applicationName: "Zist",
   robots: { index: false, follow: false },   // closed community: never list in search engines

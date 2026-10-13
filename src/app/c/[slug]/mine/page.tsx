@@ -9,6 +9,8 @@ import { getUser } from "@/lib/auth";
 import { done } from "@/lib/after-action";
 import Submit from "@/components/submit-button";
 
+export const metadata = { title: "My listings" };
+
 async function setStatus(formData: FormData) {
   "use server";
   const supabase = await createClient();

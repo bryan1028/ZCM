@@ -7,6 +7,8 @@ import { fmtDay, fmtTime, isToday } from "@/lib/time";
 import { usernamesFor } from "@/lib/usernames";
 import { getUser } from "@/lib/auth";
 
+export const metadata = { title: "Inbox" };
+
 export default async function Inbox({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const supabase = await createClient();

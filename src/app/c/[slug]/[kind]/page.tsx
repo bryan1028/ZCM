@@ -8,6 +8,11 @@ import Empty from "@/components/empty";
 import ListingCard, { type CardListing } from "@/components/listing-card";
 import Submit from "@/components/submit-button";
 
+export async function generateMetadata({ params }: { params: Promise<{ kind: string }> }) {
+  const { kind } = await params;
+  return { title: kind === "services" ? "Services" : kind === "products" ? "Products" : "Browse" };
+}
+
 export default async function Listings({ params, searchParams }: {
   params: Promise<{ slug: string; kind: string }>;
   searchParams: Promise<{ category?: string; q?: string }>;

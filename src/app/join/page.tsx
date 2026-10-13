@@ -6,6 +6,8 @@ import Page from "@/components/page";
 import { getUser } from "@/lib/auth";
 import Submit from "@/components/submit-button";
 
+export const metadata = { title: "Join your community" };
+
 async function requestToJoin(formData: FormData) {
   "use server";
   const supabase = await createClient();

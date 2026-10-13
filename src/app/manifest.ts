@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Zist Community Marketplace",
+    name: "Zist Community Marketplaces",
     short_name: "Zist",
     description: "A closed marketplace for your estate",
     start_url: "/",

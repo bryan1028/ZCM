@@ -3,6 +3,8 @@ import { safeNext } from "@/lib/nav";
 import Page from "@/components/page";
 import LoginForm from "./login-form";
 
+export const metadata = { title: "Sign in" };
+
 export default async function Login({ searchParams }: { searchParams: Promise<{ next?: string; error?: string; email?: string; step?: string; goodbye?: string }> }) {
   const { next, error, email, step, goodbye } = await searchParams;
   return (

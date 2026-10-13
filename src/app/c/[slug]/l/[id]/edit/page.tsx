@@ -9,6 +9,8 @@ import { signedUrls } from "@/lib/images";
 import { getUser } from "@/lib/auth";
 import Submit from "@/components/submit-button";
 
+export const metadata = { title: "Edit listing" };
+
 async function ctx(slug: string, id: string) {
   const supabase = await createClient();
   const { data: { user } } = await getUser(supabase);

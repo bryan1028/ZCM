@@ -9,6 +9,8 @@ import ListingCard, { type CardListing } from "@/components/listing-card";
 import Empty from "@/components/empty";
 import { getUser } from "@/lib/auth";
 
+export const metadata = { title: "Feed" };
+
 // Community home: announcements from admins, an invite prompt, and what's new.
 export default async function Feed({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;

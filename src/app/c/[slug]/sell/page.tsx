@@ -4,6 +4,8 @@ import { getCommunity } from "@/lib/community";
 import { notFound } from "next/navigation";
 import { getUser } from "@/lib/auth";
 
+export const metadata = { title: "Sell" };
+
 export default async function Sell({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ error?: string }> }) {
   const { slug } = await params;
   const { error } = await searchParams;

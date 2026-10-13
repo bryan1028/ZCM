@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import Page from "@/components/page";
 import { getUser } from "@/lib/auth";
 
+export const metadata = { title: "You're invited" };
+
 // Public landing page for an invite link: shows only the community name.
 export default async function Invite({ params, searchParams }: { params: Promise<{ code: string }>; searchParams: Promise<{ ref?: string }> }) {
   const { code } = await params;

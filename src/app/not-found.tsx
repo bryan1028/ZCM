@@ -6,7 +6,7 @@ export default function NotFound() {
     <Page>
       <div className="empty">
         <div className="emoji" aria-hidden>🧭</div>
-        <h3>We couldn&apos;t find that page</h3>
+        <h1 style={{ fontSize: 20 }}>We couldn&apos;t find that page</h1>
         <p className="muted" style={{ margin: "0 auto 14px", maxWidth: 360 }}>The link may be old, or the listing may have been removed.</p>
         <Link href="/" className="btn sm">Back to home</Link>
       </div>

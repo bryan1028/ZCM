@@ -5,6 +5,8 @@ import Page from "@/components/page";
 import { getUser } from "@/lib/auth";
 import Submit from "@/components/submit-button";
 
+export const metadata = { title: "Choose a username" };
+
 async function setUsername(formData: FormData) {
   "use server";
   const supabase = await createClient();

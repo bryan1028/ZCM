@@ -2,6 +2,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getUser } from "@/lib/auth";
 
+export const metadata = { title: "Dashboard" };
+
 const DAYS = 30;
 
 export default async function Dashboard({ params }: { params: Promise<{ slug: string }> }) {

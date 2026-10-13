@@ -14,6 +14,8 @@ import { getUser } from "@/lib/auth";
 import { done } from "@/lib/after-action";
 import Submit from "@/components/submit-button";
 
+export const metadata = { title: "Orders" };
+
 async function act(formData: FormData) {
   "use server";
   const supabase = await createClient();
@@ -143,7 +145,7 @@ export default async function Orders({ params, searchParams }: { params: Promise
 
   return (
     <>
-      <div className="page-head"><div><h1>Orders</h1><p className="muted">Reservations and bookings, in one place.</p></div></div>
+      <div className="page-head"><div><h1>Orders</h1><p className="muted">Your product reservations and their payments, in one place.</p></div></div>
       {error && <div className="alert error" role="alert" style={{ marginBottom: 12 }}>{error}</div>}
       <div className="segmented" style={{ marginBottom: 16 }}>
         <Link href={`${back}?tab=selling`} {...(active === "selling" ? { "aria-current": "page" as const } : {})}>Requests to me{openSelling > 0 && <span className="badge danger" style={{ marginLeft: 6 }}>{openSelling}</span>}</Link>

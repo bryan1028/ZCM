@@ -14,6 +14,8 @@ import Submit from "@/components/submit-button";
 import ReportFields from "@/components/report-fields";
 import { checkReport } from "@/lib/reports";
 
+export const metadata = { title: "Chat" };
+
 async function send(formData: FormData) {
   "use server";
   const slug = String(formData.get("slug")), id = String(formData.get("id"));

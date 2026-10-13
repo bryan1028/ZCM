@@ -13,6 +13,8 @@ import { done } from "@/lib/after-action";
 import Submit from "@/components/submit-button";
 import { usernamesFor } from "@/lib/usernames";
 
+export const metadata = { title: "Admin" };
+
 async function review(formData: FormData) {
   "use server";
   const supabase = await createClient();

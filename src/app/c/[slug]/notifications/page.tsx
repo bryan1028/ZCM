@@ -9,6 +9,8 @@ import { getUser } from "@/lib/auth";
 import { done } from "@/lib/after-action";
 import Submit from "@/components/submit-button";
 
+export const metadata = { title: "Notifications" };
+
 async function markAllRead(formData: FormData) {
   "use server";
   const supabase = await createClient();
