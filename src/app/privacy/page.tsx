@@ -2,15 +2,13 @@ import Link from "next/link";
 import Page from "@/components/page";
 
 export const metadata = { title: "Privacy Policy" };
-const contact = process.env.NEXT_PUBLIC_SUPPORT_EMAIL;
-
 export default function Privacy() {
   return (
     <Page>
       <h1>Privacy Policy</h1>
       <p className="muted small">Last updated: October 2026</p>
       <div className="stack" style={{ lineHeight: 1.6 }}>
-        <p>Zist Community Marketplace is a private marketplace for residents of a single estate. This page explains what we collect, who can see it and the choices you have.</p>
+        <p>Zist Community Marketplaces (&ldquo;Zist&rdquo;, &ldquo;we&rdquo;) runs this app, a private marketplace for residents of a single estate, and is responsible for the personal data described here. This page explains what we collect, who can see it and the choices you have.</p>
 
         <h3>What we collect</h3>
         <ul>
@@ -32,11 +30,18 @@ export default function Privacy() {
         <h3>Why we use it</h3>
         <p>To run the marketplace, confirm that members really live in the community, keep people safe (moderation, reports), send you notifications you asked for, and understand basic usage.</p>
 
-        <h3>Services that help us run this</h3>
-        <p>Your data is stored and processed by our providers: Supabase (database, sign-in and file storage, in the EU), Netlify (website hosting) and Resend (sending sign-in emails). They only process it on our behalf.</p>
+        <h3>Services that help us run this, and where your data goes</h3>
+        <p>Your data is processed on our behalf by these providers. They are all outside Kenya, so your data is transferred abroad when you use the app:</p>
+        <ul>
+          <li><b>Supabase</b> stores the database, sign-in and your files (photos, videos, payment proofs). These are held in the European Union (Frankfurt).</li>
+          <li><b>Netlify</b> hosts the website. Pages and actions are processed on its servers, which are in the United States, so your requests and the data they carry pass through there on their way to the database.</li>
+          <li><b>Resend</b> sends the sign-in code emails, so it sees your email address.</li>
+          <li><b>Cloudflare</b> manages our web domain&apos;s DNS records. It does not see what you do in the app.</li>
+          <li><b>Your phone&apos;s push service</b> (Apple, Google or Mozilla, depending on your device) delivers notifications, only if you turn push notifications on.</li>
+        </ul>
 
         <h3>How long we keep it</h3>
-        <p>For as long as you have an account. When you delete your account (from <Link href="/account">Your account</Link>) your profile, listings, photos, reviews, orders and messages are permanently removed. Routine technical backups, if any, may keep copies for a short while longer.</p>
+        <p>For as long as you have an account. When you delete your account (from <Link href="/account">Your account</Link>) your profile, listings, photos, reviews, orders and messages are permanently removed straight away. If we ever turn on backups, copies would disappear within about 30 days.</p>
 
         <h3>Your choices and rights</h3>
         <ul>
@@ -51,7 +56,7 @@ export default function Privacy() {
 
         <h3>Changes and contact</h3>
         <p>We may update this policy and will change the date above when we do.{" "}
-          {contact ? <>Questions? Email <a href={`mailto:${contact}`}>{contact}</a> or ask your community admin.</> : <>Questions? Ask your community admin.</>}</p>
+          Questions or complaints? Ask your community admin.</p>
         <p><Link href="/terms">Terms of Use →</Link></p>
       </div>
     </Page>

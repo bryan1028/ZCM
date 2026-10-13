@@ -41,7 +41,7 @@ Anything secret (Supabase access token, Resend key, Netlify token) lives only in
 - Supabase's advisor lists `zcm` helper functions used by RLS as "callable by signed-in users"; that is required for RLS to work and they only expose what the caller could already see.
 
 ## Needs a human decision / review
-- **Terms and Privacy pages are plain-language drafts.** Have a lawyer familiar with Kenya's Data Protection Act review them before launch, and set `NEXT_PUBLIC_SUPPORT_EMAIL` for a contact address.
+- **Terms and Privacy pages are plain-language drafts** naming "Zist Community Marketplaces" as the operator, with community admins as the contact (decided: no support email). Have a lawyer familiar with Kenya's Data Protection Act review them before launch; ask about registering as a data controller with the Office of the Data Protection Commissioner and about the cross-border transfers (Supabase EU, Netlify US) they disclose. Update them whenever the flows change (services by chat, products by order).
 - Business accounts are self-declared today (anyone can pick "Business"). Decide whether admins should approve them.
 - Reviews are open to any resident; decide whether to require a completed order.
 
