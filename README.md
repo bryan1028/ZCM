@@ -87,7 +87,8 @@ reported to admins. Make sure **Realtime** is enabled for the `messages` table (
 - Photos live in **private** Storage buckets; the app serves short-lived signed URLs, and Storage RLS limits reads to
   verified members of that community. Max photos per listing comes from `plan_limits`.
 - `/c/<slug>/mine`: pause, activate, mark sold, delete, edit, view counts. `/c/<slug>/l/<id>/edit`: details + photos.
-- Reserve/book flow (doc Phase 2): buyer reserves → seller accepts/declines → buyer pays off-platform (e.g. M-Pesa) and
+- **Services are arranged by chat**, not booked or paid in the app (most are a neighbour's known gardener or cleaner, and nobody pays before the work is done): the listing offers "Message" only. A service review needs a two-way conversation with the seller about that listing.
+- Reserve flow for **products** (doc Phase 2): buyer reserves → seller accepts/declines → buyer pays off-platform (e.g. M-Pesa) and
   uploads a screenshot → seller confirms (stock decrements) or rejects the proof. Requests expire after 48h. All state
   changes go through Postgres functions (`create_reservation`, `transition_reservation`, `submit_payment`), so the
   rules can't be bypassed from the client. Money never moves through the app; it only records proof.

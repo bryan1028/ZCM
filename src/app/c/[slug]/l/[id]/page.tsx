@@ -98,9 +98,9 @@ export default async function ListingPage({ params, searchParams }: {
     mine ? supabase.from("listing_view_counts").select("views, unique_viewers").eq("listing_id", id).maybeSingle() : Promise.resolve({ data: null }),
     signedUrls(supabase, "zcm-listing-images", l.image_urls),
     signedUrls(supabase, "zcm-listing-videos", l.video_urls),
-    mine ? Promise.resolve({ data: null }) : supabase.from("reservations").select("id").eq("listing_id", id).eq("buyer_id", user.id).eq("status", "completed").limit(1),
+    mine ? Promise.resolve({ data: false }) : supabase.rpc("can_review", { lid: id }),   // products: a completed order; services: a two-way chat with the seller
   ]);
-  const canReview = !!bought?.length;
+  const canReview = bought === true;
   const names = await usernamesFor(supabase, l.community_id, [s.user_id, ...(reviews ?? []).map((r) => r.reviewer_id)]);
   const media: MediaItem[] = [
     ...l.image_urls.flatMap((path: string) => (photos.get(path) ? [{ type: "image" as const, src: photos.get(path)! }] : [])),
@@ -112,7 +112,7 @@ export default async function ListingPage({ params, searchParams }: {
   const sellerHandle = names.get(s.user_id) ?? "neighbour";
   const avg = (reviews ?? []).length ? (reviews ?? []).reduce((n, r) => n + r.rating, 0) / (reviews ?? []).length : null;
   const listPath = `/c/${slug}/${l.kind === "service" ? "services" : "products"}`;
-  const verb = l.kind === "service" ? "Book" : "Reserve";
+  const isService = l.kind === "service";
 
   return (
     <>
@@ -168,18 +168,19 @@ export default async function ListingPage({ params, searchParams }: {
           ) : (
             <div className="sticky-cta">
               <div className="cta-bar">
-                {l.available && (
+                {!isService && l.available && (
                   <form action={reserve} style={{ gridTemplateColumns: "76px 1fr", gap: 8 }}>
                     <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} />
                     <input name="qty" type="number" min="1" defaultValue="1" aria-label="Quantity" />
                     <input name="note" placeholder="Note: pickup time, flat no." maxLength={500} aria-label="Note to seller" />
-                    <Submit style={{ gridColumn: "1 / -1" }}>{verb} {l.kind === "service" ? "this service" : "now"}</Submit>
+                    <Submit style={{ gridColumn: "1 / -1" }}>Reserve now</Submit>
                   </form>
                 )}
                 <form action={startChat}>
                   <input type="hidden" name="slug" value={slug} /><input type="hidden" name="id" value={id} />
-                  <Submit className="secondary"><ChatIcon size={18} />Message @{sellerHandle}</Submit>
+                  <Submit className={isService ? undefined : "secondary"}><ChatIcon size={18} />Message @{sellerHandle}</Submit>
                 </form>
+                {isService && <p className="cta-note">Chat to agree the details, then pay them directly once the work is done. Nothing is paid through the app.</p>}
                 {s.whatsapp && <a className="muted small center" href={`https://wa.me/${s.whatsapp.replace(/\D/g, "")}`}>or reach out on WhatsApp</a>}
                 {error && <div className="alert error" role="alert">{error}</div>}
               </div>
@@ -189,7 +190,7 @@ export default async function ListingPage({ params, searchParams }: {
       </div>
 
       <h2 style={{ marginTop: 28 }}>Reviews {avg != null && <span className="stars" style={{ fontSize: 16 }}>★ {avg.toFixed(1)} <span className="muted">({reviews?.length})</span></span>}</h2>
-      {(reviews ?? []).length === 0 && <p className="muted">No reviews yet{!mine ? ". Reviews come from neighbours who have completed an order with this seller." : "."}</p>}
+      {(reviews ?? []).length === 0 && <p className="muted">No reviews yet{!mine ? (isService ? ". Reviews come from neighbours who have used this service." : ". Reviews come from neighbours who have completed an order with this seller.") : "."}</p>}
       <div className="list">
         {(reviews ?? []).map((r) => {
           const who = names.get(r.reviewer_id) ?? "neighbour";
@@ -216,7 +217,9 @@ export default async function ListingPage({ params, searchParams }: {
         <div className="card flat" style={{ marginTop: 14 }}>
           <strong>Want to leave a review?</strong>
           <p className="muted" style={{ margin: "4px 0 0" }}>
-            Reviews come from neighbours who have completed an order for this listing. Once the seller confirms your order, you&apos;ll be able to review it here.
+            {isService
+              ? "Reviews come from neighbours who have used this service. Message the seller to arrange it, and once you've been in touch you'll be able to review it here."
+              : "Reviews come from neighbours who have completed an order for this listing. Once the seller confirms your order, you'll be able to review it here."}
           </p>
         </div>
       )}

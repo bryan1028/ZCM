@@ -289,7 +289,7 @@ do $$ declare bad text; begin
     where n.nspname = 'zcm' and p.proname in ('handle_new_user','guard_seller_plan','listings_before_write','messages_before_insert',
       'reviews_before_insert','memberships_check_referral','on_community_created','on_message_notify','on_reservation_notify',
       'on_membership_notify','guard_last_admin','notify','slug_of','is_shadowbanned','reserved_units','expire_reservations',
-      'create_community','make_community_admin') and has_function_privilege('authenticated', p.oid, 'execute');
+      'create_community','make_community_admin','reviewer_eligible') and has_function_privilege('authenticated', p.oid, 'execute');
   assert bad is null, 'internal functions callable by signed-in users: ' || coalesce(bad, '');
   -- the app's own functions still work for them
   assert has_function_privilege('authenticated', 'zcm.create_reservation(uuid,int,text)', 'execute') and
@@ -377,3 +377,27 @@ begin
   assert t.fails(format($q$insert into zcm.listings (seller_id, kind, category, title, price_unit) values (%L, 'product', 'Produce', 'Onions', 'per_pound')$q$, s)) is not null, 'an unknown price type is rejected';
   raise notice 'ok 11 price units';
 end $$;
+
+-- services are arranged by chat: no reservations, and a review needs a two-way conversation with the seller
+do $$ declare l uuid; c uuid; begin
+  select id into l from zcm.listings where title = 'Fix taps';
+  assert l is not null, 'the service fixture exists';
+  perform t.become(3);
+  assert t.fails(format('select zcm.create_reservation(%L, 1, null)', l)) like '%arranged by chat%', 'services cannot be reserved';
+  assert not zcm.can_review(l), 'no review before any conversation';
+  assert t.fails(format($q$insert into zcm.reviews(listing_id,reviewer_id,rating) values (%L,%L,5)$q$, l, t.uid(3))) like '%been in touch%', 'cannot review a service without a conversation';
+  c := zcm.start_conversation(l);
+  insert into zcm.messages(conversation_id, sender_id, body) values (c, t.uid(3), 'Hi, are you free Saturday?');
+  assert not zcm.can_review(l), 'a one-sided message is not enough (the seller has not replied)';
+  perform t.become(2);
+  insert into zcm.messages(conversation_id, sender_id, body) values (c, t.uid(2), 'Yes, 10am works.');
+  perform t.become(3);
+  assert zcm.can_review(l), 'after a two-way conversation the neighbour can review';
+  insert into zcm.reviews(listing_id, reviewer_id, rating, comment) values (l, t.uid(3), 5, 'Fixed it quickly');
+  perform t.become(4);
+  assert not zcm.can_review(l), 'a different neighbour who never chatted cannot';
+  assert t.fails(format($q$insert into zcm.reviews(listing_id,reviewer_id,rating) values (%L,%L,4)$q$, l, t.uid(4))) like '%been in touch%', 'and cannot review';
+  perform t.su();
+  raise notice 'ok 12 services by chat';
+end $$;
+
