@@ -1,5 +1,5 @@
 // Keeps the free Supabase projects from auto-pausing (they pause after ~7 days with no activity).
-// Runs once a day on Netlify. Each ping is a real but harmless read that touches the database, using only the
+// Runs every 6 hours on Netlify (a missed run is then harmless). Each ping is a real but harmless read that touches the database, using only the
 // public URL + anon key (the same ones each app already ships to browsers). Nothing is written or stored.
 const targets = [
   {
@@ -39,4 +39,4 @@ export default async () => {
   return new Response(results.join("\n"), { status: 200 });
 };
 
-export const config = { schedule: "@daily" };
+export const config = { schedule: "0 */6 * * *" };

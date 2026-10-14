@@ -32,7 +32,7 @@ To remove ZCM from a shared project: `supabase/teardown.sql` (destroys ZCM data 
 
 ## Keeping the free Supabase project awake
 Supabase pauses free projects after ~7 days without activity. `netlify/functions/keepalive.mjs` is a Netlify **scheduled function**
-(daily) that makes a harmless database call (an invite-code lookup that returns nothing), so the project never goes idle.
+(every 6 hours) that makes a harmless database call (an invite-code lookup that returns nothing), so the project never goes idle.
 It also pings the separate **Zood** project (set `ZOOD_SUPABASE_URL` + `ZOOD_SUPABASE_ANON_KEY` on the Netlify site; it reads one row id
 from Zood's public `posts` table). Each ping uses only a public URL + anon key and writes nothing. To keep another Supabase project
 awake, add one more entry to `targets` in the function. Check it under Netlify → Logs → Functions → keepalive. If the site is ever moved off
