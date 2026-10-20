@@ -58,10 +58,10 @@ function signIn(){return new Promise(res=>{
   m.querySelector('#g')?.addEventListener('click',()=>sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname}}));
   m.querySelector('#send').onclick=async b=>{email=m.querySelector('#em').value.trim();if(!email)return;b.target.disabled=true;
     const {error}=await sb.auth.signInWithOtp({email,options:{shouldCreateUser:true}});b.target.disabled=false;
-    if(error)return e(/rate|seconds/i.test(error.message)?'Please wait a minute before requesting another code.':error.message);
+    if(error)return e(/rate|seconds/i.test(error.message)?'Please wait a minute before requesting another code.':/sending/i.test(error.message)?'We couldn\'t email that address. Check it for typos and try again.':error.message);
     m.querySelector('#s1').hidden=true;m.querySelector('#s2').hidden=false;e('')};
   m.querySelector('#ver').onclick=async()=>{const {error}=await sb.auth.verifyOtp({email,token:m.querySelector('#code').value.trim(),type:'email'});
-    if(error)return e('That code didn\'t work. Check it and try again.');m.remove();await refreshMe();route();res(true)};
+    if(error)return e('That code didn\'t work. Check it and try again.');m.remove();await refreshMe();route();res(true);if(!myProfile)needProfile()};
 })}
 async function needProfile(){
   if(!me) await signIn(); if(!me) return false; if(myProfile) return true;
