@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://xwtfdjkpwzgybangudyc.supabase.co" crossorigin><link rel="preload" as="image" href="img/bg-wide.jpg" media="(min-width:701px)"><link rel="preload" as="image" href="img/bg-tall.jpg" media="(max-width:700px)">
 <title>Zist — rate every restaurant you've tried</title>
 <meta name="description" content="Search any restaurant, rate it out of 5, and share your Top 5. Zist it.">
 <style>
@@ -27,23 +28,19 @@ h2{margin:22px 0 6px;font-size:19px}.pick{display:flex;gap:4px;font-size:34px;cu
 .modal{position:fixed;inset:0;background:#0008;display:flex;align-items:center;justify-content:center;padding:16px;z-index:20}
 .modal>div{background:var(--card);border-radius:16px;padding:20px;max-width:380px;width:100%}
 .err{color:#d6336c;font-size:14px;min-height:20px}.ok{color:var(--grn)}
-.bg{position:fixed;inset:0;z-index:-2;display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));grid-auto-rows:170px;overflow:hidden}
-.bg img{width:100%;height:100%;object-fit:cover;display:block}
-.bgv{position:fixed;inset:0;z-index:-1;background:linear-gradient(rgba(251,247,240,.35),rgba(251,247,240,.62) 55%,rgba(251,247,240,.9))}
-@media(prefers-color-scheme:dark){.bgv{background:linear-gradient(rgba(20,26,23,.5),rgba(20,26,23,.75) 55%,rgba(20,26,23,.92))}}
+body{background:var(--bg) url(img/bg-wide.jpg) center/cover fixed}@media(max-width:700px){body{background-image:url(img/bg-tall.jpg)}}
+.bgv{position:fixed;inset:0;z-index:-1;background:linear-gradient(rgba(251,247,240,.12),rgba(251,247,240,.3) 55%,rgba(251,247,240,.55))}
+@media(prefers-color-scheme:dark){.bgv{background:linear-gradient(rgba(20,26,23,.4),rgba(20,26,23,.55) 55%,rgba(20,26,23,.8))}}
 header{background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:blur(8px)}
 .hero h1{font-size:34px}.hero{background:color-mix(in srgb,var(--bg) 72%,transparent);backdrop-filter:blur(6px);border-radius:18px;margin-top:10px;padding:26px 16px 16px}.hero p{color:var(--ink)}h2{text-shadow:0 0 12px var(--bg)}.card{box-shadow:0 1px 3px #0001}
-footer{max-width:760px;margin:30px auto;padding:0 16px;color:var(--mut);font-size:12px;text-align:center}
+footer{max-width:760px;margin:30px auto;padding:0 16px;font-size:12px;text-align:center}footer span{background:var(--bg);color:var(--mut);padding:3px 10px;border-radius:99px}
 </style></head><body>
-<div class="bg" id="bg" aria-hidden="true"></div><div class="bgv"></div>
+<div class="bgv"></div>
 <header><a class="logo" href="#/">zist</a><div class="sp"></div><span id="nav"></span></header>
 <main id="app"></main>
-<footer>Food photos from <a href="https://unsplash.com/?utm_source=zist&utm_medium=referral" target="_blank" rel="noopener">Unsplash</a></footer>
+<footer><span>Food photos from <a href="https://unsplash.com/?utm_source=zist&utm_medium=referral" target="_blank" rel="noopener">Unsplash</a></span></footer>
 <script src="supabase.min.js"></script>
 <script>
-const FOOD=['1414235077428-338989a2e8c0', '1473093295043-cdd812d0e601', '1476224203421-9ac39bcb3327', '1482049016688-2d3e1b311543', '1484723091739-30a097e8f929', '1493770348161-369560ae357d', '1504674900247-0877df9cc836', '1504754524776-8f4f37790ca0', '1512621776951-a57141f2eefd', '1540189549336-e6e99c3679fe', '1546069901-ba9599a7e63c', '1551782450-a2132b4ba21d', '1555939594-58d7cb561ad1', '1565299624946-b28f40a0ae38', '1565958011703-44f9829ba187', '1567620905732-2d1ec7ab7445', '1569718212165-3a8278d5f624', '1579871494447-9811cf80d66c'];
-(()=>{const bg=document.getElementById('bg');const n=Math.ceil(innerWidth/170)*Math.ceil(innerHeight/170)+4;let h='';
- for(let i=0;i<n;i++){const id=FOOD[(i*7)%FOOD.length];h+=`<img alt="" src="https://images.unsplash.com/photo-${id}?w=360&h=360&fit=crop&q=60">`}bg.innerHTML=h})();
 const SB_URL='https://xwtfdjkpwzgybangudyc.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3dGZkamtwd3pneWJhbmd1ZHljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA4NjY3NjEsImV4cCI6MjEwNjQ0Mjc2MX0.juVnPYDXu1YwW427x_NvcACO6seeEwcdUPInnomHMko';
 const GOOGLE=false; // flip to true once Google is enabled in Supabase Auth
@@ -88,11 +85,13 @@ async function needProfile(){
 const resCard=r=>`<a class="card res" href="#/r/${encodeURIComponent(r.id)}"><b>${esc(r.name)}</b> <span class="stars">${stars(r.avg_stars)}</span> <span class="mut">${r.review_count?`${r.avg_stars} · ${r.review_count}`:'be the first to rate'}</span><div class="mut">${esc([r.address,r.city,r.country].filter(Boolean).join(', '))}</div>${(r.cuisines||[]).slice(0,3).map(c=>`<span class="tag">${esc(c)}</span>`).join('')}</a>`;
 
 async function home(){
-  const {data:cities}=await sb.rpc('rv_cities');
   const saved=localStorage.getItem('zcity')||'';
+  const opts=cs=>'<option value="">All cities</option>'+(cs||[]).map(c=>`<option value="${esc(c.city_slug)}" ${c.city_slug===(localStorage.getItem('zcity')||'')?'selected':''}>${esc(c.city)}, ${esc(c.country)}</option>`).join('');
+  let cached=[];try{cached=JSON.parse(localStorage.getItem('zcities')||'[]')}catch(e){}
   app.innerHTML=`<div class="hero"><h1>Rate every place you've eaten.</h1><p>Search a restaurant, give it stars, build your Top 5. <b>Zist it.</b></p>
-   <div class="row"><input id="q" placeholder="Search restaurants…" autofocus><select id="c" style="max-width:170px"><option value="">All cities</option>${(cities||[]).map(c=>`<option value="${esc(c.city_slug)}" ${c.city_slug===saved?'selected':''}>${esc(c.city)}, ${esc(c.country)}</option>`).join('')}</select></div></div>
-   <div id="out"></div><h2 id="ph">Popular right now</h2><div id="pop"></div>`;
+   <div class="row"><input id="q" placeholder="Search restaurants…" autofocus><select id="c" style="max-width:170px">${opts(cached)}</select></div></div>
+   <div id="out"></div><h2 id="ph">Popular right now</h2><div id="pop"><p class="mut">Loading…</p></div>`;
+  sb.rpc('rv_cities').then(({data})=>{if(data&&route.cur==='home'){try{localStorage.setItem('zcities',JSON.stringify(data))}catch(e){}const c=$('#c');if(c){const v=c.value;c.innerHTML=opts(data);c.value=v}}});
   const pop=async()=>{const {data}=await sb.rpc('rv_popular',{city_filter:$('#c').value||null});$('#pop').innerHTML=(data||[]).map(resCard).join('')||'<p class="mut">No ratings yet in this city — be the first!</p>'};
   let t,seq=0; const go=async()=>{const q=$('#q').value.trim(),n=++seq;localStorage.setItem('zcity',$('#c').value);
     if(q.length<2){$('#out').innerHTML='';$('#ph').hidden=false;$('#pop').hidden=false;return pop()}
@@ -103,7 +102,7 @@ async function home(){
 }
 async function addRestaurant(name){
   if(!await needProfile())return;
-  const {data:cities}=await sb.rpc('rv_cities');const sel=$('#c').selectedOptions[0]?.textContent.split(', ');
+  const sel=$('#c').selectedOptions[0]?.textContent.split(', ');
   const m=modal(`<h2 style="margin-top:0">Add a restaurant</h2><input id="n" value="${esc(name)}" placeholder="Name"><div style="height:8px"></div><input id="ci" placeholder="City" value="${esc(sel&&$('#c').value?sel[0]:'')}"><div style="height:8px"></div><input id="co" placeholder="Country code, e.g. KE" maxlength="2" value="${esc(sel&&$('#c').value?sel[1]:'')}"><div style="height:8px"></div><input id="ad" placeholder="Address (optional)"><p class="mut">We check for duplicates first.</p><button id="go" style="width:100%">Add</button><div class="err" id="e"></div>`);
   m.querySelector('#go').onclick=async()=>{const {data,error}=await sb.rpc('rv_add_restaurant',{p_name:m.querySelector('#n').value,p_city:m.querySelector('#ci').value,p_country:m.querySelector('#co').value.toUpperCase(),p_address:m.querySelector('#ad').value});
     if(error)return m.querySelector('#e').textContent=error.message;m.remove();location.hash='#/r/'+encodeURIComponent(data)}
@@ -197,7 +196,7 @@ async function shareCard(p,list){
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=file.name;a.click();
 }
 
-function route(){const [,a,b]=location.hash.split('/');document.title='Zist — rate every restaurant you\'ve tried';
+function route(){const [,a,b]=location.hash.split('/');route.cur=(a==='r'||a==='u')?a:'home';document.title='Zist — rate every restaurant you\'ve tried';
   if(a==='r'&&b)return restaurant(decodeURIComponent(b));if(a==='u'&&b)return profile(decodeURIComponent(b));home()}
 addEventListener('hashchange',route);
 refreshMe().then(route);
