@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hot Seat: personalised demo link maker</title><meta name="robots" content="noindex">
+<style>
+*{box-sizing:border-box}body{margin:0;font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#0b1244;color:#eef1ff}
+.w{max-width:760px;margin:0 auto;padding:24px 16px 60px}h1{margin:0 0 4px;font-size:1.6rem;color:#F6C544}p{color:#c9d0f5;margin:6px 0 16px}
+.card{background:#101954;border:1px solid rgba(150,172,255,.25);border-radius:16px;padding:18px;margin-bottom:16px}
+label{display:block;font-weight:600;font-size:.9rem;margin:10px 0 4px}small{font-weight:400;color:#8e9ad6}
+input,textarea{width:100%;font:inherit;padding:10px 12px;border-radius:10px;border:1px solid rgba(150,172,255,.3);background:#0b1244;color:#eef1ff}
+input[type=color]{height:44px;padding:3px}textarea{min-height:230px;font-size:.95rem}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:560px){.row{grid-template-columns:1fr}}
+button,a.b{display:inline-block;margin-top:10px;margin-right:8px;background:#F6C544;color:#231400;border:0;border-radius:10px;padding:10px 16px;font:700 1rem system-ui;cursor:pointer;text-decoration:none}
+.link{word-break:break-all;background:#0b1244;border-radius:10px;padding:10px;font-family:ui-monospace,monospace;font-size:.85rem}
+</style></head>
+<body><div class="w">
+<h1>Hot Seat: demo link maker</h1><p>Fill in a prospect's details and copy their personalised demo link and a draft email. Nothing here is saved anywhere.</p>
+<div class="card">
+  <div class="row"><div><label for="org">Their organisation</label><input id="org" placeholder="Acme Logistics" value=""></div>
+  <div><label for="host">Host name <small>(their mascot's name; blank keeps Trollstradamus)</small></label><input id="host" placeholder="e.g. Zuri the Zebra"></div></div>
+  <div class="row"><div><label for="mascot">Mascot <small>(an emoji, or an https image link to their logo/mascot)</small></label><input id="mascot" placeholder="🦓  or  https://acme.com/mascot.png"></div>
+  <div><label for="color">Their brand colour</label><input id="color" type="color" value="#F6C544"></div></div>
+  <div class="row"><div><label for="contact">Where the "Book a game" button should email <small>(your address)</small></label><input id="contact" type="email" placeholder="you@yourdomain.com"></div>
+  <div><label for="me">Your name <small>(for the email draft)</small></label><input id="me" placeholder="Your name"></div></div>
+</div>
+<div class="card"><label>Their personalised link</label><div class="link" id="out"></div>
+<button id="copy">Copy link</button><a class="b" id="open" target="_blank" rel="noopener">Preview it</a></div>
+<div class="card"><label for="mail">Cold email draft <small>(edit freely before sending)</small></label><textarea id="mail"></textarea><button id="copyMail">Copy email</button></div>
+<script>
+const $=s=>document.querySelector(s);
+function build(){
+  const org=$('#org').value.trim(),q=new URLSearchParams();
+  if(org)q.set('org',org); if($('#host').value.trim())q.set('host',$('#host').value.trim()); if($('#mascot').value.trim())q.set('mascot',$('#mascot').value.trim());
+  if($('#color').value&&$('#color').value.toLowerCase()!=='#f6c544')q.set('color',$('#color').value.slice(1)); if($('#contact').value.trim())q.set('contact',$('#contact').value.trim());
+  const base=location.href.replace(/make\.html.*$/,'index.html'),url=base+(q.toString()?'?'+q:'');
+  $('#out').textContent=url;$('#open').href=url;
+  const o=org||'your team';
+  $('#mail').value=`Subject: A 5-minute game we built for ${o}\n\nHi [First name],\n\nI'm ${$('#me').value||'[Your name]'}. I make Hot Seat, a short team game that mixes trivia, word puzzles, logic and a sticky-note board into 100 points. It's built for remote and hybrid teams that want something fun that people actually finish.\n\nI set up a version with ${o}'s branding so you can try it yourself. It takes about five minutes:\n${url}\n\nIn a real game we'd write the questions about ${o} (products, history, values), use your own mascot as the host, and give your team a private leaderboard.\n\nWould a 15-minute call next week make sense? If this isn't relevant, just tell me and I won't follow up.\n\nThanks,\n${$('#me').value||'[Your name]'}`;
+}
+['org','host','mascot','color','contact','me'].forEach(i=>$('#'+i).addEventListener('input',build));
+$('#copy').onclick=()=>navigator.clipboard.writeText($('#out').textContent).then(()=>$('#copy').textContent='Copied ✓');
+$('#copyMail').onclick=()=>navigator.clipboard.writeText($('#mail').value).then(()=>$('#copyMail').textContent='Copied ✓');
+build();
+</script></div></body></html>
