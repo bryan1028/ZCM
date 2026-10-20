@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Zist — rate every restaurant you've tried</title>
+<meta name="description" content="Search any restaurant, rate it out of 5, and share your Top 5. Zist it.">
+<style>
+:root{--bg:#fbf7f0;--ink:#1d2a24;--mut:#6b7a72;--card:#fff;--line:#e8e0d2;--acc:#e8590c;--grn:#1f6f4a;--star:#f5a300}
+@media(prefers-color-scheme:dark){:root{--bg:#141a17;--ink:#f1ece2;--mut:#98a69e;--card:#1c2420;--line:#2c3832;--acc:#ff7a33;--grn:#4fc08a}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+a{color:inherit}header{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:5}
+.logo{font-weight:800;font-size:22px;text-decoration:none;color:var(--acc);letter-spacing:-.5px}.sp{flex:1}
+main{max-width:760px;margin:0 auto;padding:16px}
+button,.btn{font:inherit;border:0;border-radius:10px;padding:9px 14px;background:var(--acc);color:#fff;font-weight:600;cursor:pointer;text-decoration:none;display:inline-block}
+button.ghost,.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}button.sm{padding:5px 10px;font-size:14px}
+button:disabled{opacity:.5;cursor:default}
+input,textarea,select{font:inherit;width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink)}
+.hero{text-align:center;padding:28px 0 12px}.hero h1{font-size:30px;margin:0 0 6px;letter-spacing:-1px}.hero p{color:var(--mut);margin:0 0 16px}
+.row{display:flex;gap:8px}.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:10px 0}
+.res{display:block;text-decoration:none}.res b{font-size:17px}.mut{color:var(--mut);font-size:14px}.stars{color:var(--star);letter-spacing:1px}
+.tag{display:inline-block;font-size:12px;border:1px solid var(--line);border-radius:99px;padding:1px 8px;margin:2px 4px 0 0;color:var(--mut)}
+h2{margin:22px 0 6px;font-size:19px}.pick{display:flex;gap:4px;font-size:34px;cursor:pointer;user-select:none}
+.pick span{color:var(--line)}.pick span.on{color:var(--star)}
+.photos{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.photos img{width:96px;height:96px;object-fit:cover;border-radius:10px}
+.top5{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.slot{background:var(--card);border:1px dashed var(--line);border-radius:12px;min-height:96px;padding:8px;font-size:13px;display:flex;flex-direction:column;justify-content:space-between}
+.slot b{font-size:14px;line-height:1.2}.n{color:var(--acc);font-weight:800;font-size:18px}
+@media(max-width:560px){.top5{grid-template-columns:1fr 1fr}}
+.modal{position:fixed;inset:0;background:#0008;display:flex;align-items:center;justify-content:center;padding:16px;z-index:20}
+.modal>div{background:var(--card);border-radius:16px;padding:20px;max-width:380px;width:100%}
+.err{color:#d6336c;font-size:14px;min-height:20px}.ok{color:var(--grn)}
+</style></head><body>
+<header><a class="logo" href="#/">zist</a><div class="sp"></div><span id="nav"></span></header>
+<main id="app"></main>
+<script src="supabase.min.js"></script>
+<script>
+const SB_URL='https://xwtfdjkpwzgybangudyc.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3dGZkamtwd3pneWJhbmd1ZHljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA4NjY3NjEsImV4cCI6MjEwNjQ0Mjc2MX0.juVnPYDXu1YwW427x_NvcACO6seeEwcdUPInnomHMko';
+const GOOGLE=false; // flip to true once Google is enabled in Supabase Auth
+const sb=supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,detectSessionInUrl:true}});
+const $=s=>document.querySelector(s), app=$('#app');
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const stars=n=>n==null?'—':'★'.repeat(Math.round(n))+'☆'.repeat(5-Math.round(n));
+let me=null, myProfile=null;
+
+async function refreshMe(){
+  const {data:{session}}=await sb.auth.getSession(); me=session?.user||null; myProfile=null;
+  if(me){const {data}=await sb.from('rv_profiles').select('*').eq('id',me.id).maybeSingle(); myProfile=data;}
+  $('#nav').innerHTML=me?`<a href="#/u/${myProfile?esc(myProfile.handle):'me'}" class="btn ghost sm">${myProfile?'@'+esc(myProfile.handle):'Finish profile'}</a> <button class="ghost sm" id="out">Sign out</button>`:`<button class="sm" id="in">Sign in</button>`;
+  $('#in')?.addEventListener('click',()=>signIn()); $('#out')?.addEventListener('click',async()=>{await sb.auth.signOut();await refreshMe();route()});
+}
+
+function modal(html){const m=document.createElement('div');m.className='modal';m.innerHTML=`<div>${html}</div>`;m.addEventListener('click',e=>{if(e.target===m)m.remove()});document.body.appendChild(m);return m}
+function signIn(){return new Promise(res=>{
+  const m=modal(`<h2 style="margin-top:0">Sign in to zist</h2>
+   ${GOOGLE?'<button id="g" style="width:100%;margin-bottom:10px" class="ghost">Continue with Google</button>':''}
+   <div id="s1"><input id="em" type="email" placeholder="you@email.com" autocomplete="email"><p class="mut">We'll email you a 6-digit code.</p><button id="send" style="width:100%">Send code</button></div>
+   <div id="s2" hidden><input id="code" inputmode="numeric" maxlength="8" placeholder="Code from email" autocomplete="one-time-code"><button id="ver" style="width:100%;margin-top:10px">Verify</button></div><div class="err" id="e"></div>`);
+  const e=t=>m.querySelector('#e').textContent=t||''; let email='';
+  m.querySelector('#g')?.addEventListener('click',()=>sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname}}));
+  m.querySelector('#send').onclick=async b=>{email=m.querySelector('#em').value.trim();if(!email)return;b.target.disabled=true;
+    const {error}=await sb.auth.signInWithOtp({email,options:{shouldCreateUser:true}});b.target.disabled=false;
+    if(error)return e(/rate|seconds/i.test(error.message)?'Please wait a minute before requesting another code.':error.message);
+    m.querySelector('#s1').hidden=true;m.querySelector('#s2').hidden=false;e('')};
+  m.querySelector('#ver').onclick=async()=>{const {error}=await sb.auth.verifyOtp({email,token:m.querySelector('#code').value.trim(),type:'email'});
+    if(error)return e('That code didn\'t work. Check it and try again.');m.remove();await refreshMe();route();res(true)};
+})}
+async function needProfile(){
+  if(!me) await signIn(); if(!me) return false; if(myProfile) return true;
+  return new Promise(res=>{const m=modal(`<h2 style="margin-top:0">Pick your handle</h2><input id="h" placeholder="e.g. amina_eats" maxlength="20"><p class="mut">3–20 letters, numbers or _. This is your public profile name.</p><button id="go" style="width:100%">Save</button><div class="err" id="e"></div>`);
+    m.querySelector('#go').onclick=async()=>{const h=m.querySelector('#h').value.trim().toLowerCase();
+      if(!/^[a-z0-9_]{3,20}$/.test(h))return m.querySelector('#e').textContent='Use 3–20 letters, numbers or _.';
+      const {error}=await sb.from('rv_profiles').insert({id:me.id,handle:h,display_name:h});
+      if(error)return m.querySelector('#e').textContent=error.code==='23505'?'That handle is taken.':error.message;
+      m.remove();await refreshMe();res(true)}})
+}
+
+const resCard=r=>`<a class="card res" href="#/r/${encodeURIComponent(r.id)}"><b>${esc(r.name)}</b> <span class="stars">${stars(r.avg_stars)}</span> <span class="mut">${r.review_count?`${r.avg_stars} · ${r.review_count}`:'be the first to rate'}</span><div class="mut">${esc([r.address,r.city,r.country].filter(Boolean).join(', '))}</div>${(r.cuisines||[]).slice(0,3).map(c=>`<span class="tag">${esc(c)}</span>`).join('')}</a>`;
+
+async function home(){
+  const {data:cities}=await sb.rpc('rv_cities');
+  const saved=localStorage.getItem('zcity')||'';
+  app.innerHTML=`<div class="hero"><h1>Rate every place you've eaten.</h1><p>Search a restaurant, give it stars, build your Top 5. <b>Zist it.</b></p>
+   <div class="row"><input id="q" placeholder="Search restaurants…" autofocus><select id="c" style="max-width:170px"><option value="">All cities</option>${(cities||[]).map(c=>`<option value="${esc(c.city_slug)}" ${c.city_slug===saved?'selected':''}>${esc(c.city)}, ${esc(c.country)}</option>`).join('')}</select></div></div>
+   <div id="out"></div><h2 id="ph">Popular right now</h2><div id="pop"></div>`;
+  const pop=async()=>{const {data}=await sb.rpc('rv_popular',{city_filter:$('#c').value||null});$('#pop').innerHTML=(data||[]).map(resCard).join('')||'<p class="mut">No ratings yet in this city — be the first!</p>'};
+  let t,seq=0; const go=async()=>{const q=$('#q').value.trim(),n=++seq;localStorage.setItem('zcity',$('#c').value);
+    if(q.length<2){$('#out').innerHTML='';$('#ph').hidden=false;$('#pop').hidden=false;return pop()}
+    $('#ph').hidden=true;$('#pop').hidden=true;const {data,error}=await sb.rpc('rv_search',{q,city_filter:$('#c').value||null,lim:20});if(n!==seq)return;
+    $('#out').innerHTML=error?'<p class="err">Search failed.</p>':(data||[]).map(resCard).join('')+`<div class="card">Can't find it? <button class="sm" id="add">Add a restaurant</button></div>`;
+    $('#add')?.addEventListener('click',()=>addRestaurant(q))};
+  $('#q').oninput=()=>{clearTimeout(t);t=setTimeout(go,250)};$('#c').onchange=go;pop();
+}
+async function addRestaurant(name){
+  if(!await needProfile())return;
+  const {data:cities}=await sb.rpc('rv_cities');const sel=$('#c').selectedOptions[0]?.textContent.split(', ');
+  const m=modal(`<h2 style="margin-top:0">Add a restaurant</h2><input id="n" value="${esc(name)}" placeholder="Name"><div style="height:8px"></div><input id="ci" placeholder="City" value="${esc(sel&&$('#c').value?sel[0]:'')}"><div style="height:8px"></div><input id="co" placeholder="Country code, e.g. KE" maxlength="2" value="${esc(sel&&$('#c').value?sel[1]:'')}"><div style="height:8px"></div><input id="ad" placeholder="Address (optional)"><p class="mut">We check for duplicates first.</p><button id="go" style="width:100%">Add</button><div class="err" id="e"></div>`);
+  m.querySelector('#go').onclick=async()=>{const {data,error}=await sb.rpc('rv_add_restaurant',{p_name:m.querySelector('#n').value,p_city:m.querySelector('#ci').value,p_country:m.querySelector('#co').value.toUpperCase(),p_address:m.querySelector('#ad').value});
+    if(error)return m.querySelector('#e').textContent=error.message;m.remove();location.hash='#/r/'+encodeURIComponent(data)}
+}
+
+async function restaurant(id){
+  const {data}=await sb.rpc('rv_restaurant',{rid:id});const r=data?.[0];if(!r){app.innerHTML='<p>Restaurant not found. <a href="#/">Back</a></p>';return}
+  document.title=`${r.name} — Zist`;
+  const {data:revs}=await sb.from('rv_reviews').select('*').eq('restaurant_id',id).order('created_at',{ascending:false}).limit(50);
+  const ids=[...new Set((revs||[]).map(v=>v.user_id))];
+  const {data:profs}=ids.length?await sb.from('rv_profiles').select('id,handle').in('id',ids):{data:[]};
+  const H=Object.fromEntries((profs||[]).map(p=>[p.id,p.handle]));
+  const mine=(revs||[]).find(v=>me&&v.user_id===me.id);
+  app.innerHTML=`<p><a href="#/">← Search</a></p><h1 style="margin:0">${esc(r.name)}</h1>
+   <div class="mut">${esc([r.address,r.city,r.country].filter(Boolean).join(', '))}${r.website&&/^https?:\/\//.test(r.website)?` · <a href="${esc(r.website)}" target="_blank" rel="noopener nofollow">website</a>`:''}</div>
+   <p><span class="stars" style="font-size:24px">${stars(r.avg_stars)}</span> <b>${r.avg_stars??''}</b> <span class="mut">${r.review_count} rating${r.review_count==1?'':'s'}</span></p>
+   <button id="rate">${mine?'Edit your rating':'Rate this place'}</button>
+   <h2>Reviews</h2>${(revs||[]).map(v=>`<div class="card"><a href="#/u/${esc(H[v.user_id]||'')}"><b>@${esc(H[v.user_id]||'someone')}</b></a> <span class="stars">${stars(v.stars)}</span> <span class="mut">${new Date(v.created_at).toLocaleDateString()}</span>
+    ${v.body?`<p style="margin:6px 0 0;white-space:pre-wrap">${esc(v.body)}</p>`:''}
+    ${v.photos?.length?`<div class="photos">${v.photos.map(u=>`<a href="${esc(u)}" target="_blank" rel="noopener"><img loading="lazy" src="${esc(u)}" alt="Photo by @${esc(H[v.user_id]||'')}"></a>`).join('')}</div>`:''}
+    ${me&&v.user_id!==me.id?`<div><button class="ghost sm rep" data-id="${v.id}">Report</button></div>`:''}</div>`).join('')||'<p class="mut">No reviews yet.</p>'}`;
+  $('#rate').onclick=async()=>{if(await needProfile())rateModal(r,mine)};
+  document.querySelectorAll('.rep').forEach(b=>b.onclick=async()=>{const {error}=await sb.from('rv_reports').insert({reporter:me.id,review_id:b.dataset.id,reason:'reported'});b.textContent=error&&error.code!=='23505'?'Failed':'Reported';b.disabled=true});
+}
+
+async function shrink(file){const img=await createImageBitmap(file);const k=Math.min(1,1280/Math.max(img.width,img.height));const c=document.createElement('canvas');c.width=img.width*k;c.height=img.height*k;c.getContext('2d').drawImage(img,0,0,c.width,c.height);return new Promise(r=>c.toBlob(r,'image/jpeg',.82))}
+function rateModal(r,mine){
+  let s=mine?.stars||0,photos=[...(mine?.photos||[])];
+  const m=modal(`<h2 style="margin-top:0">${esc(r.name)}</h2><div class="pick" id="pk">${[1,2,3,4,5].map(i=>`<span data-i="${i}">★</span>`).join('')}</div>
+   <textarea id="b" rows="4" maxlength="2000" placeholder="What did you have? How was it? (optional)" style="margin-top:10px">${esc(mine?.body||'')}</textarea>
+   <div class="photos" id="ph"></div><input id="f" type="file" accept="image/*" multiple hidden><button class="ghost sm" id="addp" style="margin-top:8px">+ Add photos</button>
+   <div style="margin-top:12px" class="row"><button id="save" style="flex:1">Save</button>${mine?'<button class="ghost" id="del">Delete</button>':''}</div><div class="err" id="e"></div>`);
+  const paint=()=>{m.querySelectorAll('#pk span').forEach(x=>x.classList.toggle('on',+x.dataset.i<=s));m.querySelector('#ph').innerHTML=photos.map((u,i)=>`<span style="position:relative"><img src="${esc(u)}"><button class="sm" data-x="${i}" style="position:absolute;top:2px;right:2px;padding:0 7px">×</button></span>`).join('');
+    m.querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{photos.splice(+b.dataset.x,1);paint()});m.querySelector('#addp').hidden=photos.length>=4};paint();
+  m.querySelectorAll('#pk span').forEach(x=>x.onclick=()=>{s=+x.dataset.i;paint()});
+  m.querySelector('#addp').onclick=()=>m.querySelector('#f').click();
+  m.querySelector('#f').onchange=async e=>{for(const f of [...e.target.files].slice(0,4-photos.length)){try{const blob=await shrink(f);const p=`${me.id}/${crypto.randomUUID()}.jpg`;
+    const {error}=await sb.storage.from('review-photos').upload(p,blob,{contentType:'image/jpeg'});if(error)throw error;photos.push(sb.storage.from('review-photos').getPublicUrl(p).data.publicUrl)}catch(x){m.querySelector('#e').textContent='Photo upload failed.'}}paint()};
+  m.querySelector('#save').onclick=async()=>{if(!s)return m.querySelector('#e').textContent='Tap a star rating first.';
+    const {error}=await sb.from('rv_reviews').upsert({user_id:me.id,restaurant_id:r.id,stars:s,body:m.querySelector('#b').value.trim()||null,photos},{onConflict:'user_id,restaurant_id'});
+    if(error)return m.querySelector('#e').textContent=error.message;m.remove();route()};
+  m.querySelector('#del')?.addEventListener('click',async()=>{await sb.from('rv_reviews').delete().eq('id',mine.id);m.remove();route()});
+}
+
+async function profile(handle){
+  if(handle==='me'){if(!await needProfile())return;location.hash='#/u/'+myProfile.handle;return}
+  const {data:p}=await sb.from('rv_profiles').select('*').eq('handle',handle.toLowerCase()).maybeSingle();
+  if(!p){app.innerHTML='<p>No such profile. <a href="#/">Back</a></p>';return}
+  document.title=`@${p.handle} — Zist`;const own=me&&me.id===p.id;
+  const [{data:revs},{data:top}]=await Promise.all([sb.from('rv_reviews').select('*').eq('user_id',p.id).order('created_at',{ascending:false}).limit(100),sb.from('rv_top5').select('*').eq('user_id',p.id).order('position')]);
+  const rid=[...new Set([...(revs||[]).map(v=>v.restaurant_id),...(top||[]).map(t=>t.restaurant_id)])];
+  const R={};for(const id of rid){const {data}=await sb.rpc('rv_restaurant',{rid:id});if(data?.[0])R[id]=data[0]}
+  const slots=[1,2,3,4,5].map(i=>top?.find(t=>t.position===i));
+  app.innerHTML=`<h1 style="margin:0">@${esc(p.handle)}</h1><div class="mut">${revs?.length||0} rated${p.city?' · '+esc(p.city):''}</div>
+   <h2>Top 5</h2><div class="top5">${slots.map((t,i)=>{const r=t&&R[t.restaurant_id];return `<div class="slot"><div><span class="n">${i+1}</span><br>${r?`<a href="#/r/${encodeURIComponent(r.id)}"><b>${esc(r.name)}</b></a><div class="mut">${esc(r.city)}</div>`:'<span class="mut">empty</span>'}</div>${own&&r?`<div><button class="ghost sm" data-l="${i+1}">‹</button> <button class="ghost sm" data-r="${i+1}">›</button> <button class="ghost sm" data-d="${i+1}">×</button></div>`:''}</div>`}).join('')}</div>
+   <p><button id="card">Share my Top 5 card</button></p>
+   <h2>Ratings</h2>${(revs||[]).map(v=>{const r=R[v.restaurant_id];if(!r)return '';const inTop=top?.some(t=>t.restaurant_id===r.id);
+    return `<div class="card"><a href="#/r/${encodeURIComponent(r.id)}"><b>${esc(r.name)}</b></a> <span class="stars">${stars(v.stars)}</span> <span class="mut">${esc(r.city)}</span>${v.body?`<p style="margin:6px 0 0;white-space:pre-wrap">${esc(v.body)}</p>`:''}${v.photos?.length?`<div class="photos">${v.photos.map(u=>`<img loading="lazy" src="${esc(u)}" alt="">`).join('')}</div>`:''}${own&&!inTop&&(top?.length||0)<5?`<div><button class="ghost sm" data-add="${r.id}">Add to Top 5</button></div>`:''}</div>`}).join('')||'<p class="mut">Nothing rated yet.</p>'}`;
+  const save=async arr=>{await sb.from('rv_top5').delete().eq('user_id',p.id);if(arr.length)await sb.from('rv_top5').insert(arr.map((id,i)=>({user_id:p.id,position:i+1,restaurant_id:id})));route()};
+  const cur=(top||[]).map(t=>t.restaurant_id);
+  document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>save([...cur,b.dataset.add]));
+  document.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{const a=[...cur];a.splice(+b.dataset.d-1,1);save(a)});
+  document.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>{const i=+b.dataset.l-1;if(i<1)return;const a=[...cur];[a[i-1],a[i]]=[a[i],a[i-1]];save(a)});
+  document.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{const i=+b.dataset.r-1;if(i>=cur.length-1)return;const a=[...cur];[a[i+1],a[i]]=[a[i],a[i+1]];save(a)});
+  $('#card').onclick=()=>shareCard(p,slots.map(t=>t&&R[t.restaurant_id]));
+}
+
+async function shareCard(p,list){
+  const c=document.createElement('canvas');c.width=1080;c.height=1350;const x=c.getContext('2d');
+  x.fillStyle='#1f6f4a';x.fillRect(0,0,1080,1350);x.fillStyle='#fbf7f0';x.fillRect(40,40,1000,1270);
+  x.fillStyle='#e8590c';x.font='800 64px system-ui,sans-serif';x.fillText('zist',90,150);
+  x.fillStyle='#1d2a24';x.font='700 52px system-ui,sans-serif';x.fillText('@'+p.handle+"'s Top 5",90,240);
+  list.forEach((r,i)=>{const y=330+i*180;x.fillStyle='#e8590c';x.font='800 84px system-ui,sans-serif';x.fillText(i+1,90,y+70);
+    x.fillStyle='#1d2a24';x.font='700 44px system-ui,sans-serif';let n=r?r.name:'—';while(x.measureText(n).width>780&&n.length>3)n=n.slice(0,-2);if(r&&n!==r.name)n+='…';x.fillText(n,190,y+40);
+    x.fillStyle='#6b7a72';x.font='32px system-ui,sans-serif';x.fillText(r?[r.city,r.country].filter(Boolean).join(', '):'',190,y+90)});
+  x.fillStyle='#6b7a72';x.font='34px system-ui,sans-serif';x.fillText('Zist it · zist.it.com',90,1260);
+  const blob=await new Promise(r=>c.toBlob(r,'image/png'));const file=new File([blob],`zist-top5-${p.handle}.png`,{type:'image/png'});
+  if(navigator.canShare?.({files:[file]})){try{await navigator.share({files:[file],title:'My Zist Top 5'});return}catch(e){if(e.name==='AbortError')return}}
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=file.name;a.click();
+}
+
+function route(){const [,a,b]=location.hash.split('/');document.title='Zist — rate every restaurant you\'ve tried';
+  if(a==='r'&&b)return restaurant(decodeURIComponent(b));if(a==='u'&&b)return profile(decodeURIComponent(b));home()}
+addEventListener('hashchange',route);
+refreshMe().then(route);
+sb.auth.onAuthStateChange((ev)=>{if(ev==='SIGNED_IN'&&!me)refreshMe().then(route)});
+</script></body></html>
