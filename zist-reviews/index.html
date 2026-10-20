@@ -154,7 +154,7 @@ function rateModal(r,mine){
     const {error}=await sb.storage.from('review-photos').upload(p,blob,{contentType:'image/jpeg'});if(error)throw error;photos.push(sb.storage.from('review-photos').getPublicUrl(p).data.publicUrl)}catch(x){m.querySelector('#e').textContent='Photo upload failed.'}}paint()};
   m.querySelector('#save').onclick=async()=>{if(!s)return m.querySelector('#e').textContent='Tap a star rating first.';
     const {error}=await sb.from('rv_reviews').upsert({user_id:me.id,restaurant_id:r.id,stars:s,body:m.querySelector('#b').value.trim()||null,photos},{onConflict:'user_id,restaurant_id'});
-    if(error)return m.querySelector('#e').textContent=error.message;m.remove();route()};
+    if(error)return m.querySelector('#e').textContent=/row-level|policy|suspend/i.test(error.message)?'Your account is suspended and can\'t post.':error.message;m.remove();route()};
   m.querySelector('#del')?.addEventListener('click',async()=>{await sb.from('rv_reviews').delete().eq('id',mine.id);m.remove();route()});
 }
 
@@ -188,7 +188,14 @@ async function admin(){
   app.innerHTML=`<h1 style="margin:0">Admin</h1><div class="card"><b>${t.users??0}</b> users · <b>${t.reviews??0}</b> reviews · <b>${t.restaurants??0}</b> restaurants (<b>${t.user_added??0}</b> user-added) · <b>${t.reports??0}</b> reported</div>
    <h2>Reported reviews</h2>${error?`<p class="err">${esc(error.message)}</p>`:''}${(rep||[]).map(v=>`<div class="card"><a href="#/r/${encodeURIComponent(v.restaurant_id)}"><b>${esc(v.restaurant)}</b></a> by @${esc(v.handle||'?')} <span class="stars">${stars(v.stars)}</span> <span class="mut">· ${v.report_count} report${v.report_count==1?'':'s'}</span>
     ${v.body?`<p style="white-space:pre-wrap;margin:6px 0">${esc(v.body)}</p>`:''}${v.photos?.length?`<div class="photos">${v.photos.map(u=>`<img loading="lazy" src="${esc(u)}" alt="">`).join('')}</div>`:''}
-    <div class="row" style="margin-top:8px"><button class="ghost sm" data-ok="${v.review_id}">Keep (dismiss reports)</button><button class="sm" data-rm="${v.review_id}">Delete review</button></div></div>`).join('')||'<p class="mut">No reports. 🎉</p>'}`;
+    <div class="row" style="margin-top:8px"><button class="ghost sm" data-ok="${v.review_id}">Keep (dismiss reports)</button><button class="sm" data-rm="${v.review_id}">Delete review</button>${v.banned?'<span class="mut">author banned</span>':`<button class="sm" style="background:#c92a2a" data-ban="${v.user_id}" data-h="${esc(v.handle||'')}">Ban @${esc(v.handle||'user')}</button>`}</div></div>`).join('')||'<p class="mut">No reports. 🎉</p>'}
+   <h2>Users</h2><input id="uq" placeholder="Search by handle…"><div id="ul"></div>`;
+  const ban=async(id,h)=>{const why=prompt(`Ban @${h}? Their reviews are hidden and they can't post. Reason (optional):`,'');if(why===null)return;const {error}=await sb.rpc('rv_admin_ban',{uid:id,why});if(error)return alert(error.message);admin()};
+  document.querySelectorAll('[data-ban]').forEach(b=>b.onclick=()=>ban(b.dataset.ban,b.dataset.h));
+  const users=async()=>{const {data}=await sb.rpc('rv_admin_users',{q:$('#uq').value.trim()||null});$('#ul').innerHTML=(data||[]).map(u=>`<div class="card"><a href="#/u/${esc(u.handle)}"><b>@${esc(u.handle)}</b></a> <span class="mut">${u.review_count} review${u.review_count==1?'':'s'}${u.banned?' · <b style="color:#c92a2a">BANNED</b>'+(u.ban_reason?': '+esc(u.ban_reason):''):''}</span> ${u.banned?`<button class="ghost sm" data-un="${u.user_id}">Unban</button>`:`<button class="ghost sm" data-b2="${u.user_id}" data-h="${esc(u.handle)}">Ban</button>`}</div>`).join('')||'<p class="mut">No users.</p>';
+    document.querySelectorAll('[data-b2]').forEach(b=>b.onclick=()=>ban(b.dataset.b2,b.dataset.h));
+    document.querySelectorAll('[data-un]').forEach(b=>b.onclick=async()=>{await sb.rpc('rv_admin_unban',{uid:b.dataset.un});users()})};
+  let ut;$('#uq').oninput=()=>{clearTimeout(ut);ut=setTimeout(users,250)};users();
   document.querySelectorAll('[data-ok]').forEach(b=>b.onclick=async()=>{await sb.rpc('rv_admin_dismiss',{rid:b.dataset.ok});admin()});
   document.querySelectorAll('[data-rm]').forEach(b=>b.onclick=async()=>{if(confirm('Delete this review permanently?')){await sb.rpc('rv_admin_delete_review',{rid:b.dataset.rm});admin()}});
 }
