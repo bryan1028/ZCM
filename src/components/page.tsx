@@ -5,7 +5,7 @@ export default function Page({ children, brand = true }: { children: React.React
       {brand && (
         <div className="brand" style={{ marginBottom: 22 }}>
           <span className="brand-mark" aria-hidden>Z</span>
-          <span className="brand-name">Zist Community</span>
+          <span className="brand-name">Zist</span>
         </div>
       )}
       {children}
